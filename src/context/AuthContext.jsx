@@ -16,7 +16,6 @@ const AuthContext = createContext(null)
 
 const ROLE_ROUTES = {
   admin: '/admin',
-  inventory_manager: '/inventory',
   technician: '/technician',
   customer: '/customer',
 }
@@ -79,7 +78,7 @@ export function AuthProvider({ children }) {
       window.removeEventListener('beforeunload', handleUnload)
       clearInterval(lastSeenInterval.current)
     }
-  }, [])
+  }, [user?.uid])
 
   const fetchProfile = async (uid) => {
     const data = await fetchProfileWithRetry(uid)
@@ -110,7 +109,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const registerWithEmail = async (email, password, name, phone, role = 'customer') => {
+  const registerWithEmail = async (email, password, name, phone, role = 'technician') => {
     const cred = await createUserWithEmailAndPassword(auth, email, password)
     await setDoc(doc(db, 'users', cred.user.uid), {
       uid: cred.user.uid,

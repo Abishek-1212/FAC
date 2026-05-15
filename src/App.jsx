@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import InventoryDashboard from './pages/InventoryDashboard'
 import TechnicianDashboard from './pages/TechnicianDashboard'
 import CustomerDashboard from './pages/CustomerDashboard'
+import PropTypes from 'prop-types'
 
 function LoadingScreen() {
   return (
@@ -27,6 +28,11 @@ function ProtectedRoute({ children, allowedRoles }) {
   if (!isProfileComplete(profile)) return <Navigate to="/complete-profile" replace />
   if (allowedRoles && !allowedRoles.includes(profile.role)) return <Navigate to="/login" replace />
   return children
+}
+
+ProtectedRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+  allowedRoles: PropTypes.arrayOf(PropTypes.string)
 }
 
 function RootRedirect() {
@@ -50,7 +56,7 @@ export default function App() {
         </ProtectedRoute>
       } />
       <Route path="/inventory/*" element={
-        <ProtectedRoute allowedRoles={['inventory_manager', 'admin']}>
+        <ProtectedRoute allowedRoles={['admin']}>
           <InventoryDashboard />
         </ProtectedRoute>
       } />

@@ -1,0 +1,62 @@
+// Firebase Storage Security Rules
+// Copy these rules to your Firebase Console > Storage > Rules
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isValidImageType() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    function isValidPDFType() {
+      return request.resource.contentType == 'application/pdf';
+    }
+    
+    function isUnder5MB() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+    
+    // Product images (admin only)
+    match /products/{productId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && isValidImageType() && isUnder5MB();
+    }
+    
+    // Invoice PDFs
+    match /invoices/{invoiceId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isValidPDFType() && isUnder5MB();
+    }
+    
+    // User profile images
+    match /users/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && 
+                     request.auth.uid == userId && 
+                     isValidImageType() && 
+                     isUnder5MB();
+    }
+    
+    // Service job attachments
+    match /jobs/{jobId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isUnder5MB();
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

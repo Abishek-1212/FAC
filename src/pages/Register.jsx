@@ -102,7 +102,7 @@ export default function Register() {
     if (!step1Ready) return
     setSaving(true)
     try {
-      const cred = await registerWithEmail(form.email, form.password, form.name.trim(), form.phone)
+      const cred = await registerWithEmail(form.email, form.password, form.name.trim(), form.phone, 'customer')
       const profile = await fetchProfile(cred.user.uid)
       toast.success('Account created!')
       navigate(ROLE_ROUTES[profile?.role] || '/customer', { replace: true })

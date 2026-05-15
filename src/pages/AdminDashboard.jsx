@@ -11,7 +11,7 @@ const NAV = [
   { to: '/admin', icon: '🏠', label: 'Dashboard' },
   { to: '/admin/jobs', icon: '🔧', label: 'Service Jobs' },
   { to: '/admin/products', icon: '📦', label: 'Products' },
-  { to: '/admin/employees', icon: '👥', label: 'Employees' },
+  { to: '/admin/employees', icon: '👷', label: 'Technicians' },
   { to: '/admin/invoices', icon: '🧾', label: 'Invoices' },
   { to: '/admin/reports', icon: '📊', label: 'Reports' },
 ]

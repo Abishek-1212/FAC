@@ -1,0 +1,134 @@
+// Firebase Firestore Security Rules
+// Copy these rules to your Firebase Console > Firestore Database > Rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isTechnician() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'technician';
+    }
+    
+    function isCustomer() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'customer';
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone can read their own profile
+      allow read: if isOwner(userId);
+      
+      // Admin can read all users
+      allow read: if isAdmin();
+      
+      // Users can create their own profile during registration
+      allow create: if isOwner(userId) && 
+                      request.resource.data.uid == userId &&
+                      request.resource.data.role in ['customer', 'technician'];
+      
+      // Users can update their own profile (limited fields)
+      allow update: if isOwner(userId) && 
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['name', 'phone', 'isOnline', 'lastSeen']);
+      
+      // Admin can update any user (including role changes)
+      allow update: if isAdmin();
+      
+      // Only admin can delete users
+      allow delete: if isAdmin();
+    }
+    
+    // Products collection
+    match /products/{productId} {
+      // Everyone can read products
+      allow read: if isSignedIn();
+      
+      // Only admin can create, update, delete products
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Service Jobs collection
+    match /serviceJobs/{jobId} {
+      // Admin can do everything
+      allow read, write: if isAdmin();
+      
+      // Technicians can read jobs assigned to them
+      allow read: if isTechnician() && 
+                    resource.data.technicianId == request.auth.uid;
+      
+      // Technicians can update their assigned jobs (limited fields)
+      allow update: if isTechnician() && 
+                      resource.data.technicianId == request.auth.uid &&
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status', 'notes', 'completedAt', 'productsUsed']);
+      
+      // Customers can read their own jobs
+      allow read: if isCustomer() && 
+                    resource.data.customerId == request.auth.uid;
+    }
+    
+    // Invoices collection
+    match /invoices/{invoiceId} {
+      // Admin can do everything
+      allow read, write: if isAdmin();
+      
+      // Technicians can read and create invoices for their jobs
+      allow read, create: if isTechnician();
+      
+      // Customers can read their own invoices
+      allow read: if isCustomer() && 
+                    resource.data.customerId == request.auth.uid;
+    }
+    
+    // Inventory/Stock collection
+    match /inventory/{itemId} {
+      // Admin can do everything
+      allow read, write: if isAdmin();
+      
+      // Technicians can read inventory
+      allow read: if isTechnician();
+    }
+    
+    // Stock Assignments collection
+    match /stockAssignments/{assignmentId} {
+      // Admin can do everything
+      allow read, write: if isAdmin();
+      
+      // Technicians can read their own assignments
+      allow read: if isTechnician() && 
+                    resource.data.technicianId == request.auth.uid;
+      
+      // Technicians can update their assignments (limited fields)
+      allow update: if isTechnician() && 
+                      resource.data.technicianId == request.auth.uid &&
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status', 'returnedAt', 'notes']);
+    }
+    
+    // Reports collection (admin only)
+    match /reports/{reportId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
