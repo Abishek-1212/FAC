@@ -22,8 +22,12 @@ const ROLE_ROUTES = {
 
 async function fetchProfileWithRetry(uid, retries = 3) {
   for (let i = 0; i < retries; i++) {
-    const snap = await getDoc(doc(db, 'users', uid))
-    if (snap.exists()) return snap.data()
+    try {
+      const snap = await getDoc(doc(db, 'users', uid))
+      if (snap.exists()) return snap.data()
+    } catch (err) {
+      if (err.code !== 'permission-denied' && i === retries - 1) throw err
+    }
     if (i < retries - 1) await new Promise(r => setTimeout(r, 100))
   }
   return null
@@ -53,17 +57,20 @@ export function AuthProvider({ children }) {
     setPersistence(auth, browserLocalPersistence).catch(() => {})
 
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const data = await fetchProfileWithRetry(firebaseUser.uid)
-        setUser(firebaseUser)
-        setProfile(data)
-        startOnlineTracking(firebaseUser.uid)
-      } else {
-        if (user?.uid) await stopOnlineTracking(user.uid)
-        setUser(null)
-        setProfile(null)
+      try {
+        if (firebaseUser) {
+          const data = await fetchProfileWithRetry(firebaseUser.uid)
+          setUser(firebaseUser)
+          setProfile(data)
+          startOnlineTracking(firebaseUser.uid)
+        } else {
+          if (user?.uid) await stopOnlineTracking(user.uid)
+          setUser(null)
+          setProfile(null)
+        }
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     const handleUnload = () => {
@@ -78,7 +85,7 @@ export function AuthProvider({ children }) {
       window.removeEventListener('beforeunload', handleUnload)
       clearInterval(lastSeenInterval.current)
     }
-  }, [user?.uid])
+  }, [])
 
   const fetchProfile = async (uid) => {
     const data = await fetchProfileWithRetry(uid)

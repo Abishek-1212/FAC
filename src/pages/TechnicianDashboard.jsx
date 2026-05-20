@@ -4,9 +4,11 @@ import TechnicianHome from '../components/technician/TechnicianHome'
 import JobDetail from '../components/technician/JobDetail'
 import MyStock from '../components/technician/MyStock'
 import TechnicianInvoice from '../components/technician/TechnicianInvoice'
+import CompletionReports from '../components/technician/CompletionReports'
 
 const NAV = [
   { to: '/technician', icon: '🔧', label: 'My Jobs' },
+  { to: '/technician/reports', icon: '📋', label: 'Reports' },
   { to: '/technician/stock', icon: '📦', label: 'My Stock' },
   { to: '/technician/invoice', icon: '🧾', label: 'Invoice' },
 ]
@@ -17,6 +19,7 @@ export default function TechnicianDashboard() {
       <Routes>
         <Route index element={<TechnicianHome />} />
         <Route path="job/:jobId" element={<JobDetail />} />
+        <Route path="reports" element={<CompletionReports />} />
         <Route path="stock" element={<MyStock />} />
         <Route path="invoice" element={<TechnicianInvoice />} />
         <Route path="*" element={<Navigate to="/technician" replace />} />

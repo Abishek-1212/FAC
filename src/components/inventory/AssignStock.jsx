@@ -117,6 +117,11 @@ export default function AssignStock() {
         })
       }
 
+      // Mark job as having stock assigned
+      await updateDoc(doc(db, 'service_jobs', jobId), {
+        stockAssigned: true,
+      })
+
       toast.success(`${items.length} product${items.length > 1 ? 's' : ''} assigned to ${job?.technicianName}`)
       setJobId('')
       setItems([{ ...EMPTY_ITEM }])

@@ -1,0 +1,56 @@
+// FIRESTORE SECURITY RULES - SIMPLIFIED VERSION
+// Copy these rules to your Firestore console under Rules tab
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId;
+    }
+
+    // Service Jobs collection
+    match /service_jobs/{jobId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+    }
+
+    // Job Stock Assignment collection
+    match /job_stock_assignment/{assignmentId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+    }
+
+    // Job Completion Reports collection - ALLOWS TECHNICIAN TO CREATE
+    match /job_completion_reports/{reportId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+    }
+
+    // Inventory collection
+    match /inventory/{productId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+    }
+
+    // Stock Transactions collection
+    match /stock_transactions/{transactionId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+    }
+
+    // Invoices collection
+    match /invoices/{invoiceId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+    }
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

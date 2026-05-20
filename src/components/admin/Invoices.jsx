@@ -1,96 +1,76 @@
-import { useEffect, useState, useRef } from 'react'
-import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { useEffect, useState } from 'react'
+import { collection, onSnapshot, addDoc, serverTimestamp, query, where } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useTheme } from '../../context/ThemeContext'
 import Modal from '../common/Modal'
 import toast from 'react-hot-toast'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
+import { generateInvoice } from '../../utils/generateInvoice'
 
-const STATUS_COLORS = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  paid:    'bg-green-100 text-green-700',
-}
-
-function formatDate(ts) {
+const formatDate = (ts) => {
   if (!ts) return '—'
   const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000)
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export default function Invoices() {
-  const [invoices, setInvoices]     = useState([])
-  const [jobs, setJobs]             = useState([])
-  const [products, setProducts]     = useState([])
-  const [modal, setModal]           = useState(false)
-  const [viewInvoice, setViewInvoice] = useState(null)
-  const [activeTab, setActiveTab]   = useState('all') // 'all' | 'notifications'
-  const [form, setForm]             = useState({ jobId: '', serviceCharge: '', warrantyMonths: '3', items: [] })
-  const [saving, setSaving]         = useState(false)
-  const invoiceRef = useRef(null)
+  const { isDark } = useTheme()
+  const [invoices, setInvoices] = useState([])
+  const [completedJobs, setCompletedJobs] = useState([])
+  const [modal, setModal] = useState(false)
+  const [selectedJob, setSelectedJob] = useState(null)
+  const [products, setProducts] = useState([{ name: '', qty: 1, price: 0 }])
+  const [serviceCharge, setServiceCharge] = useState(0)
+  const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const u1 = onSnapshot(collection(db, 'invoices'), snap =>
-      setInvoices(
-        snap.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .sort((a, b) => (b.generatedDate?.seconds || 0) - (a.generatedDate?.seconds || 0))
-      )
+      setInvoices(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)))
     )
-    const u2 = onSnapshot(collection(db, 'service_jobs'), snap =>
-      setJobs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    const u2 = onSnapshot(query(collection(db, 'service_jobs'), where('status', '==', 'completed')), snap =>
+      setCompletedJobs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
-    const u3 = onSnapshot(collection(db, 'products'), snap =>
-      setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    )
-    return () => { u1(); u2(); u3() }
+    return () => { u1(); u2() }
   }, [])
 
-  // Technician-submitted invoices = invoices with submittedByTechnician flag
-  const techInvoices = invoices.filter(inv => inv.submittedByTechnician)
-  const unreadCount  = techInvoices.filter(inv => !inv.adminViewed).length
-
-  const markViewed = async (inv) => {
-    if (inv.submittedByTechnician && !inv.adminViewed) {
-      await updateDoc(doc(db, 'invoices', inv.id), { adminViewed: true }).catch(() => {})
+  const handleGenerateInvoice = async () => {
+    if (!selectedJob) return
+    if (products.some(p => !p.name || p.qty <= 0 || p.price <= 0)) {
+      toast.error('Please fill all product details')
+      return
     }
-    setViewInvoice(inv)
-  }
 
-  const addItem    = () => setForm(f => ({ ...f, items: [...f.items, { productId: '', productName: '', quantity: 1, unitPrice: 0 }] }))
-  const removeItem = (i) => setForm(f => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }))
-  const updateItem = (i, key, val) => setForm(f => {
-    const items = [...f.items]
-    items[i] = { ...items[i], [key]: val }
-    if (key === 'productId') {
-      const p = products.find(p => p.id === val)
-      if (p) { items[i].productName = p.name; items[i].unitPrice = p.price }
-    }
-    return { ...f, items }
-  })
-
-  const total = form.items.reduce((s, i) => s + (i.quantity * i.unitPrice), 0) + Number(form.serviceCharge || 0)
-
-  const handleCreate = async (e) => {
-    e.preventDefault()
     setSaving(true)
     try {
-      const job = jobs.find(j => j.id === form.jobId)
+      const invoiceNumber = `FAC-${Date.now()}`
+      const invoiceData = {
+        invoiceNumber,
+        customerName: selectedJob.customerName,
+        customerPhone: selectedJob.customerPhone,
+        customerAddress: selectedJob.customerAddress,
+        technicianName: selectedJob.technicianName,
+        serviceType: selectedJob.serviceType,
+        problemDescription: selectedJob.problemDescription,
+        serviceCharge: parseFloat(serviceCharge),
+        products,
+        notes,
+      }
+
       await addDoc(collection(db, 'invoices'), {
-        jobId: form.jobId,
-        customerId: job?.customerId || '',
-        customerName: job?.customerName || '',
-        customerPhone: job?.customerPhone || '',
-        items: form.items,
-        serviceCharge: Number(form.serviceCharge),
-        totalAmount: total,
-        warrantyMonths: Number(form.warrantyMonths),
-        paymentStatus: 'pending',
-        submittedByTechnician: false,
-        generatedDate: serverTimestamp(),
+        ...invoiceData,
+        totalAmount: products.reduce((sum, p) => sum + (p.qty * p.price), 0) + parseFloat(serviceCharge),
+        createdAt: serverTimestamp(),
       })
-      toast.success('Invoice created')
+      
+      generateInvoice(invoiceData)
+      
+      toast.success('✅ Invoice generated and saved!')
       setModal(false)
-      setForm({ jobId: '', serviceCharge: '', warrantyMonths: '3', items: [] })
+      setSelectedJob(null)
+      setProducts([{ name: '', qty: 1, price: 0 }])
+      setServiceCharge(0)
+      setNotes('')
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -98,230 +78,244 @@ export default function Invoices() {
     }
   }
 
-  const markPaid = async (inv) => {
-    await updateDoc(doc(db, 'invoices', inv.id), { paymentStatus: 'paid' })
-    toast.success('Marked as paid')
-    setViewInvoice(prev => prev ? { ...prev, paymentStatus: 'paid' } : null)
-  }
-
-  const downloadPDF = async () => {
-    if (!invoiceRef.current) return
-    const canvas = await html2canvas(invoiceRef.current, { scale: 2 })
-    const pdf = new jsPDF('p', 'mm', 'a4')
-    const imgData = canvas.toDataURL('image/png')
-    const pdfWidth = pdf.internal.pageSize.getWidth()
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
-    pdf.save(`invoice-${viewInvoice.id}.pdf`)
-  }
-
-  const displayList = activeTab === 'notifications' ? techInvoices : invoices
-
   return (
-    <div className="space-y-4 pb-20 md:pb-0">
+    <div className="space-y-5 pb-20 md:pb-0">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-black text-gray-800">Invoices</h2>
-        <button onClick={() => setModal(true)} className="bg-aqua-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-aqua-600 transition">
-          + Create Invoice
-        </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setActiveTab('all')}
-          className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${activeTab === 'all' ? 'bg-aqua-500 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-        >
-          All Invoices
-        </button>
-        <button
-          onClick={() => setActiveTab('notifications')}
-          className={`relative px-4 py-1.5 rounded-full text-xs font-semibold transition ${activeTab === 'notifications' ? 'bg-aqua-500 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-        >
-          🔔 From Technicians
-          {unreadCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-xs font-black rounded-full flex items-center justify-center">
-              {unreadCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Technician notification banner */}
-      {activeTab === 'notifications' && techInvoices.length > 0 && (
-        <div className="bg-aqua-50 border border-aqua-200 rounded-2xl px-4 py-3 text-sm text-aqua-700">
-          <p className="font-bold">💡 Technician-submitted invoices</p>
-          <p className="text-xs mt-0.5 text-aqua-600">These invoices were generated by technicians after collecting cash from customers.</p>
+        <div>
+          <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Invoices</h2>
+          <p className={`text-sm mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{invoices.length} total invoices</p>
         </div>
-      )}
-
-      {/* Invoice list */}
-      <div className="grid gap-3">
-        {displayList.map(inv => (
-          <div
-            key={inv.id}
-            onClick={() => markViewed(inv)}
-            className={`bg-white rounded-2xl p-4 shadow-sm border cursor-pointer hover:border-aqua-200 transition ${
-              inv.submittedByTechnician && !inv.adminViewed ? 'border-aqua-300 bg-aqua-50/40' : 'border-gray-100'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="font-bold text-gray-800">{inv.customerName || 'Customer'}</p>
-                  {inv.submittedByTechnician && !inv.adminViewed && (
-                    <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">New</span>
-                  )}
-                  {inv.submittedByTechnician && (
-                    <span className="text-xs bg-aqua-100 text-aqua-700 px-2 py-0.5 rounded-full font-semibold">By Technician</span>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 mt-0.5">📞 {inv.customerPhone}</p>
-                {inv.technicianName && (
-                  <p className="text-xs text-gray-500 mt-0.5">👷 {inv.technicianName}</p>
-                )}
-                <p className="text-xs text-gray-400 mt-0.5">{formatDate(inv.generatedDate)}</p>
-                <p className="text-lg font-black text-aqua-600 mt-1">₹{Number(inv.totalAmount).toLocaleString('en-IN')}</p>
-              </div>
-              <div className="text-right">
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_COLORS[inv.paymentStatus] || 'bg-gray-100 text-gray-600'}`}>
-                  {inv.paymentStatus}
-                </span>
-                <p className="text-xs text-gray-400 mt-2">{inv.warrantyMonths}m warranty</p>
-              </div>
-            </div>
-          </div>
-        ))}
-        {displayList.length === 0 && (
-          <p className="text-center text-gray-400 text-sm py-8">
-            {activeTab === 'notifications' ? 'No technician-submitted invoices yet' : 'No invoices yet'}
-          </p>
-        )}
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => setModal(true)}
+          className={`px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg transition-shadow ${
+            isDark
+              ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-cyan-500/20 hover:shadow-cyan-500/40'
+              : 'bg-gradient-to-r from-aqua-500 to-aqua-600 text-white shadow-aqua-200 hover:shadow-aqua-300'
+          }`}
+        >
+          + Generate Invoice
+        </motion.button>
       </div>
 
-      {/* Create Invoice Modal */}
-      <Modal open={modal} onClose={() => setModal(false)} title="Create Invoice" size="lg">
-        <form onSubmit={handleCreate} className="space-y-4">
+      {/* Invoices List */}
+      <AnimatePresence mode="popLayout">
+        <div className="grid gap-3">
+          {invoices.map((invoice, i) => (
+            <motion.div
+              key={invoice.id}
+              layout
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ delay: i * 0.04 }}
+              className={`rounded-2xl p-4 shadow-sm border ${
+                isDark
+                  ? 'bg-dark-card border-white/10 hover:border-cyan-500/30'
+                  : 'bg-white border-gray-100 hover:shadow-md hover:border-aqua-200'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {invoice.customerName}
+                  </p>
+                  <p className={`text-xs mt-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                    📋 {invoice.invoiceNumber}
+                  </p>
+                  <p className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                    📅 {formatDate(invoice.createdAt)}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                  <span className={`text-sm font-bold px-3 py-1.5 rounded-full ${
+                    isDark
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : 'bg-emerald-100 text-emerald-700'
+                  }`}>
+                    ₹{invoice.totalAmount.toFixed(2)}
+                  </span>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                    isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-50 text-cyan-700'
+                  }`}>
+                    ✅ Generated
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+
+          {invoices.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className={`rounded-2xl p-12 text-center border border-dashed ${
+                isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
+              }`}
+            >
+              <p className="text-4xl mb-3">📄</p>
+              <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                No invoices yet
+              </p>
+            </motion.div>
+          )}
+        </div>
+      </AnimatePresence>
+
+      {/* Generate Invoice Modal */}
+      <Modal open={modal} onClose={() => setModal(false)} title="Generate Invoice" size="lg">
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto scrollbar-hide">
+          {/* Select Job */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Service Job</label>
-            <select value={form.jobId} onChange={e => setForm(f => ({ ...f, jobId: e.target.value }))} required className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-300">
-              <option value="">Select job</option>
-              {jobs.filter(j => j.status === 'completed').map(j => (
-                <option key={j.id} value={j.id}>{j.customerName} — {j.problemDescription}</option>
+            <label className={`text-xs font-bold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Select Completed Job</label>
+            <select
+              value={selectedJob?.id || ''}
+              onChange={(e) => {
+                const job = completedJobs.find(j => j.id === e.target.value)
+                setSelectedJob(job)
+              }}
+              className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
+                isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+              }`}
+            >
+              <option value="">Choose a job...</option>
+              {completedJobs.map(job => (
+                <option key={job.id} value={job.id} className="text-gray-900">
+                  {job.customerName} - {job.serviceType}
+                </option>
               ))}
             </select>
           </div>
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Products Used</label>
-              <button type="button" onClick={addItem} className="text-xs text-aqua-600 font-semibold">+ Add Item</button>
-            </div>
-            {form.items.map((item, i) => (
-              <div key={i} className="flex gap-2 mb-2">
-                <select value={item.productId} onChange={e => updateItem(i, 'productId', e.target.value)} className="flex-1 border border-gray-200 rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-aqua-300">
-                  <option value="">Select product</option>
-                  {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-                <input type="number" value={item.quantity} onChange={e => updateItem(i, 'quantity', Number(e.target.value))} min={1} className="w-16 border border-gray-200 rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-aqua-300" placeholder="Qty" />
-                <input type="number" value={item.unitPrice} onChange={e => updateItem(i, 'unitPrice', Number(e.target.value))} className="w-20 border border-gray-200 rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-aqua-300" placeholder="Price" />
-                <button type="button" onClick={() => removeItem(i)} className="text-red-400 text-lg">×</button>
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Service Charge (₹)</label>
-              <input type="number" value={form.serviceCharge} onChange={e => setForm(f => ({ ...f, serviceCharge: e.target.value }))} required className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-300" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Warranty (months)</label>
-              <input type="number" value={form.warrantyMonths} onChange={e => setForm(f => ({ ...f, warrantyMonths: e.target.value }))} className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-300" />
-            </div>
-          </div>
-          <div className="bg-aqua-50 rounded-xl p-3 text-right">
-            <p className="text-sm text-gray-600">Total: <span className="text-xl font-black text-aqua-700">₹{total.toLocaleString('en-IN')}</span></p>
-          </div>
-          <div className="flex gap-3">
-            <button type="button" onClick={() => setModal(false)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 bg-aqua-500 text-white rounded-xl py-2.5 text-sm font-bold disabled:opacity-60">
-              {saving ? 'Creating...' : 'Create Invoice'}
-            </button>
-          </div>
-        </form>
-      </Modal>
 
-      {/* View Invoice Modal */}
-      <Modal open={!!viewInvoice} onClose={() => setViewInvoice(null)} title="Invoice" size="lg">
-        {viewInvoice && (
-          <div className="space-y-4">
-            {viewInvoice.submittedByTechnician && (
-              <div className="bg-aqua-50 border border-aqua-200 rounded-xl px-4 py-3 text-sm">
-                <p className="font-bold text-aqua-700">💰 Cash Collected by Technician</p>
-                <p className="text-aqua-600 text-xs mt-0.5">
-                  {viewInvoice.technicianName} collected ₹{Number(viewInvoice.totalAmount).toLocaleString('en-IN')} from {viewInvoice.customerName}
+          {selectedJob && (
+            <>
+              {/* Job Details */}
+              <div className={`rounded-xl p-3 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
+                <p className={`text-xs font-bold ${isDark ? 'text-white/40' : 'text-gray-500'}`}>JOB DETAILS</p>
+                <div className="mt-2 space-y-1 text-sm">
+                  <p className={isDark ? 'text-white' : 'text-gray-900'}><span className="font-semibold">Customer:</span> {selectedJob.customerName}</p>
+                  <p className={isDark ? 'text-white' : 'text-gray-900'}><span className="font-semibold">Phone:</span> {selectedJob.customerPhone}</p>
+                  <p className={isDark ? 'text-white' : 'text-gray-900'}><span className="font-semibold">Type:</span> {selectedJob.serviceType}</p>
+                </div>
+              </div>
+
+              {/* Products */}
+              <div>
+                <label className={`text-xs font-bold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Products Used</label>
+                <div className="space-y-2 mt-2">
+                  {products.map((product, idx) => (
+                    <div key={idx} className="grid grid-cols-4 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Product name"
+                        value={product.name}
+                        onChange={(e) => {
+                          const newProducts = [...products]
+                          newProducts[idx].name = e.target.value
+                          setProducts(newProducts)
+                        }}
+                        className={`col-span-2 border rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
+                          isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+                        }`}
+                      />
+                      <input
+                        type="number"
+                        placeholder="Qty"
+                        value={product.qty}
+                        onChange={(e) => {
+                          const newProducts = [...products]
+                          newProducts[idx].qty = parseInt(e.target.value) || 0
+                          setProducts(newProducts)
+                        }}
+                        className={`border rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
+                          isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+                        }`}
+                      />
+                      <input
+                        type="number"
+                        placeholder="Price"
+                        value={product.price}
+                        onChange={(e) => {
+                          const newProducts = [...products]
+                          newProducts[idx].price = parseFloat(e.target.value) || 0
+                          setProducts(newProducts)
+                        }}
+                        className={`border rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
+                          isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+                        }`}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setProducts([...products, { name: '', qty: 1, price: 0 }])}
+                  className={`mt-2 text-xs font-bold px-3 py-1.5 rounded-lg ${
+                    isDark ? 'bg-white/10 text-cyan-300 hover:bg-white/20' : 'bg-gray-100 text-cyan-600 hover:bg-gray-200'
+                  }`}
+                >
+                  + Add Product
+                </motion.button>
+              </div>
+
+              {/* Service Charge */}
+              <div>
+                <label className={`text-xs font-bold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Service Charge</label>
+                <input
+                  type="number"
+                  value={serviceCharge}
+                  onChange={(e) => setServiceCharge(e.target.value)}
+                  className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
+                    isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+                  }`}
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className={`text-xs font-bold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Notes</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none ${
+                    isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+                  }`}
+                />
+              </div>
+
+              {/* Total */}
+              <div className={`rounded-xl p-3 ${isDark ? 'bg-cyan-500/10 border border-cyan-500/30' : 'bg-cyan-50 border border-cyan-200'}`}>
+                <p className={`text-sm font-bold ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>
+                  Total: ₹{(products.reduce((sum, p) => sum + (p.qty * p.price), 0) + parseFloat(serviceCharge || 0)).toFixed(2)}
                 </p>
               </div>
-            )}
-            <div ref={invoiceRef} className="bg-white p-4 rounded-xl border border-gray-100">
-              <div className="text-center mb-4">
-                <h2 className="text-xl font-black text-aqua-700">💧 Friends Aqua Care</h2>
-                <p className="text-xs text-gray-500">RO Water Purifier Service</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm mb-4">
-                <div><p className="text-gray-500 text-xs">Customer</p><p className="font-semibold">{viewInvoice.customerName}</p></div>
-                <div><p className="text-gray-500 text-xs">Phone</p><p className="font-semibold">{viewInvoice.customerPhone}</p></div>
-                <div><p className="text-gray-500 text-xs">Date</p><p className="font-semibold">{formatDate(viewInvoice.generatedDate)}</p></div>
-                <div><p className="text-gray-500 text-xs">Warranty</p><p className="font-semibold">{viewInvoice.warrantyMonths} months</p></div>
-                {viewInvoice.technicianName && (
-                  <div><p className="text-gray-500 text-xs">Technician</p><p className="font-semibold">{viewInvoice.technicianName}</p></div>
-                )}
-                <div><p className="text-gray-500 text-xs">Status</p><p className="font-semibold capitalize">{viewInvoice.paymentStatus}</p></div>
-              </div>
-              <table className="w-full text-sm mb-4">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-1 text-xs text-gray-500">Item</th>
-                    <th className="text-center py-1 text-xs text-gray-500">Qty</th>
-                    <th className="text-right py-1 text-xs text-gray-500">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(viewInvoice.items || []).map((item, i) => (
-                    <tr key={i} className="border-b border-gray-50">
-                      <td className="py-1.5">{item.productName}</td>
-                      <td className="text-center py-1.5">{item.quantity}</td>
-                      <td className="text-right py-1.5">₹{(item.quantity * item.unitPrice).toLocaleString('en-IN')}</td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td className="py-1.5 text-gray-500">Service Charge</td>
-                    <td></td>
-                    <td className="text-right py-1.5">₹{Number(viewInvoice.serviceCharge).toLocaleString('en-IN')}</td>
-                  </tr>
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-gray-200">
-                    <td colSpan={2} className="py-2 font-black">Total</td>
-                    <td className="text-right py-2 font-black text-aqua-700">₹{Number(viewInvoice.totalAmount).toLocaleString('en-IN')}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-            <div className="flex gap-3">
-              {viewInvoice.paymentStatus !== 'paid' && (
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-white/10">
                 <button
-                  onClick={() => markPaid(viewInvoice)}
-                  className="flex-1 bg-green-500 text-white rounded-xl py-3 text-sm font-bold hover:bg-green-600 transition"
+                  onClick={() => setModal(false)}
+                  className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+                    isDark ? 'bg-white/5 text-white/80 hover:bg-white/10' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
                 >
-                  ✅ Mark as Paid
+                  Cancel
                 </button>
-              )}
-              <button onClick={downloadPDF} className="flex-1 bg-aqua-500 text-white rounded-xl py-3 text-sm font-bold hover:bg-aqua-600 transition">
-                📥 Download PDF
-              </button>
-            </div>
-          </div>
-        )}
+                <button
+                  onClick={handleGenerateInvoice}
+                  disabled={saving}
+                  className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white disabled:opacity-60 ${
+                    isDark ? 'bg-gradient-to-r from-cyan-500 to-cyan-600' : 'bg-gradient-to-r from-cyan-500 to-cyan-600'
+                  }`}
+                >
+                  {saving ? 'Generating...' : 'Generate & Download'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </Modal>
     </div>
   )
