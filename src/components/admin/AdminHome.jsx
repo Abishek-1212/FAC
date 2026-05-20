@@ -68,29 +68,6 @@ export default function AdminHome() {
 
   return (
     <div className="space-y-6">
-      {/* Hero */}
-      <motion.div
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={`relative overflow-hidden rounded-3xl p-8 border ${
-          isDark 
-            ? 'glass-strong border-cyan-500/20' 
-            : 'bg-gradient-to-br from-sky-500 to-cyan-600 border-sky-400/30 shadow-xl'
-        }`}
-      >
-        <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl ${
-          isDark ? 'bg-cyan-500/10' : 'bg-white/20'
-        }`} />
-        <div className={`absolute -bottom-10 -left-10 w-48 h-48 rounded-full blur-3xl ${
-          isDark ? 'bg-cyan-600/10' : 'bg-white/10'
-        }`} />
-        <div className="relative">
-          <p className={`text-sm font-medium ${isDark ? 'text-white/50' : 'text-white/80'}`}>Good day 👋</p>
-          <h1 className="text-4xl font-black text-white mt-1">Admin Panel</h1>
-          <p className={`text-sm mt-2 ${isDark ? 'text-white/60' : 'text-white/90'}`}>💧 Friends Aqua Care — Service Management</p>
-        </div>
-      </motion.div>
-
       {/* Invoice notification */}
       {stats.unreadInvoices > 0 && (
         <motion.div
@@ -130,35 +107,42 @@ export default function AdminHome() {
         </motion.div>
       )}
 
-      {/* Stats */}
-      <div>
+      {/* Quick Actions */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${
           isDark ? 'text-white/40' : 'text-gray-500'
-        }`}>OVERVIEW</p>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {STAT_CARDS.map((card, i) => (
-            <motion.div
-              key={card.key}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              whileHover={{ y: -4, transition: { duration: 0.2 } }}
-              className={`relative overflow-hidden rounded-2xl p-5 border group cursor-pointer ${
+        }`}>QUICK ACTIONS</p>
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { label: 'New Service Job', icon: '🔧', path: '/admin/jobs',      gradient: 'from-cyan-500 to-cyan-600' },
+            { label: 'Add Product',     icon: '📦', path: '/admin/products',  gradient: 'from-blue-500 to-blue-600' },
+            { label: 'Add Technician',  icon: '👷', path: '/admin/employees', gradient: 'from-violet-500 to-purple-600' },
+            { label: 'View Invoices',   icon: '🧾', path: '/admin/invoices',  gradient: 'from-emerald-500 to-green-600' },
+          ].map((action, i) => (
+            <motion.button
+              key={action.label}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15 + i * 0.05 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => navigate(action.path)}
+              className={`relative overflow-hidden rounded-2xl p-5 text-left border group ${
                 isDark ? 'glass-strong border-white/5' : 'bg-white border-sky-200 shadow-md hover:shadow-xl'
               }`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} transition-opacity ${
-                isDark ? 'opacity-0 group-hover:opacity-10' : 'opacity-0 group-hover:opacity-5'
+              <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} transition-opacity ${
+                isDark ? 'opacity-0 group-hover:opacity-20' : 'opacity-0 group-hover:opacity-10'
               }`} />
-              <div className="relative">
-                <span className="text-3xl">{card.icon}</span>
-                <p className={`text-3xl font-black mt-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>{getValue(card.key)}</p>
-                <p className={`text-xs font-semibold mt-1 ${isDark ? 'text-white/50' : 'text-gray-600'}`}>{card.label}</p>
-              </div>
-            </motion.div>
+              <div className={`absolute -bottom-4 -right-4 w-24 h-24 rounded-full blur-2xl ${
+                isDark ? 'bg-white/5' : 'bg-sky-100/50'
+              }`} />
+              <span className="text-3xl relative z-10">{action.icon}</span>
+              <p className={`font-bold text-sm mt-3 relative z-10 ${isDark ? 'text-white' : 'text-gray-900'}`}>{action.label}</p>
+            </motion.button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* Recent jobs */}
       <motion.div
@@ -220,42 +204,35 @@ export default function AdminHome() {
         )}
       </motion.div>
 
-      {/* Quick actions */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+      {/* Overview Stats */}
+      <div>
         <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${
           isDark ? 'text-white/40' : 'text-gray-500'
-        }`}>QUICK ACTIONS</p>
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { label: 'New Service Job', icon: '🔧', path: '/admin/jobs',      gradient: 'from-cyan-500 to-cyan-600' },
-            { label: 'Add Technician',  icon: '👷', path: '/admin/employees', gradient: 'from-violet-500 to-purple-600' },
-            { label: 'View Invoices',   icon: '🧾', path: '/admin/invoices',  gradient: 'from-emerald-500 to-green-600' },
-            { label: 'Reports',         icon: '📊', path: '/admin/reports',   gradient: 'from-blue-500 to-blue-600' },
-          ].map((action, i) => (
-            <motion.button
-              key={action.label}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5 + i * 0.05 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate(action.path)}
-              className={`relative overflow-hidden rounded-2xl p-5 text-left border group ${
+        }`}>OVERVIEW</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {STAT_CARDS.map((card, i) => (
+            <motion.div
+              key={card.key}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              className={`relative overflow-hidden rounded-2xl p-5 border group cursor-pointer ${
                 isDark ? 'glass-strong border-white/5' : 'bg-white border-sky-200 shadow-md hover:shadow-xl'
               }`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} transition-opacity ${
-                isDark ? 'opacity-0 group-hover:opacity-20' : 'opacity-0 group-hover:opacity-10'
+              <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} transition-opacity ${
+                isDark ? 'opacity-0 group-hover:opacity-10' : 'opacity-0 group-hover:opacity-5'
               }`} />
-              <div className={`absolute -bottom-4 -right-4 w-24 h-24 rounded-full blur-2xl ${
-                isDark ? 'bg-white/5' : 'bg-sky-100/50'
-              }`} />
-              <span className="text-3xl relative z-10">{action.icon}</span>
-              <p className={`font-bold text-sm mt-3 relative z-10 ${isDark ? 'text-white' : 'text-gray-900'}`}>{action.label}</p>
-            </motion.button>
+              <div className="relative">
+                <span className="text-3xl">{card.icon}</span>
+                <p className={`text-3xl font-black mt-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>{getValue(card.key)}</p>
+                <p className={`text-xs font-semibold mt-1 ${isDark ? 'text-white/50' : 'text-gray-600'}`}>{card.label}</p>
+              </div>
+            </motion.div>
           ))}
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }
