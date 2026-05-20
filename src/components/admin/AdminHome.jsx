@@ -118,6 +118,7 @@ export default function AdminHome() {
             { label: 'Add Product',     icon: '📦', path: '/admin/products',  gradient: 'from-blue-500 to-blue-600' },
             { label: 'Add Technician',  icon: '👷', path: '/admin/employees', gradient: 'from-violet-500 to-purple-600' },
             { label: 'View Invoices',   icon: '🧾', path: '/admin/invoices',  gradient: 'from-emerald-500 to-green-600' },
+            { label: 'Reports',         icon: '📊', path: '/admin/reports',   gradient: 'from-orange-500 to-red-600' },
           ].map((action, i) => (
             <motion.button
               key={action.label}

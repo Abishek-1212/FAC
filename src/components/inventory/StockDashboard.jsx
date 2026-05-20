@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react'
 import { collection, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { useTheme } from '../../context/ThemeContext'
 import StatCard from '../common/StatCard'
 
 export default function StockDashboard() {
+  const navigate = useNavigate()
+  const { isDark } = useTheme()
   const [inventory, setInventory] = useState([])
   const [transactions, setTransactions] = useState([])
 
@@ -26,6 +31,34 @@ export default function StockDashboard() {
         <h2 className="text-xl font-black text-gray-800">Stock Dashboard</h2>
         <p className="text-sm text-gray-500">Inventory overview</p>
       </div>
+
+      {/* Quick Actions */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+        <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>QUICK ACTIONS</p>
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { label: 'Receive Stock', icon: '📥', path: '/inventory/receive', gradient: 'from-green-500 to-emerald-600' },
+            { label: 'Assign Stock',  icon: '📤', path: '/inventory/assign',  gradient: 'from-blue-500 to-blue-600' },
+            { label: 'Verify Returns', icon: '↩️', path: '/inventory/returns', gradient: 'from-purple-500 to-purple-600' },
+          ].map((action, i) => (
+            <motion.button
+              key={action.label}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 + i * 0.05 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => navigate(action.path)}
+              className={`relative overflow-hidden rounded-2xl p-5 text-left border group ${isDark ? 'glass-strong border-white/5' : 'bg-white border-sky-200 shadow-md hover:shadow-xl'}`}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} transition-opacity ${isDark ? 'opacity-0 group-hover:opacity-20' : 'opacity-0 group-hover:opacity-10'}`} />
+              <div className={`absolute -bottom-4 -right-4 w-24 h-24 rounded-full blur-2xl ${isDark ? 'bg-white/5' : 'bg-sky-100/50'}`} />
+              <span className="text-3xl relative z-10">{action.icon}</span>
+              <p className={`font-bold text-sm mt-3 relative z-10 ${isDark ? 'text-white' : 'text-gray-900'}`}>{action.label}</p>
+            </motion.button>
+          ))}
+        </div>
+      </motion.div>
 
       <div className="grid grid-cols-2 gap-3">
         <StatCard icon="📦" label="Total Items" value={totalItems} color="aqua" />

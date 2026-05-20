@@ -229,47 +229,6 @@ export default function Layout({ children, navItems, title }) {
       </header>
 
       <div className="flex flex-1 overflow-hidden min-h-0">
-        {/* Sidebar - only show when NOT in section */}
-        {!isInSection && (
-          <aside className={`hidden md:flex flex-col w-64 border-r py-6 px-4 gap-2 overflow-y-auto scrollbar-hide ${isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border'}`}>
-            <div className={`px-3 pb-4 mb-3 border-b ${isDark ? 'border-dark-border' : 'border-light-border'}`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-white shadow-glow-cyan-sm ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}>
-                  {profile?.name?.[0]?.toUpperCase() || 'A'}
-                </div>
-                <div>
-                  <p className={`font-bold text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{profile?.name}</p>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-block mt-1 ${isDark ? 'bg-cyan-500/20 text-cyan-400' : 'bg-cyan-100 text-cyan-700'}`}>
-                    {profile?.role === 'admin' ? 'Admin' : 'Technician'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {navItems.map(item => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/admin' || item.to === '/technician' || item.to === '/inventory'}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                    isActive
-                      ? isDark
-                        ? 'bg-cyan-500/20 text-cyan-400 shadow-glow-cyan-sm'
-                        : 'bg-cyan-50 text-cyan-600'
-                      : isDark
-                      ? 'text-white/60 hover:text-white hover:bg-white/5'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`
-                }
-              >
-                <span className="text-lg">{item.icon}</span>
-                {item.label}
-              </NavLink>
-            ))}
-          </aside>
-        )}
-
         <main className="flex-1 overflow-y-auto scrollbar-hide p-6 md:p-8 pb-24">
           <div className="max-w-7xl mx-auto">
             {children}
