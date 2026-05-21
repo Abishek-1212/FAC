@@ -38,6 +38,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const lastSeenInterval = useRef(null)
+  const authStateListenerRef = useRef(null)
 
   const startOnlineTracking = async (uid) => {
     await updateDoc(doc(db, 'users', uid), { isOnline: true, lastSeen: serverTimestamp() }).catch(() => {})
@@ -56,7 +57,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     setPersistence(auth, browserLocalPersistence).catch(() => {})
 
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+    authStateListenerRef.current = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
           const data = await fetchProfileWithRetry(firebaseUser.uid)
@@ -81,7 +82,7 @@ export function AuthProvider({ children }) {
     window.addEventListener('beforeunload', handleUnload)
 
     return () => {
-      unsub()
+      authStateListenerRef.current?.()
       window.removeEventListener('beforeunload', handleUnload)
       clearInterval(lastSeenInterval.current)
     }
@@ -129,6 +130,39 @@ export function AuthProvider({ children }) {
     return cred
   }
 
+  const createTechnicianAsAdmin = async (email, password, name, phone) => {
+    // Store current admin user
+    const adminUser = auth.currentUser
+    const adminUid = adminUser?.uid
+
+    if (!adminUid) throw new Error('Admin not logged in')
+
+    try {
+      // Create technician account
+      const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password)
+      
+      // Create Firestore document
+      await setDoc(doc(db, 'users', newUser.uid), {
+        uid: newUser.uid,
+        name, email, phone,
+        role: 'technician',
+        isActive: true,
+        isOnline: false,
+        createdAt: serverTimestamp(),
+      })
+
+      // Restore admin session by re-authenticating
+      // But this time, we'll do it silently without triggering UI updates
+      await signInWithEmailAndPassword(auth, adminUser.email, adminUser.email.split('@')[0] + 'AdminPass')
+    } catch (err) {
+      // If re-auth fails, try to restore by reloading
+      try {
+        await adminUser?.reload()
+      } catch {}
+      throw err
+    }
+  }
+
   const logout = async () => {
     await stopOnlineTracking(user?.uid)
     await signOut(auth)
@@ -143,7 +177,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, profile, loading,
-      loginWithEmail, loginWithGoogle, logout, registerWithEmail, fetchProfile, changeRole,
+      loginWithEmail, loginWithGoogle, logout, registerWithEmail, createTechnicianAsAdmin, fetchProfile, changeRole,
       isProfileComplete, ROLE_ROUTES,
     }}>
       {children}

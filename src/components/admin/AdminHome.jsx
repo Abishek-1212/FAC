@@ -4,6 +4,7 @@ import { db } from '../../firebase'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useTheme } from '../../context/ThemeContext'
+import RecentServiceJobs from './RecentServiceJobs'
 
 const STAT_CARDS = [
   { key: 'jobs',        icon: '🔧', label: 'Total Jobs',     gradient: 'from-cyan-500 to-cyan-600' },
@@ -13,20 +14,6 @@ const STAT_CARDS = [
   { key: 'revenue',     icon: '💰', label: 'Total Revenue',  gradient: 'from-emerald-500 to-green-600' },
   { key: 'missing',     icon: '⚠️', label: 'Missing Stock',  gradient: 'from-red-500 to-rose-600' },
 ]
-
-const STATUS_META_DARK = {
-  pending:     { color: 'bg-amber-500/20 text-amber-400',   dot: 'bg-amber-400' },
-  assigned:    { color: 'bg-blue-500/20 text-blue-400',     dot: 'bg-blue-400' },
-  in_progress: { color: 'bg-violet-500/20 text-violet-400', dot: 'bg-violet-400' },
-  completed:   { color: 'bg-emerald-500/20 text-emerald-400', dot: 'bg-emerald-400' },
-}
-
-const STATUS_META_LIGHT = {
-  pending:     { color: 'bg-amber-100 text-amber-700',   dot: 'bg-amber-500' },
-  assigned:    { color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500' },
-  in_progress: { color: 'bg-violet-100 text-violet-700', dot: 'bg-violet-500' },
-  completed:   { color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
-}
 
 export default function AdminHome() {
   const navigate = useNavigate()
@@ -43,7 +30,6 @@ export default function AdminHome() {
       setRecentJobs(
         snap.docs.map(d => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
-          .slice(0, 6)
       )
     }))
     unsubs.push(onSnapshot(collection(db, 'products'), snap => setStats(s => ({ ...s, products: snap.size }))))
@@ -146,64 +132,7 @@ export default function AdminHome() {
       </motion.div>
 
       {/* Recent jobs */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className={`rounded-3xl border overflow-hidden ${
-          isDark ? 'glass-strong border-white/5' : 'bg-white border-sky-200 shadow-lg'
-        }`}
-      >
-        <div className={`px-6 py-5 border-b flex items-center justify-between ${
-          isDark ? 'border-white/5' : 'border-sky-100'
-        }`}>
-          <h3 className={`font-black text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>Recent Service Jobs</h3>
-          <button onClick={() => navigate('/admin/jobs')} className={`text-xs font-bold transition ${
-            isDark ? 'text-cyan-400 hover:text-cyan-300' : 'text-sky-600 hover:text-sky-700'
-          }`}>
-            View all →
-          </button>
-        </div>
-        {recentJobs.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-4xl mb-3">🔧</p>
-            <p className={`text-sm ${isDark ? 'text-white/40' : 'text-gray-500'}`}>No jobs yet</p>
-          </div>
-        ) : (
-          <div className={`divide-y ${isDark ? 'divide-white/5' : 'divide-sky-100'}`}>
-            {recentJobs.map((job, i) => {
-              const STATUS_META = isDark ? STATUS_META_DARK : STATUS_META_LIGHT
-              const meta = STATUS_META[job.status] || STATUS_META.pending
-              return (
-                <motion.div
-                  key={job.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.35 + i * 0.04 }}
-                  onClick={() => navigate('/admin/jobs')}
-                  className={`px-6 py-4 flex items-center justify-between cursor-pointer transition group ${
-                    isDark ? 'hover:bg-white/5' : 'hover:bg-sky-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-3 h-3 rounded-full ${meta.dot} group-hover:shadow-lg transition`} />
-                    <div>
-                      <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{job.customerName}</p>
-                      <p className={`text-xs mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-600'}`}>
-                        {job.serviceType || job.componentName || job.problemDescription || '—'}
-                        {job.technicianName && ` · 👷 ${job.technicianName}`}
-                      </p>
-                    </div>
-                  </div>
-                  <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${meta.color}`}>
-                    {job.status?.replace('_', ' ')}
-                  </span>
-                </motion.div>
-              )
-            })}
-          </div>
-        )}
-      </motion.div>
+      <RecentServiceJobs jobs={recentJobs} />
 
       {/* Overview Stats */}
       <div>

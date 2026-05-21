@@ -1,322 +1,489 @@
-import { useEffect, useState } from 'react'
-import { collection, onSnapshot, addDoc, serverTimestamp, query, where } from 'firebase/firestore'
-import { db } from '../../firebase'
-import { motion, AnimatePresence } from 'framer-motion'
-import { useTheme } from '../../context/ThemeContext'
-import Modal from '../common/Modal'
-import toast from 'react-hot-toast'
-import { generateInvoice } from '../../utils/generateInvoice'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
-const formatDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000)
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+const formatCurrency = (value) => {
+  const amount = Number(value || 0).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
+  return `INR ${amount}`
+}
+
+const formatDate = (date) => {
+  if (!date) return new Date().toLocaleDateString('en-IN')
+  if (typeof date === 'string') return date
+  if (date.toDate) return date.toDate().toLocaleDateString('en-IN')
+  return new Date(date).toLocaleDateString('en-IN')
+}
+
+export const generateInvoice = (invoiceData) => {
+  const doc = new jsPDF('p', 'mm', 'a4')
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 12
+  const contentWidth = pageWidth - (margin * 2)
+
+  const {
+    invoiceNumber = `FAC-${Date.now()}`,
+    serviceId = `SRV-${Math.floor(100000 + Math.random() * 900000)}`,
+    status = 'PAID',
+    paymentMode = 'UPI',
+    customerId = `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
+    customerName,
+    customerPhone,
+    customerAddress,
+    technicianName,
+    technicianName2,
+    serviceDate,
+    serviceType,
+    problemDescription,
+    serviceCharge = 0,
+    discount = 0,
+    tax = 0,
+    products = [],
+    notes = '',
+    inventoryMetrics = { assigned: 0, used: 0, returned: 0 }
+  } = invoiceData
+
+  const primaryColor = [6, 182, 212]     
+  const darkText = [31, 41, 55]          
+  const lightMuted = [107, 114, 128]     
+  const tableBorder = [209, 213, 219]    
+  const rowHighlight = [240, 253, 250]   
+
+  let currentY = margin
+
+  // ========================================================
+  // HEADER SECTION
+  // ========================================================
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(24)
+  doc.setTextColor(...primaryColor)
+  doc.text('Friends Aqua Care', margin, currentY + 4)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8.5)
+  doc.setTextColor(...darkText)
+  
+  const contactLines = [
+    `GSTIN: 33ACDPU6542L1Z9`,
+    `Email: facwatersystems@gmail.com`,
+    `Phone: +91 99765 55199`,
+    `       +91 90955 40660`
+  ]
+  let contactY = currentY
+  contactLines.forEach(line => {
+    doc.text(line, pageWidth - margin, contactY, { align: 'right' })
+    contactY += 4
+  })
+
+  currentY += 10
+  doc.setFont('helvetica', 'oblique')
+  doc.setFontSize(10)
+  doc.setTextColor(...lightMuted)
+  doc.text('Water Purifier Service & Maintenance', margin, currentY)
+  
+  currentY += 4.5
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.text('Water Purifiers • Water Softeners • Solar Water Heaters • CCTV Cameras', margin, currentY)
+
+  currentY += 8
+  
+  doc.setLineWidth(0.2)
+  doc.setDrawColor(...tableBorder)
+  doc.line(margin, currentY, pageWidth - margin, currentY)
+  currentY += 4
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8.5)
+  doc.setTextColor(...darkText)
+  doc.text('Head Office:', margin, currentY)
+  doc.text('Branch Office:', margin + (contentWidth / 2), currentY)
+  
+  currentY += 4
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.setTextColor(...lightMuted)
+  
+  const hoAddress = ['No.25 Railway Station Road,', 'VOC Street, Udumalpet,', 'Tirupur Dt – 642126']
+  const boAddress = ['2/290A1 DHRUGANAGAR,', 'Siruvani Main Road, Kalampalayam,', 'Coimbatore – 641010']
+  
+  for(let i = 0; i < 3; i++) {
+    doc.text(hoAddress[i], margin, currentY + (i * 3.5))
+    doc.text(boAddress[i], margin + (contentWidth / 2), currentY + (i * 3.5))
+  }
+  
+  currentY += 15
+
+  doc.setLineWidth(0.6)
+  doc.setDrawColor(...primaryColor)
+  doc.line(margin, currentY, pageWidth - margin, currentY)
+  currentY += 6
+
+  // ========================================================
+  // FIX 1: INVOICE META BLOCK (Shifted up & fully separated)
+  // ========================================================
+  const computedDate = formatDate(serviceDate)
+  
+  // Render invoice meta information horizontally across the top instead of a stacked overlapping box
+  doc.setFillColor(248, 250, 252)
+  doc.rect(margin, currentY, contentWidth, 8, 'F')
+  doc.setLineWidth(0.2)
+  doc.setDrawColor(...tableBorder)
+  doc.rect(margin, currentY, contentWidth, 8, 'S')
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(...darkText)
+  
+  // Single row layout metrics calculation
+  doc.text(`Invoice No: ${invoiceNumber}`, margin + 3, currentY + 5.5)
+  doc.text(`Date: ${computedDate}`, margin + 45, currentY + 5.5)
+  doc.text(`Service ID: ${serviceId}`, margin + 85, currentY + 5.5)
+  doc.text(`Status: ${status}`, margin + 130, currentY + 5.5)
+  doc.text(`Payment: ${paymentMode}`, margin + 160, currentY + 5.5)
+
+  currentY += 14 // Drop safely below the meta block row
+
+  // ========================================================
+  // CUSTOMER & SERVICE INFORMATION INFORMATION
+  // ========================================================
+  const cardWidth = (contentWidth - 6) / 2
+  const cardHeight = 38
+  
+  // Left Column: Customer Card
+  doc.setDrawColor(...tableBorder)
+  doc.setFillColor(255, 255, 255)
+  doc.rect(margin, currentY, cardWidth, cardHeight, 'S')
+  doc.setFillColor(...primaryColor)
+  doc.rect(margin, currentY, cardWidth, 5, 'F')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(255, 255, 255)
+  doc.text('CUSTOMER INFORMATION', margin + 3, currentY + 3.5)
+  
+  doc.setTextColor(...darkText)
+  doc.setFontSize(8.5)
+  doc.text(`Customer ID: ${customerId}`, margin + 3, currentY + 10)
+  doc.text(`Name: ${customerName}`, margin + 3, currentY + 15)
+  doc.text(`Phone: ${customerPhone}`, margin + 3, currentY + 20)
+  
+  const cleanAddress = (customerAddress || '').replace(/\n/g, ' ')
+  const splitCustAddress = doc.splitTextToSize(`Address: ${cleanAddress}`, cardWidth - 6)
+  doc.text(splitCustAddress, margin + 3, currentY + 25)
+
+  // Right Column: Service Card (Now clean and completely overlap-free)
+  const rightColumnX = margin + cardWidth + 6
+  doc.setFillColor(255, 255, 255)
+  doc.rect(rightColumnX, currentY, cardWidth, cardHeight, 'S')
+  doc.setFillColor(...primaryColor)
+  doc.rect(rightColumnX, currentY, cardWidth, 5, 'F')
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(255, 255, 255)
+  doc.text('SERVICE INFORMATION', rightColumnX + 3, currentY + 3.5)
+
+  doc.setTextColor(...darkText)
+  doc.text(`Technician: ${technicianName || 'Unassigned'}`, rightColumnX + 3, currentY + 10)
+  if (technicianName2) {
+    doc.text(`Technician 2: ${technicianName2}`, rightColumnX + 3, currentY + 13)
+    doc.text(`Service Type: ${serviceType}`, rightColumnX + 3, currentY + 16)
+  } else {
+    doc.text(`Service Type: ${serviceType}`, rightColumnX + 3, currentY + 15)
+  }
+  
+  const cleanProblem = (problemDescription || '').replace(/\n/g, ' ')
+  const splitProblem = doc.splitTextToSize(`Problem: ${cleanProblem}`, cardWidth - 6)
+  const problemY = technicianName2 ? currentY + 23 : currentY + 20
+  doc.text(splitProblem, rightColumnX + 3, problemY)
+  
+  const parsedDate = serviceDate ? new Date(serviceDate) : new Date()
+  parsedDate.setDate(parsedDate.getDate() + 90)
+  const nextServiceDateStr = parsedDate.toLocaleDateString('en-IN')
+
+  const serviceDateY = technicianName2 ? currentY + 33 : currentY + 30
+  const nextServiceY = technicianName2 ? currentY + 38 : currentY + 35
+  doc.text(`Service Date: ${computedDate}`, rightColumnX + 3, serviceDateY)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...primaryColor)
+  doc.text(`Next Service Due: ${nextServiceDateStr}`, rightColumnX + 3, nextServiceY)
+
+  currentY += cardHeight + 8
+
+  // ========================================================
+  // LINE ITEMS TABLE (FIX 3: Adjusted Widths)
+  // ========================================================
+  const formattedTableData = []
+  let serialCounter = 1
+
+  products.forEach((product) => {
+    const itemTotal = Number(product.qty || 0) * Number(product.price || 0)
+    formattedTableData.push([
+      serialCounter.toString(),
+      product.name || 'Service Item',
+      product.qty ? product.qty.toString() : '0',
+      product.unit || 'Nos',
+      formatCurrency(product.price),
+      formatCurrency(itemTotal)
+    ])
+    serialCounter++
+
+    if (product.nestedItems && product.nestedItems.length > 0) {
+      const inlineComponentsText = `Included Accessories: ${product.nestedItems.join('  •  ')}`
+      formattedTableData.push(['', inlineComponentsText, '', '', '', ''])
+    }
+  })
+
+  autoTable(doc, {
+    startY: currentY,
+    head: [['S.No', 'Product / Particular', 'Quantity', 'Unit', 'Unit Price', 'Amount']],
+    body: formattedTableData,
+    theme: 'grid',
+    headStyles: {
+      fillColor: primaryColor,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 9,
+      halign: 'left',
+      valign: 'middle',
+      cellPadding: 4,
+      lineColor: primaryColor,
+      lineWidth: 0.1
+    },
+    bodyStyles: {
+      fontSize: 8.5,
+      textColor: darkText,
+      cellPadding: 4,
+      lineColor: tableBorder,
+      lineWidth: 0.1,
+      valign: 'middle'
+    },
+    columnStyles: {
+      0: { cellWidth: 12, halign: 'center' },
+      1: { cellWidth: 78, halign: 'left' },
+      2: { cellWidth: 22, halign: 'center' }, // Expanded slightly to prevent "Quantity" breaking labels
+      3: { cellWidth: 15, halign: 'center' },
+      4: { cellWidth: 30, halign: 'right' },
+      5: { cellWidth: 29, halign: 'right' }
+    },
+    margin: { left: margin, right: margin },
+    alternateRowStyles: {
+      fillColor: rowHighlight
+    },
+    didParseCell: function(data) {
+      if (data.row.section === 'body' && data.column.index === 1) {
+        if (data.cell.raw.startsWith('Included Accessories:')) {
+          data.cell.styles.fontStyle = 'italic'
+          data.cell.styles.fontSize = 7.5
+          data.cell.styles.textColor = [13, 148, 136] 
+          data.cell.styles.fillColor = [255, 255, 255] 
+        }
+      }
+      if (data.row.section === 'body' && data.row.raw[0] === '') {
+        data.cell.styles.fillColor = [255, 255, 255]
+      }
+    }
+  })
+
+  currentY = doc.lastAutoTable.finalY + margin
+
+  if (currentY > pageHeight - 75) {
+    doc.addPage()
+    currentY = margin + 10
+  }
+
+  const savedSplitPositionBaselineY = currentY
+
+  // ========================================================
+  // BANK DETAILS & INVENTORY STATUS (FIX 2: Replaced Unicode Checkmark)
+  // ========================================================
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.setTextColor(...primaryColor)
+  doc.text('OUR BANK DETAILS', margin, currentY)
+  
+  currentY += 4.5
+  doc.setFontSize(8)
+  doc.setTextColor(...darkText)
+  const bankKeys = ['Account Name:', 'Account Number:', 'Bank:', 'Branch:', 'IFSC:']
+  const bankVals = ['FRIENDS AQUA CARE', '637301010050288', 'UNION BANK', 'Udumalpet', 'UBIN0563731']
+  
+  bankKeys.forEach((key, idx) => {
+    doc.setFont('helvetica', 'bold')
+    doc.text(key, margin, currentY + (idx * 4))
+    doc.setFont('helvetica', 'normal')
+    doc.text(bankVals[idx], margin + 28, currentY + (idx * 4))
+  })
+
+  currentY += 24
+  doc.setFillColor(248, 250, 252)
+  doc.rect(margin, currentY, 65, 14, 'F')
+  doc.setDrawColor(...tableBorder)
+  doc.rect(margin, currentY, 65, 14, 'S')
+  
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7.5)
+  doc.setTextColor(...darkText)
+  doc.text(`Assigned: ${inventoryMetrics.assigned}   |   Used: ${inventoryMetrics.used}   |   Returned: ${inventoryMetrics.returned}`, margin + 3, currentY + 5)
+  
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(13, 148, 136)
+  // Replaced unicode character with standard text string to prevent string corruption
+  doc.text('Status: Inventory Updated', margin + 3, currentY + 10)
+
+  currentY = savedSplitPositionBaselineY
+
+  // ========================================================
+  // SUMMARY CALCULATIONS SECTION
+  // ========================================================
+  const calculatedItemsTotal = products.reduce((sum, p) => sum + (Number(p.qty || 0) * Number(p.price || 0)), 0)
+  const finalGrandTotalValue = (calculatedItemsTotal + Number(serviceCharge)) - Number(discount) + Number(tax)
+
+  const summaryLabels = ['Products Total:', 'Service Charge:', 'Discount:', 'Tax:', 'GRAND TOTAL:']
+  const summaryValues = [
+    formatCurrency(calculatedItemsTotal),
+    formatCurrency(serviceCharge),
+    formatCurrency(discount),
+    formatCurrency(tax),
+    formatCurrency(finalGrandTotalValue)
+  ]
+
+  summaryLabels.forEach((label, idx) => {
+    const rowY = currentY + (idx * 5)
+    const isTotal = idx === summaryLabels.length - 1
+    
+    if (isTotal) {
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.setTextColor(...primaryColor)
+      doc.setLineWidth(0.4)
+      doc.setDrawColor(...primaryColor)
+      doc.line(pageWidth - margin - 75, rowY - 1, pageWidth - margin, rowY - 1)
+      doc.text(label, pageWidth - margin - 72, rowY + 4)
+      doc.text(summaryValues[idx], pageWidth - margin, rowY + 4, { align: 'right' })
+    } else {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.5)
+      doc.setTextColor(...darkText)
+      doc.text(label, pageWidth - margin - 72, rowY)
+      doc.text(summaryValues[idx], pageWidth - margin, rowY, { align: 'right' })
+    }
+  })
+
+  if (notes && notes.trim()) {
+    currentY += 32
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.setTextColor(...darkText)
+    doc.text('Remarks/Notes:', margin, currentY)
+    doc.setFont('helvetica', 'normal')
+    const splitNotesText = doc.splitTextToSize(notes, contentWidth)
+    doc.text(splitNotesText, margin, currentY + 3.5)
+  }
+
+  // ========================================================
+  // SIGNATURE PANELS SECTION
+  // ========================================================
+  let sigY = pageHeight - 32
+  doc.setLineWidth(0.2)
+  doc.setDrawColor(...tableBorder)
+  
+  doc.line(margin, sigY, margin + 40, sigY)
+  doc.line((pageWidth / 2) - 20, sigY, (pageWidth / 2) + 20, sigY)
+  doc.line(pageWidth - margin - 45, sigY, pageWidth - margin, sigY)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7.5)
+  doc.setTextColor(...darkText)
+  doc.text('Receiver Signature', margin + 2, sigY + 4)
+  doc.text('Customer Signature', (pageWidth / 2), sigY + 4, { align: 'center' })
+  
+  doc.setFont('helvetica', 'bold')
+  doc.text('Authorized Signature', pageWidth - margin - 43, sigY + 4)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7)
+  doc.text('For Friends Aqua Care', pageWidth - margin - 43, sigY + 7)
+
+  // ========================================================
+  // FOOTER BANNER STRIP
+  // ========================================================
+  const footerHeight = 12
+  doc.setFillColor(...primaryColor)
+  doc.rect(0, pageHeight - footerHeight, pageWidth, footerHeight, 'F')
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(255, 255, 255)
+  doc.text('Water Purifier  •  Water Softener  •  Solar Water Heater  •  CCTV Camera', pageWidth / 2, pageHeight - 7.5, { align: 'center' })
+  
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7)
+  doc.text('Thank you for choosing Friends Aqua Care.  |  For service support: +91 99765 55199', pageWidth / 2, pageHeight - 3.5, { align: 'center' })
+
+  const fileName = `FAC-Invoice-${invoiceNumber}.pdf`
+  doc.save(fileName)
+
+  return {
+    invoiceNo: invoiceNumber,
+    customerName: customerName || 'Customer',
+    serviceDate: computedDate,
+    totalAmount: finalGrandTotalValue,
+    technician: technicianName || 'Unassigned',
+    fileName: fileName,
+    documentInstance: doc 
+  }
+}
+
+export const generateInvoiceFromJob = (job, selectedProducts = [], serviceCharge = 0, discount = 0, notes = '') => {
+  const normalizedProductsList = (selectedProducts || []).map(item => ({
+    name: item.name || '',
+    qty: Number(item.qty || 0),
+    unit: item.unit || 'Nos',
+    price: Number(item.price || 0),
+    nestedItems: item.nestedItems || [] 
+  }))
+
+  const metricsSummary = {
+    assigned: normalizedProductsList.length,
+    used: normalizedProductsList.filter(p => p.qty > 0).length,
+    returned: Math.max(0, normalizedProductsList.length - normalizedProductsList.filter(p => p.qty > 0).length)
+  }
+
+  const invoiceDataPayload = {
+    invoiceNumber: `FAC-${Date.now()}`,
+    serviceId: job.id || job.serviceId || `SRV-${Math.floor(1000 + Math.random() * 9000)}`,
+    status: job.paymentStatus || 'PAID',
+    paymentMode: job.paymentMode || 'Cash',
+    customerId: job.customerId || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
+    customerName: job.customerName || 'Customer',
+    customerPhone: job.customerPhone || '',
+    customerAddress: job.customerAddress || '',
+    technicianName: job.technicianName || 'Unassigned',
+    serviceDate: job.createdAt || new Date(),
+    serviceType: job.serviceType || 'General Service',
+    problemDescription: job.problemDescription || 'N/A',
+    serviceCharge: Number(serviceCharge),
+    discount: Number(discount),
+    tax: 0, 
+    products: normalizedProductsList,
+    inventoryMetrics: metricsSummary,
+    notes: notes
+  }
+
+  return generateInvoice(invoiceDataPayload)
 }
 
 export default function Invoices() {
-  const { isDark } = useTheme()
-  const [invoices, setInvoices] = useState([])
-  const [completedJobs, setCompletedJobs] = useState([])
-  const [modal, setModal] = useState(false)
-  const [selectedJob, setSelectedJob] = useState(null)
-  const [products, setProducts] = useState([{ name: '', qty: 1, price: 0 }])
-  const [serviceCharge, setServiceCharge] = useState(0)
-  const [notes, setNotes] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    const u1 = onSnapshot(collection(db, 'invoices'), snap =>
-      setInvoices(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)))
-    )
-    const u2 = onSnapshot(query(collection(db, 'service_jobs'), where('status', '==', 'completed')), snap =>
-      setCompletedJobs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    )
-    return () => { u1(); u2() }
-  }, [])
-
-  const handleGenerateInvoice = async () => {
-    if (!selectedJob) return
-    if (products.some(p => !p.name || p.qty <= 0 || p.price <= 0)) {
-      toast.error('Please fill all product details')
-      return
-    }
-
-    setSaving(true)
-    try {
-      const invoiceNumber = `FAC-${Date.now()}`
-      const invoiceData = {
-        invoiceNumber,
-        customerName: selectedJob.customerName,
-        customerPhone: selectedJob.customerPhone,
-        customerAddress: selectedJob.customerAddress,
-        technicianName: selectedJob.technicianName,
-        serviceType: selectedJob.serviceType,
-        problemDescription: selectedJob.problemDescription,
-        serviceCharge: parseFloat(serviceCharge),
-        products,
-        notes,
-      }
-
-      await addDoc(collection(db, 'invoices'), {
-        ...invoiceData,
-        totalAmount: products.reduce((sum, p) => sum + (p.qty * p.price), 0) + parseFloat(serviceCharge),
-        createdAt: serverTimestamp(),
-      })
-      
-      generateInvoice(invoiceData)
-      
-      toast.success('✅ Invoice generated and saved!')
-      setModal(false)
-      setSelectedJob(null)
-      setProducts([{ name: '', qty: 1, price: 0 }])
-      setServiceCharge(0)
-      setNotes('')
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
   return (
     <div className="space-y-5 pb-20 md:pb-0">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Invoices</h2>
-          <p className={`text-sm mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{invoices.length} total invoices</p>
-        </div>
-        <motion.button
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => setModal(true)}
-          className={`px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg transition-shadow ${
-            isDark
-              ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-cyan-500/20 hover:shadow-cyan-500/40'
-              : 'bg-gradient-to-r from-aqua-500 to-aqua-600 text-white shadow-aqua-200 hover:shadow-aqua-300'
-          }`}
-        >
-          + Generate Invoice
-        </motion.button>
+      <div>
+        <h2 className="text-2xl font-black text-gray-900">Invoices</h2>
+        <p className="text-sm mt-0.5 text-gray-400">Invoices are generated from completed service jobs</p>
       </div>
-
-      {/* Invoices List */}
-      <AnimatePresence mode="popLayout">
-        <div className="grid gap-3">
-          {invoices.map((invoice, i) => (
-            <motion.div
-              key={invoice.id}
-              layout
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.97 }}
-              transition={{ delay: i * 0.04 }}
-              className={`rounded-2xl p-4 shadow-sm border ${
-                isDark
-                  ? 'bg-dark-card border-white/10 hover:border-cyan-500/30'
-                  : 'bg-white border-gray-100 hover:shadow-md hover:border-aqua-200'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    {invoice.customerName}
-                  </p>
-                  <p className={`text-xs mt-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                    📋 {invoice.invoiceNumber}
-                  </p>
-                  <p className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                    📅 {formatDate(invoice.createdAt)}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                  <span className={`text-sm font-bold px-3 py-1.5 rounded-full ${
-                    isDark
-                      ? 'bg-emerald-500/20 text-emerald-300'
-                      : 'bg-emerald-100 text-emerald-700'
-                  }`}>
-                    ₹{invoice.totalAmount.toFixed(2)}
-                  </span>
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                    isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-50 text-cyan-700'
-                  }`}>
-                    ✅ Generated
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-
-          {invoices.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className={`rounded-2xl p-12 text-center border border-dashed ${
-                isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
-              }`}
-            >
-              <p className="text-4xl mb-3">📄</p>
-              <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-                No invoices yet
-              </p>
-            </motion.div>
-          )}
-        </div>
-      </AnimatePresence>
-
-      {/* Generate Invoice Modal */}
-      <Modal open={modal} onClose={() => setModal(false)} title="Generate Invoice" size="lg">
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto scrollbar-hide">
-          {/* Select Job */}
-          <div>
-            <label className={`text-xs font-bold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Select Completed Job</label>
-            <select
-              value={selectedJob?.id || ''}
-              onChange={(e) => {
-                const job = completedJobs.find(j => j.id === e.target.value)
-                setSelectedJob(job)
-              }}
-              className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-                isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-              }`}
-            >
-              <option value="">Choose a job...</option>
-              {completedJobs.map(job => (
-                <option key={job.id} value={job.id} className="text-gray-900">
-                  {job.customerName} - {job.serviceType}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {selectedJob && (
-            <>
-              {/* Job Details */}
-              <div className={`rounded-xl p-3 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
-                <p className={`text-xs font-bold ${isDark ? 'text-white/40' : 'text-gray-500'}`}>JOB DETAILS</p>
-                <div className="mt-2 space-y-1 text-sm">
-                  <p className={isDark ? 'text-white' : 'text-gray-900'}><span className="font-semibold">Customer:</span> {selectedJob.customerName}</p>
-                  <p className={isDark ? 'text-white' : 'text-gray-900'}><span className="font-semibold">Phone:</span> {selectedJob.customerPhone}</p>
-                  <p className={isDark ? 'text-white' : 'text-gray-900'}><span className="font-semibold">Type:</span> {selectedJob.serviceType}</p>
-                </div>
-              </div>
-
-              {/* Products */}
-              <div>
-                <label className={`text-xs font-bold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Products Used</label>
-                <div className="space-y-2 mt-2">
-                  {products.map((product, idx) => (
-                    <div key={idx} className="grid grid-cols-4 gap-2">
-                      <input
-                        type="text"
-                        placeholder="Product name"
-                        value={product.name}
-                        onChange={(e) => {
-                          const newProducts = [...products]
-                          newProducts[idx].name = e.target.value
-                          setProducts(newProducts)
-                        }}
-                        className={`col-span-2 border rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-                          isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-                        }`}
-                      />
-                      <input
-                        type="number"
-                        placeholder="Qty"
-                        value={product.qty}
-                        onChange={(e) => {
-                          const newProducts = [...products]
-                          newProducts[idx].qty = parseInt(e.target.value) || 0
-                          setProducts(newProducts)
-                        }}
-                        className={`border rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-                          isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-                        }`}
-                      />
-                      <input
-                        type="number"
-                        placeholder="Price"
-                        value={product.price}
-                        onChange={(e) => {
-                          const newProducts = [...products]
-                          newProducts[idx].price = parseFloat(e.target.value) || 0
-                          setProducts(newProducts)
-                        }}
-                        className={`border rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-                          isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-                        }`}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setProducts([...products, { name: '', qty: 1, price: 0 }])}
-                  className={`mt-2 text-xs font-bold px-3 py-1.5 rounded-lg ${
-                    isDark ? 'bg-white/10 text-cyan-300 hover:bg-white/20' : 'bg-gray-100 text-cyan-600 hover:bg-gray-200'
-                  }`}
-                >
-                  + Add Product
-                </motion.button>
-              </div>
-
-              {/* Service Charge */}
-              <div>
-                <label className={`text-xs font-bold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Service Charge</label>
-                <input
-                  type="number"
-                  value={serviceCharge}
-                  onChange={(e) => setServiceCharge(e.target.value)}
-                  className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-                    isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-                  }`}
-                />
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className={`text-xs font-bold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Notes</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none ${
-                    isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-                  }`}
-                />
-              </div>
-
-              {/* Total */}
-              <div className={`rounded-xl p-3 ${isDark ? 'bg-cyan-500/10 border border-cyan-500/30' : 'bg-cyan-50 border border-cyan-200'}`}>
-                <p className={`text-sm font-bold ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>
-                  Total: ₹{(products.reduce((sum, p) => sum + (p.qty * p.price), 0) + parseFloat(serviceCharge || 0)).toFixed(2)}
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-white/10">
-                <button
-                  onClick={() => setModal(false)}
-                  className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
-                    isDark ? 'bg-white/5 text-white/80 hover:bg-white/10' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleGenerateInvoice}
-                  disabled={saving}
-                  className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white disabled:opacity-60 ${
-                    isDark ? 'bg-gradient-to-r from-cyan-500 to-cyan-600' : 'bg-gradient-to-r from-cyan-500 to-cyan-600'
-                  }`}
-                >
-                  {saving ? 'Generating...' : 'Generate & Download'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
+      <div className="rounded-2xl p-12 text-center border border-dashed bg-white border-gray-200">
+        <p className="text-4xl mb-3">📄</p>
+        <p className="text-sm font-medium text-gray-400">Invoices are generated when you complete a service job</p>
+      </div>
     </div>
   )
 }

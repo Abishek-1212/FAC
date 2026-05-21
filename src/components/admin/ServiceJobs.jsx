@@ -28,7 +28,7 @@ const SERVICE_TYPES = ['New Fitting', 'Service / Repair']
 const EMPTY_FORM = {
   customerName: '', customerPhone: '', customerAddress: '',
   problemDescription: '', serviceType: 'Service / Repair',
-  technicianId: '', priority: 'normal',
+  technicianId: '', priority: 'normal', assignmentMode: 'broadcast',
 }
 
 function formatDate(ts) {
@@ -52,10 +52,6 @@ export default function ServiceJobs() {
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [invoiceModal, setInvoiceModal] = useState(false)
   const [selectedJobForInvoice, setSelectedJobForInvoice] = useState(null)
-  const [stockModal, setStockModal] = useState(false)
-  const [selectedJobForStock, setSelectedJobForStock] = useState(null)
-  const [stockForm, setStockForm] = useState({ items: '' })
-  const [assigningStock, setAssigningStock] = useState(false)
 
   const STATUS_META = isDark ? STATUS_META_DARK : STATUS_META_LIGHT
 
@@ -74,14 +70,37 @@ export default function ServiceJobs() {
     setSaving(true)
     try {
       const techName = technicians.find(t => t.id === form.technicianId)?.name || ''
-      await addDoc(collection(db, 'service_jobs'), {
+      const jobData = {
         ...form,
         technicianName: techName,
-        status: form.technicianId ? 'assigned' : 'pending',
-        stockAssigned: false,
+        status: form.assignmentMode === 'direct' && form.technicianId ? 'assigned' : 'pending',
+        assignmentMode: form.assignmentMode,
         createdAt: serverTimestamp(),
-      })
-      toast.success('✅ Job created!')
+      }
+      
+      const jobRef = await addDoc(collection(db, 'service_jobs'), jobData)
+      
+      // If broadcast mode, create notifications for all technicians
+      if (form.assignmentMode === 'broadcast') {
+        const notificationData = {
+          jobId: jobRef.id,
+          customerName: form.customerName,
+          customerPhone: form.customerPhone,
+          customerAddress: form.customerAddress,
+          serviceType: form.serviceType,
+          priority: form.priority,
+          createdAt: serverTimestamp(),
+          read: false,
+          type: 'job_available'
+        }
+        
+        // Send to all technicians
+        for (const tech of technicians) {
+          await addDoc(collection(db, 'users', tech.id, 'notifications'), notificationData)
+        }
+      }
+      
+      toast.success(form.assignmentMode === 'broadcast' ? '✅ Job posted! Technicians notified.' : '✅ Job assigned!')
       setModal(false)
       setForm(EMPTY_FORM)
     } catch (err) {
@@ -91,26 +110,7 @@ export default function ServiceJobs() {
     }
   }
 
-  const handleAssignStock = async (e) => {
-    e.preventDefault()
-    if (!selectedJobForStock) return
-    setAssigningStock(true)
-    try {
-      await updateDoc(doc(db, 'service_jobs', selectedJobForStock.id), {
-        stockAssigned: true,
-        stockItems: stockForm.items,
-        stockAssignedAt: serverTimestamp(),
-      })
-      toast.success('✅ Stock assigned!')
-      setStockModal(false)
-      setSelectedJobForStock(null)
-      setStockForm({ items: '' })
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setAssigningStock(false)
-    }
-  }
+
 
   const getDateRange = () => {
     if (periodFilter === 'custom' && customDateRange.start && customDateRange.end) {
@@ -187,9 +187,26 @@ export default function ServiceJobs() {
     <div className="space-y-5 pb-20 md:pb-0">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Service Jobs</h2>
-          <p className={`text-sm mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{jobs.length} total jobs</p>
+        <div className="flex items-center gap-3">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => window.history.back()}
+            className={`p-2 rounded-xl transition-all ${
+              isDark
+                ? 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
+                : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 shadow-sm'
+            }`}
+            title="Back to Home"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </motion.button>
+          <div>
+            <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Service Jobs</h2>
+            <p className={`text-sm mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{jobs.length} total jobs</p>
+          </div>
         </div>
         <motion.button
           whileHover={{ scale: 1.04 }}
@@ -205,55 +222,32 @@ export default function ServiceJobs() {
         </motion.button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { key: 'active', label: 'Active', count: counts.active, icon: '🔄' },
-          { key: 'completed', label: 'Completed', count: counts.completed, icon: '✅' },
-          { key: 'all', label: 'Total', count: counts.all, icon: '📊' },
-        ].map(stat => (
-          <motion.div
-            key={stat.key}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`rounded-2xl p-4 shadow-sm border ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'}`}
-          >
-            <p className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>{stat.label}</p>
-            <div className="flex items-end justify-between mt-2">
-              <p className={`text-3xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{stat.count}</p>
-              <span className="text-2xl">{stat.icon}</span>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
       {/* Period Filter Pills */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
         {[
-          { key: 'today', label: 'Today', icon: '📅' },
-          { key: 'week', label: 'This Week', icon: '📆' },
-          { key: 'month', label: 'This Month', icon: '📊' },
-          { key: 'custom', label: 'Custom Range', icon: '📍' },
-        ].map(({ key, label, icon }) => (
+          { key: 'today', label: 'Today' },
+          { key: 'week', label: 'This Week' },
+          { key: 'month', label: 'This Month' },
+          { key: 'custom', label: 'Custom Range' },
+        ].map(({ key, label }) => (
           <motion.button
             key={key}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => {
               setPeriodFilter(key)
               if (key === 'custom') setShowDatePicker(true)
               resetStatusFilter()
             }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
+            className={`px-5 py-3 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
               periodFilter === key
                 ? isDark
-                  ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
-                  : 'bg-aqua-500 text-white shadow-md shadow-aqua-200'
+                  ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
+                  : 'bg-gradient-to-r from-aqua-500 to-aqua-600 text-white shadow-lg shadow-aqua-300/40'
                 : isDark
-                ? 'bg-white/5 text-white/60 border border-white/10 hover:border-cyan-500/30'
-                : 'bg-white text-gray-500 border border-gray-200 hover:border-aqua-300'
+                ? 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:border-white/20'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm'
             }`}
           >
-            <span>{icon}</span>
             {label}
           </motion.button>
         ))}
@@ -309,13 +303,61 @@ export default function ServiceJobs() {
       )}
 
       {/* Status Filter Pills */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide">
         {getStatusOptions().map((key) => {
           const statusConfig = {
-            active: { label: 'Active', icon: '🔄', count: dateFilteredActive.length },
-            completed: { label: 'Completed', icon: '✅', count: dateFilteredCompleted.length },
-            missed: { label: 'Missed', icon: '❌', count: dateFilteredMissed.length },
-            total: { label: 'Total', icon: '📋', count: dateFilteredTotal.length },
+            active: { 
+              label: 'Active Jobs', 
+              count: dateFilteredActive.length,
+              icon: (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              ),
+              gradient: 'from-blue-500 to-blue-600',
+              bgLight: 'bg-blue-50',
+              textLight: 'text-blue-700',
+              borderLight: 'border-blue-200'
+            },
+            completed: { 
+              label: 'Completed', 
+              count: dateFilteredCompleted.length,
+              icon: (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+              gradient: 'from-emerald-500 to-emerald-600',
+              bgLight: 'bg-emerald-50',
+              textLight: 'text-emerald-700',
+              borderLight: 'border-emerald-200'
+            },
+            missed: { 
+              label: 'Missed', 
+              count: dateFilteredMissed.length,
+              icon: (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+              gradient: 'from-red-500 to-red-600',
+              bgLight: 'bg-red-50',
+              textLight: 'text-red-700',
+              borderLight: 'border-red-200'
+            },
+            total: { 
+              label: 'Total Jobs', 
+              count: dateFilteredTotal.length,
+              icon: (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              ),
+              gradient: 'from-gray-500 to-gray-600',
+              bgLight: 'bg-gray-50',
+              textLight: 'text-gray-700',
+              borderLight: 'border-gray-200'
+            },
           }
           const config = statusConfig[key]
           return (
@@ -323,22 +365,24 @@ export default function ServiceJobs() {
               key={key}
               whileTap={{ scale: 0.95 }}
               onClick={() => setStatusFilter(key)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
+              className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-bold whitespace-nowrap transition-all shadow-sm ${
                 statusFilter === key
                   ? isDark
-                    ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
-                    : 'bg-aqua-500 text-white shadow-md shadow-aqua-200'
+                    ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg`
+                    : `bg-gradient-to-r ${config.gradient} text-white shadow-md`
                   : isDark
-                  ? 'bg-white/5 text-white/60 border border-white/10 hover:border-cyan-500/30'
-                  : 'bg-white text-gray-500 border border-gray-200 hover:border-aqua-300'
+                  ? 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10'
+                  : `${config.bgLight} ${config.textLight} border ${config.borderLight} hover:shadow-md`
               }`}
             >
-              <span>{config.icon}</span>
-              {config.label}
-              <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+              <div className={statusFilter === key ? '' : 'opacity-60'}>
+                {config.icon}
+              </div>
+              <span>{config.label}</span>
+              <span className={`min-w-[28px] h-6 flex items-center justify-center px-2 rounded-lg text-xs font-black ${
                 statusFilter === key
-                  ? 'bg-white/20 text-white'
-                  : isDark ? 'bg-white/10 text-white/40' : 'bg-gray-100 text-gray-500'
+                  ? 'bg-white/25 text-white'
+                  : isDark ? 'bg-white/10 text-white/50' : 'bg-white/60 text-gray-700'
               }`}>
                 {config.count}
               </span>
@@ -347,148 +391,108 @@ export default function ServiceJobs() {
         })}
       </div>
 
-      {/* Job cards */}
-      <AnimatePresence mode="popLayout">
-        <div className="grid gap-3 max-h-[calc(100vh-400px)] overflow-y-auto scrollbar-hide">
-          {filtered.map((job, i) => {
-            const meta = STATUS_META[job.status] || STATUS_META.pending
-            const isUrgent = job.priority === 'urgent'
+      {/* Service Jobs List */}
+      <div className={`rounded-2xl border overflow-hidden shadow-sm mt-4 ${
+        isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
+      }`}>
+        <AnimatePresence mode="popLayout">
+          {filtered.length > 0 ? (
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 ${
+              isDark ? 'bg-dark-card' : 'bg-white'
+            }`}>
+              {filtered.map((job, i) => {
+                const meta = STATUS_META[job.status] || STATUS_META.pending
+                const isUrgent = job.priority === 'urgent'
+                const time = job.createdAt?.toDate?.() || (job.createdAt?.seconds ? new Date(job.createdAt.seconds * 1000) : new Date())
 
-            return (
-              <motion.div
-                key={job.id}
-                layout
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                transition={{ delay: i * 0.04, duration: 0.25 }}
-                onClick={() => setDetailJob(job)}
-                className={`rounded-2xl p-3 md:p-4 shadow-sm border cursor-pointer transition-all group ${
-                  isDark
-                    ? 'bg-dark-card border-white/10 hover:border-cyan-500/30 hover:bg-white/5'
-                    : 'bg-white border-gray-100 hover:shadow-md hover:border-aqua-200'
-                }`}
-              >
-                {/* Top Row: Customer Name & Status */}
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${meta.dot}`} />
-                    <p className={`font-bold text-sm md:text-base truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {job.customerName}
-                    </p>
-                  </div>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full border flex-shrink-0 whitespace-nowrap ${meta.color}`}>
-                    {meta.icon} {meta.label}
-                  </span>
-                </div>
-
-                {/* Contact Info */}
-                <div className={`text-xs space-y-0.5 ml-4 mb-2 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                  <p className="truncate">📞 {job.customerPhone}</p>
-                  <p className="truncate">📍 {job.customerAddress}</p>
-                </div>
-
-                {/* Bottom Row: Service Type, Date, Technician */}
-                <div className="flex flex-wrap items-center justify-between gap-2 ml-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                  {job.serviceType && (
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
-                      job.serviceType === 'New Fitting'
-                        ? isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-600'
-                        : isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-50 text-orange-600'
-                    }`}>
-                      {job.serviceType === 'New Fitting' ? '🔧' : '🛠️'}
-                    </span>
-                  )}
-                  <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
-                    isDark ? 'text-white/40' : 'text-gray-400'
-                  }`}>
-                    📅 {formatDate(job.createdAt)}
-                  </span>
-                  {isUrgent && (
-                    <span className={`text-xs px-2 py-1 rounded-full font-bold whitespace-nowrap ${
-                      isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-600'
-                    }`}>
-                      🔴
-                    </span>
-                  )}
-                  {job.technicianName ? (
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
-                      isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-50 text-cyan-700'
-                    }`}>
-                      👷 {job.technicianName.split(' ')[0]}
-                    </span>
-                  ) : (
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
-                      isDark ? 'bg-gray-500/20 text-gray-300' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      ⚠️
-                    </span>
-                  )}
-                  {!job.stockAssigned && job.status !== 'completed' && job.status !== 'verified' && (
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedJobForStock(job)
-                        setStockForm({ items: '' })
-                        setStockModal(true)
-                      }}
-                      className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
-                        isDark ? 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                      }`}
-                    >
-                      📦 Assign Stock
-                    </motion.button>
-                  )}
-                  {job.stockAssigned && (
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
-                      isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700'
-                    }`}>
-                      ✅ Stock Assigned
-                    </span>
-                  )}
-                  </div>
-                  {job.status === 'completed' && (
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedJobForInvoice(job)
-                        setInvoiceModal(true)
-                      }}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap transition-all ${
-                        isDark
-                          ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
-                          : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                      }`}
-                    >
-                      📄 Invoice
-                    </motion.button>
-                  )}
-                </div>
-              </motion.div>
-            )
-          })}
-
-          {filtered.length === 0 && (
+                return (
+                  <motion.div
+                    key={job.id}
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className={`rounded-2xl border p-4 transition-all hover:shadow-lg ${
+                      isDark
+                        ? 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 hover:border-white/20 hover:bg-white/10'
+                        : 'bg-gradient-to-br from-white to-gray-50 border-gray-200 hover:border-gray-300 hover:shadow-md'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between" onClick={() => setDetailJob(job)}>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {job.customerName}
+                        </p>
+                        <p className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+                          {job.customerPhone}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-3">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-lg whitespace-nowrap ${
+                          job.serviceType === 'New Fitting'
+                            ? isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-600'
+                            : isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-50 text-orange-600'
+                        }`}>
+                          {job.serviceType === 'New Fitting' ? '🔧 New Fitting' : '🛠️ Service'}
+                        </span>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-lg whitespace-nowrap ${
+                          job.technicianName
+                            ? isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-50 text-cyan-700'
+                            : isDark ? 'bg-gray-500/20 text-gray-300' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {job.technicianName ? `👷 ${job.technicianName}` : '⚠️ Unassigned'}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+          ) : (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className={`rounded-2xl p-12 text-center border border-dashed ${
-                isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
+              className={`p-12 text-center ${
+                isDark ? 'bg-dark-card' : 'bg-white'
               }`}
             >
               <p className="text-4xl mb-3">🔧</p>
-              <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>No jobs found</p>
+              <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>No service jobs found</p>
             </motion.div>
           )}
-        </div>
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
 
       {/* Create Job Modal */}
       <Modal open={modal} onClose={() => setModal(false)} title="Create Service Job" size="lg">
         <form onSubmit={handleCreate} className="space-y-4 max-h-[70vh] overflow-y-auto scrollbar-hide">
+          {/* Assignment Mode Section - FIRST */}
+          <div>
+            <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>How to Assign?</p>
+            <div className="flex gap-2 mb-3">
+              {[
+                { key: 'broadcast', label: 'Broadcast to All', icon: '📢', desc: 'Technicians can accept' },
+                { key: 'direct', label: 'Direct Assignment', icon: '👤', desc: 'Assign to specific tech' }
+              ].map(mode => (
+                <button
+                  key={mode.key}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, assignmentMode: mode.key }))}
+                  className={`flex-1 py-3 px-3 rounded-xl text-sm font-semibold border-2 transition ${
+                    form.assignmentMode === mode.key
+                      ? isDark ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-cyan-500 bg-cyan-50 text-cyan-700'
+                      : isDark ? 'border-white/10 bg-white/5 text-white/60 hover:border-white/20' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-lg mb-1">{mode.icon}</div>
+                  <div className="font-bold">{mode.label}</div>
+                  <div className="text-xs opacity-70">{mode.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Customer Info Section */}
           <div>
             <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Customer Information</p>
@@ -551,21 +555,26 @@ export default function ServiceJobs() {
             </div>
           </div>
 
+
+
           {/* Assignment Section */}
           <div>
             <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Assignment</p>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Technician</label>
-                <select
-                  value={form.technicianId}
-                  onChange={e => setForm(f => ({ ...f, technicianId: e.target.value }))}
-                  className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
-                >
-                  <option value="" className="text-gray-900">Unassigned</option>
-                  {technicians.map(t => <option key={t.id} value={t.id} className="text-gray-900">{t.name}</option>)}
-                </select>
-              </div>
+              {form.assignmentMode === 'direct' && (
+                <div>
+                  <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Technician *</label>
+                  <select
+                    value={form.technicianId}
+                    onChange={e => setForm(f => ({ ...f, technicianId: e.target.value }))}
+                    required={form.assignmentMode === 'direct'}
+                    className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                  >
+                    <option value="" className="text-gray-900">Select Technician</option>
+                    {technicians.map(t => <option key={t.id} value={t.id} className="text-gray-900">{t.name}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Priority</label>
                 <select
@@ -642,45 +651,6 @@ export default function ServiceJobs() {
             </div>
           )
         })()}
-      </Modal>
-
-      {/* Assign Stock Modal */}
-      <Modal open={stockModal} onClose={() => setStockModal(false)} title="Assign Stock" size="md">
-        {selectedJobForStock && (
-          <form onSubmit={handleAssignStock} className="space-y-4">
-            <div className={`rounded-2xl p-4 border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-              <p className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Job</p>
-              <p className={`font-bold text-sm mt-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedJobForStock.customerName}</p>
-            </div>
-            <div>
-              <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Stock Items</label>
-              <textarea
-                value={stockForm.items}
-                onChange={e => setStockForm({ items: e.target.value })}
-                placeholder="Enter stock items (e.g., Part A, Part B, etc.)"
-                required
-                rows={4}
-                className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
-              />
-            </div>
-            <div className="flex gap-3 pt-4 border-t border-white/10">
-              <button
-                type="button"
-                onClick={() => setStockModal(false)}
-                className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${isDark ? 'bg-white/5 text-white/80 hover:bg-white/10' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={assigningStock}
-                className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white disabled:opacity-60 ${isDark ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 shadow-glow-cyan-sm' : 'bg-gradient-to-r from-cyan-500 to-cyan-600'}`}
-              >
-                {assigningStock ? 'Assigning...' : 'Assign Stock'}
-              </button>
-            </div>
-          </form>
-        )}
       </Modal>
 
       {selectedJobForInvoice && (

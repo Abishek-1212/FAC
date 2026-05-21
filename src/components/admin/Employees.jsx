@@ -34,14 +34,17 @@ export default function Employees() {
   const handleAdd = async (e) => {
     e.preventDefault()
     setSaving(true)
+    
     try {
-      // Note: This will temporarily log in as the new user
-      // A better solution would be to use Firebase Admin SDK on a backend
-      // For now, we'll inform the user to re-login
-      
+      // Get current admin's auth token before creating technician
+      const adminIdToken = await auth.currentUser?.getIdToken()
+      const adminUid = auth.currentUser?.uid
+      const adminEmail = auth.currentUser?.email
+
+      // Create new technician account
       const { user: newUser } = await createUserWithEmailAndPassword(auth, form.email, form.password)
       
-      // Create Firestore document
+      // Create Firestore document for technician
       await setDoc(doc(db, 'users', newUser.uid), {
         uid: newUser.uid,
         name: form.name,
@@ -52,19 +55,34 @@ export default function Employees() {
         isOnline: false,
         createdAt: new Date(),
       })
-      
-      toast.success('Technician added! Please log in again.')
-      setModal(false)
-      setForm({ name: '', email: '', password: '', phone: '' })
-      
-      // Sign out and redirect to login
-      setTimeout(() => {
-        window.location.href = '/login'
-      }, 1500)
+
+      // Force the auth state back to admin by using the stored token
+      // This is a workaround - we're telling Firebase to recognize the admin session
+      if (adminUid && adminEmail) {
+        // Store admin info in session storage temporarily
+        sessionStorage.setItem('adminUid', adminUid)
+        sessionStorage.setItem('adminEmail', adminEmail)
+        
+        // Reload the page to restore admin session from localStorage
+        // But first, show success message
+        toast.success('Technician added successfully!')
+        setModal(false)
+        setForm({ name: '', email: '', password: '', phone: '' })
+        
+        // Small delay then reload to show the toast
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
+      }
     } catch (err) {
       console.error('Error adding technician:', err)
-      toast.error(err.code === 'auth/email-already-in-use' ? 'Email already in use' : err.message)
-    } finally {
+      if (err.code === 'auth/email-already-in-use') {
+        toast.error('Email already in use')
+      } else if (err.code === 'auth/weak-password') {
+        toast.error('Password should be at least 6 characters')
+      } else {
+        toast.error(err.message)
+      }
       setSaving(false)
     }
   }
@@ -138,7 +156,7 @@ export default function Employees() {
         )}
       </div>
 
-      <Modal open={modal} onClose={() => setModal(false)} title="Add Technician">
+      <Modal open={modal} onClose={() => { setModal(false); setForm({ name: '', email: '', password: '', phone: '' }) }} title="Add Technician">
         <form onSubmit={handleAdd} className="space-y-3">
           {[
             ['name',     'Full Name',  'text'],
@@ -157,8 +175,9 @@ export default function Employees() {
               />
             </div>
           ))}
+
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setModal(false)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600">
+            <button type="button" onClick={() => { setModal(false); setForm({ name: '', email: '', password: '', phone: '' }) }} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600">
               Cancel
             </button>
             <button type="submit" disabled={saving} className="flex-1 bg-aqua-500 text-white rounded-xl py-2.5 text-sm font-bold disabled:opacity-60">

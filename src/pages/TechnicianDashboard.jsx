@@ -3,6 +3,8 @@ import Layout from '../components/common/Layout'
 import TechnicianHome from '../components/technician/TechnicianHome'
 import JobDetail from '../components/technician/JobDetail'
 import MyStock from '../components/technician/MyStock'
+import TakeStock from '../components/technician/TakeStock'
+import ReturnStock from '../components/technician/ReturnStock'
 import TechnicianInvoice from '../components/technician/TechnicianInvoice'
 import CompletionReports from '../components/technician/CompletionReports'
 
@@ -21,6 +23,8 @@ export default function TechnicianDashboard() {
         <Route path="job/:jobId" element={<JobDetail />} />
         <Route path="reports" element={<CompletionReports />} />
         <Route path="stock" element={<MyStock />} />
+        <Route path="take-stock" element={<TakeStock />} />
+        <Route path="return-stock" element={<ReturnStock />} />
         <Route path="invoice" element={<TechnicianInvoice />} />
         <Route path="*" element={<Navigate to="/technician" replace />} />
       </Routes>

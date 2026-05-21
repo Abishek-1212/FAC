@@ -30,6 +30,7 @@ export default function Layout({ children, navItems, title }) {
   const [otp, setOtp] = useState('')
   const [newPw, setNewPw] = useState('')
   const [pwSaving, setPwSaving] = useState(false)
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   const isAdmin = profile?.role === 'admin'
   const inInventory = location.pathname.startsWith('/inventory')
@@ -171,9 +172,10 @@ export default function Layout({ children, navItems, title }) {
               <AnimatePresence>
                 {profileOpen && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
+                    initial={{ opacity: 0, y: -12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: prefersReducedMotion ? 0 : 0.15 }}
                     className={`absolute right-0 top-14 w-64 rounded-2xl shadow-2xl overflow-hidden z-50 ${isDark ? 'bg-dark-card border border-dark-border' : 'bg-white border border-light-border'}`}
                   >
                     {/* Profile Header */}
