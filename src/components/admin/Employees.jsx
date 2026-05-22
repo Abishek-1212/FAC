@@ -97,8 +97,13 @@ export default function Employees() {
 
   return (
     <div className="space-y-4 pb-20 md:pb-0">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-black text-gray-800">Technicians</h2>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button onClick={() => window.history.back()} className="p-2 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 shadow-sm transition">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          </button>
+          <h2 className="text-xl font-black text-gray-800">Technicians</h2>
+        </div>
         <button
           onClick={() => setModal(true)}
           className="bg-aqua-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-aqua-600 transition"

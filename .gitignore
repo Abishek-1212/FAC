@@ -1,4 +1,21 @@
 # Dependencies
 node_modules/
 
+# Build output
+dist/
 
+# Environment variables (Firebase keys - DO NOT commit)
+.env
+.env.local
+.env.production
+
+# Firebase
+.firebase/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

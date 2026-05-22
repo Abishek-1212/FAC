@@ -71,9 +71,40 @@ export default function InvoiceModal({ open, onClose, job, isDark }) {
   const handleGenerateInvoice = async () => {
     setSaving(true)
     try {
-      const invoiceNumber = `FAC-${Date.now()}`
+      const billNo = `FAC-${Date.now()}`
+      const billAmount = total
       const invoiceData = {
-        invoiceNumber,
+        // ViewInvoices compatible fields
+        billNo,
+        jobId: job.id,
+        customerName: job.customerName,
+        customerPhone: job.customerPhone,
+        customerAddress: job.customerAddress,
+        technicianId: job.technicianId,
+        technicianName: job.technicianName,
+        serviceType: job.serviceType,
+        components: products.map(p => ({ name: p.name, quantity: p.qty, amount: p.qty * p.price })),
+        componentsTotal: subtotal,
+        billAmount,
+        amountReceived: billAmount,
+        paymentPending: 0,
+        modeOfPayment: 'Cash',
+        invoiceDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        submittedByTechnician: true,
+        adminViewed: false,
+        generatedDate: serverTimestamp(),
+        // Legacy fields
+        invoiceNumber: billNo,
+        totalAmount: billAmount,
+        serviceCharge: parseFloat(serviceCharge || 0),
+        notes,
+        createdAt: serverTimestamp(),
+      }
+
+      await addDoc(collection(db, 'invoices'), invoiceData)
+      
+      generateInvoice({
+        invoiceNumber: billNo,
         customerName: job.customerName,
         customerPhone: job.customerPhone,
         customerAddress: job.customerAddress,
@@ -83,20 +114,11 @@ export default function InvoiceModal({ open, onClose, job, isDark }) {
         serviceCharge: parseFloat(serviceCharge),
         products,
         notes,
-      }
-
-      const invoiceRef = await addDoc(collection(db, 'invoices'), {
-        ...invoiceData,
-        jobId: job.id,
-        totalAmount: total,
-        createdAt: serverTimestamp(),
       })
       
-      generateInvoice(invoiceData)
-      
-      toast.success('✅ Invoice generated!')
+      toast.success('✅ Invoice generated! View it in My Invoices.')
       setSaving(false)
-      return invoiceRef.id
+      return billNo
     } catch (err) {
       toast.error(err.message)
       setSaving(false)
@@ -107,23 +129,17 @@ export default function InvoiceModal({ open, onClose, job, isDark }) {
   const handleShareInvoice = async () => {
     setSharing(true)
     try {
-      const invoiceId = await handleGenerateInvoice()
-      if (!invoiceId) {
-        setSharing(false)
-        return
-      }
+      const billNo = await handleGenerateInvoice()
+      if (!billNo) { setSharing(false); return }
 
       const phone = job.customerPhone.replace(/\D/g, '')
-      const message = `Hi ${job.customerName}, your invoice for ${job.serviceType} service is ready. Invoice #FAC-${Date.now()}`
+      const message = `Hi ${job.customerName}, your invoice for ${job.serviceType} service is ready. Invoice #${billNo}`
       const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
       
       window.open(whatsappUrl, '_blank')
-      toast.success('✅ Invoice shared! Redirecting...')
+      toast.success('✅ Invoice shared!')
       
-      setTimeout(() => {
-        onClose()
-        window.location.href = '/technician'
-      }, 1500)
+      setTimeout(() => { onClose() }, 1500)
     } catch (err) {
       toast.error(err.message)
     } finally {

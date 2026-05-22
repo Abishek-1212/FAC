@@ -6,14 +6,16 @@ import Employees from '../components/admin/Employees'
 import ServiceJobs from '../components/admin/ServiceJobs'
 import Invoices from '../components/admin/Invoices'
 import Reports from '../components/admin/Reports'
+import Inventory from '../components/admin/Inventory'
 
 const NAV = [
   { to: '/admin', icon: '🏠', label: 'Dashboard' },
   { to: '/admin/jobs', icon: '🔧', label: 'Service Jobs' },
   { to: '/admin/products', icon: '📦', label: 'Products' },
+  { to: '/admin/inventory', icon: '🏪', label: 'Inventory' },
   { to: '/admin/employees', icon: '👷', label: 'Technicians' },
   { to: '/admin/invoices', icon: '🧾', label: 'Invoices' },
-  { to: '/admin/reports', icon: '📊', label: 'Reports' },
+  { to: '/admin/reports', icon: '📈', label: 'Reports' },
 ]
 
 export default function AdminDashboard() {
@@ -23,6 +25,7 @@ export default function AdminDashboard() {
         <Route index element={<AdminHome />} />
         <Route path="jobs" element={<ServiceJobs />} />
         <Route path="products" element={<Products />} />
+        <Route path="inventory" element={<Inventory />} />
         <Route path="employees" element={<Employees />} />
         <Route path="invoices" element={<Invoices />} />
         <Route path="reports" element={<Reports />} />

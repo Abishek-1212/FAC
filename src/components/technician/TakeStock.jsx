@@ -18,8 +18,8 @@ export default function TakeStock() {
   const MAX_PER_PRODUCT = 20
 
   useEffect(() => {
-    const u1 = onSnapshot(collection(db, 'products'), snap =>
-      setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    const u1 = onSnapshot(collection(db, 'inventory'), snap =>
+      setProducts(snap.docs.map(d => ({ id: d.id, name: d.data().productName || d.data().name, price: d.data().price, ...d.data() })))
     )
     
     // Get technician's current stock to check limits
@@ -153,6 +153,27 @@ export default function TakeStock() {
           timestamp: serverTimestamp(),
         })
       }
+
+      // Create admin notification for stock taken
+      const itemsSummary = items.map(row => {
+        const product = products.find(p => p.id === row.productId)
+        return `${product.name} (${row.quantity})`
+      }).join(', ')
+
+      await addDoc(collection(db, 'notifications'), {
+        type: 'stock_taken',
+        technicianId: user.uid,
+        technicianName: profile?.name || 'Technician',
+        items: items.map(row => ({
+          productId: row.productId,
+          productName: products.find(p => p.id === row.productId)?.name,
+          quantity: Number(row.quantity)
+        })),
+        totalItems: items.length,
+        message: `${profile?.name || 'Technician'} took stock: ${itemsSummary}`,
+        createdAt: serverTimestamp(),
+        read: false,
+      })
 
       toast.success(`✅ ${items.length} product${items.length > 1 ? 's' : ''} taken from inventory`)
       setItems([{ ...EMPTY_ITEM }])

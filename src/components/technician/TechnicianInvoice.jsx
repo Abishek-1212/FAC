@@ -4,6 +4,7 @@ import { db } from '../../firebase'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import Modal from '../common/Modal'
+import InvoicePDF from '../common/InvoicePDF'
 import toast from 'react-hot-toast'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -23,6 +24,8 @@ function generateBillNo() {
   return `FAC${year}${month}${random}`
 }
 
+const PAYMENT_MODES = ['Cash', 'UPI', 'Net Banking', 'None']
+
 export default function TechnicianInvoice() {
   const { user, profile } = useAuth()
   const { isDark } = useTheme()
@@ -31,14 +34,11 @@ export default function TechnicianInvoice() {
   const [myStock, setMyStock] = useState([])
   const [selectedJob, setSelectedJob] = useState(null)
   const [viewInvoice, setViewInvoice] = useState(null)
+  const [filterPeriod, setFilterPeriod] = useState('all')
   const [form, setForm] = useState({
-    customerName: '',
-    customerPhone: '',
-    customerAddress: '',
-    serviceType: '',
-    components: [],
-    billAmount: '',
-    amountReceived: '',
+    customerName: '', customerPhone: '', customerAddress: '',
+    serviceType: '', components: [],
+    billAmount: '', amountReceived: '', modeOfPayment: 'Cash',
     date: formatDate(null)
   })
   const [saving, setSaving] = useState(false)
@@ -47,26 +47,37 @@ export default function TechnicianInvoice() {
 
   useEffect(() => {
     if (!user) return
-    // Get all jobs assigned to this technician
     const u1 = onSnapshot(
       query(collection(db, 'service_jobs'), where('technicianId', '==', user.uid)),
       snap => setMyJobs(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)))
     )
-    // Get all invoices created by this technician
     const u2 = onSnapshot(
       query(collection(db, 'invoices'), where('technicianId', '==', user.uid)),
-      snap => setMyInvoices(
-        snap.docs.map(d => ({ id: d.id, ...d.data() }))
-          .sort((a, b) => (b.generatedDate?.seconds || 0) - (a.generatedDate?.seconds || 0))
-      )
+      snap => setMyInvoices(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.generatedDate?.seconds || 0) - (a.generatedDate?.seconds || 0)))
     )
-    // Get technician's stock
     const u3 = onSnapshot(
-      query(collection(db, 'stock_assignments'), where('technicianId', '==', user.uid), where('status', '==', 'assigned')),
+      query(collection(db, 'technician_stock'), where('technicianId', '==', user.uid), where('status', '==', 'active')),
       snap => setMyStock(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
     return () => { u1(); u2(); u3() }
   }, [user])
+
+  // Filter invoices by period
+  const getFilteredInvoices = () => {
+    if (filterPeriod === 'all') return myInvoices
+    const now = new Date()
+    return myInvoices.filter(inv => {
+      const d = inv.generatedDate?.toDate ? inv.generatedDate.toDate() : new Date(inv.generatedDate?.seconds * 1000)
+      if (filterPeriod === 'week') {
+        const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7)
+        return d >= weekAgo
+      }
+      if (filterPeriod === 'month') {
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+      }
+      return true
+    })
+  }
 
   const toggleJobStatus = async (job) => {
     setToggling(true)
@@ -92,8 +103,7 @@ export default function TechnicianInvoice() {
       customerAddress: job.customerAddress || '',
       serviceType: job.serviceType || 'Service / Repair',
       components: [],
-      billAmount: '',
-      amountReceived: '',
+      billAmount: '', amountReceived: '', modeOfPayment: 'Cash',
       date: formatDate(null)
     })
   }
@@ -113,7 +123,7 @@ export default function TechnicianInvoice() {
     setSaving(true)
     try {
       const billNo = generateBillNo()
-      
+      const pending = Number(form.billAmount) - Number(form.amountReceived)
       const invoiceData = {
         billNo,
         jobId: selectedJob.id,
@@ -128,323 +138,323 @@ export default function TechnicianInvoice() {
         componentsTotal,
         billAmount: Number(form.billAmount),
         amountReceived: Number(form.amountReceived),
-        paymentPending: Number(form.billAmount) - Number(form.amountReceived),
+        paymentPending: pending < 0 ? 0 : pending,
+        modeOfPayment: form.modeOfPayment,
         invoiceDate: form.date,
         submittedByTechnician: true,
         adminViewed: false,
         generatedDate: serverTimestamp(),
       }
-      
-      await addDoc(collection(db, 'invoices'), invoiceData)
-      
-      // Reduce stock
+      const docRef = await addDoc(collection(db, 'invoices'), invoiceData)
+
+      // Update used stock
       for (const comp of form.components) {
         const stockItem = myStock.find(s => s.productName === comp.name)
         if (stockItem && comp.quantity > 0) {
-          const newUsed = (stockItem.usedQuantity || 0) + comp.quantity
-          await updateDoc(doc(db, 'stock_assignments', stockItem.id), {
-            usedQuantity: newUsed
+          await updateDoc(doc(db, 'technician_stock', stockItem.id), {
+            usedQuantity: (stockItem.usedQuantity || 0) + Number(comp.quantity)
           })
         }
       }
-      
-      toast.success('✅ Invoice generated successfully!')
-      setSelectedJob(null)
-      setForm({
-        customerName: '',
-        customerPhone: '',
-        customerAddress: '',
-        serviceType: '',
-        components: [],
-        billAmount: '',
-        amountReceived: '',
-        date: formatDate(null)
+
+      // Notify admin
+      await addDoc(collection(db, 'notifications'), {
+        type: 'invoice_generated',
+        invoiceId: docRef.id,
+        billNo,
+        technicianId: user.uid,
+        technicianName: profile?.name || '',
+        customerName: form.customerName,
+        customerPhone: form.customerPhone,
+        billAmount: Number(form.billAmount),
+        amountReceived: Number(form.amountReceived),
+        paymentPending: pending < 0 ? 0 : pending,
+        read: false,
+        createdAt: serverTimestamp(),
+        message: `New invoice ${billNo} by ${profile?.name || 'Technician'} for ${form.customerName}`,
       })
+
+      toast.success('✅ Invoice generated and admin notified!')
+      setSelectedJob(null)
     } catch (err) {
-      console.error('Error creating invoice:', err)
       toast.error(err.message)
     } finally {
       setSaving(false)
     }
   }
 
-  const downloadPDF = async () => {
-    if (!invoiceRef.current) return
+  const generatePDF = async (inv) => {
+    if (!invoiceRef.current) return null
     try {
-      const canvas = await html2canvas(invoiceRef.current, { 
-        scale: 2, 
-        backgroundColor: '#ffffff',
-        windowWidth: 794, // A4 width in pixels at 96 DPI
-        windowHeight: 1123 // A4 height in pixels at 96 DPI
-      })
+      const canvas = await html2canvas(invoiceRef.current, { scale: 2, backgroundColor: '#ffffff', windowWidth: 794, windowHeight: 1123 })
       const pdf = new jsPDF('p', 'mm', 'a4')
       const imgData = canvas.toDataURL('image/png')
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = pdf.internal.pageSize.getHeight()
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
-      const fileName = `FAC_Invoice_${viewInvoice.billNo}_${viewInvoice.customerName.replace(/\s+/g, '_')}.pdf`
-      pdf.save(fileName)
-      toast.success('📥 PDF downloaded!')
-      return pdf
+      pdf.addImage(imgData, 'PNG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight())
+      return { pdf, fileName: `FAC_Invoice_${inv.billNo}_${inv.customerName.replace(/\s+/g, '_')}.pdf` }
     } catch (err) {
-      console.error('PDF generation error:', err)
       toast.error('Failed to generate PDF')
       return null
     }
   }
 
-  const shareWhatsApp = async () => {
-    if (!viewInvoice) return
-    
-    try {
-      // First download the PDF
-      toast.loading('Generating PDF...')
-      await downloadPDF()
-      toast.dismiss()
-      
-      // Then open WhatsApp with message
-      const message = `*FRIENDS AQUA CARE - Invoice*\n\nBill No: ${viewInvoice.billNo}\nCustomer: ${viewInvoice.customerName}\nPhone: ${viewInvoice.customerPhone}\nService: ${viewInvoice.serviceType}\nBill Amount: ₹${viewInvoice.billAmount.toLocaleString('en-IN')}\nAmount Received: ₹${viewInvoice.amountReceived.toLocaleString('en-IN')}\n${viewInvoice.paymentPending > 0 ? `Pending: ₹${viewInvoice.paymentPending.toLocaleString('en-IN')}\n` : ''}\n\nPDF has been downloaded. Please attach it manually in WhatsApp.\n\nThank you for choosing Friends Aqua Care!`
-      
-      // Open WhatsApp Web (allows selecting contact)
-      const url = `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`
-      window.open(url, '_blank')
-      
-      toast.success('📱 PDF downloaded! Now attach it in WhatsApp')
-    } catch (err) {
-      toast.error('Failed to share')
-    }
+  const downloadPDF = async () => {
+    const result = await generatePDF(viewInvoice)
+    if (!result) return
+    result.pdf.save(result.fileName)
+    toast.success('📥 PDF downloaded!')
   }
 
-  const completedJobs = myJobs.filter(j => j.status === 'completed')
-  const pendingJobs = myJobs.filter(j => j.status !== 'completed')
+  const shareWhatsApp = async () => {
+    const result = await generatePDF(viewInvoice)
+    if (!result) return
+    result.pdf.save(result.fileName)
+    let phone = (viewInvoice.customerPhone || '').replace(/[\s-]/g, '')
+    if (!phone.startsWith('91') && phone.length === 10) phone = '91' + phone
+    const msg = `*FRIENDS AQUA CARE - Invoice*\n\nBill No: ${viewInvoice.billNo}\nCustomer: ${viewInvoice.customerName}\nService: ${viewInvoice.serviceType}\nDate: ${viewInvoice.invoiceDate}\n\nBill Amount: ₹${viewInvoice.billAmount.toLocaleString('en-IN')}\nAmount Received: ₹${viewInvoice.amountReceived.toLocaleString('en-IN')}\n${viewInvoice.paymentPending > 0 ? `Pending: ₹${viewInvoice.paymentPending.toLocaleString('en-IN')}\n` : ''}\nPDF downloaded. Please attach it in WhatsApp.\n\nThank you for choosing Friends Aqua Care!`
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
+    toast.success('📱 PDF downloaded! Attach it in WhatsApp.')
+  }
+
+  const t = isDark ? 'text-white' : 'text-gray-900'
+  const s = isDark ? 'text-white/40' : 'text-gray-400'
+  const cardBase = `rounded-2xl border ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'}`
+  const inputCls = `w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`
+  const labelCls = `text-xs font-semibold uppercase ${isDark ? 'text-white/50' : 'text-gray-500'}`
+
+  const filteredInvoices = getFilteredInvoices()
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       {/* Header */}
-      <div>
-        <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Invoice Management</h2>
-        <p className={`text-sm mt-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Mark jobs as completed and generate invoices</p>
+      <div className="flex items-center gap-3">
+        <button onClick={() => window.history.back()} className={`p-2 rounded-xl border transition ${isDark ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'}`}>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+        </button>
+        <div>
+          <h2 className={`text-2xl font-black ${t}`}>Invoice Management</h2>
+          <p className={`text-sm mt-0.5 ${s}`}>Mark jobs complete and generate invoices</p>
+        </div>
       </div>
 
-      {/* My Jobs with Status Toggle */}
-      <div className={`rounded-2xl border overflow-hidden ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'}`}>
-        <div className={`px-6 py-4 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-          <h3 className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>My Jobs</h3>
-          <p className={`text-xs mt-1 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Toggle status to completed, then generate invoice</p>
+      {/* MY JOBS */}
+      <div className={`${cardBase} overflow-hidden`}>
+        <div className={`px-5 py-4 border-b ${isDark ? 'border-white/10' : 'border-gray-100'}`}>
+          <h3 className={`font-black text-base ${t}`}>My Jobs</h3>
+          <p className={`text-xs mt-0.5 ${s}`}>Toggle to completed, then generate invoice</p>
         </div>
-
         <div className={`divide-y ${isDark ? 'divide-white/5' : 'divide-gray-100'}`}>
           {myJobs.length === 0 ? (
-            <div className="p-12 text-center">
-              <p className="text-4xl mb-3">📋</p>
-              <p className={`text-sm ${isDark ? 'text-white/40' : 'text-gray-500'}`}>No jobs assigned yet</p>
+            <div className="p-10 text-center">
+              <p className="text-3xl mb-2">📋</p>
+              <p className={`text-sm ${s}`}>No jobs assigned yet</p>
             </div>
-          ) : (
-            myJobs.map(job => {
-              const isCompleted = job.status === 'completed'
-              const hasInvoice = myInvoices.some(inv => inv.jobId === job.id)
-              
-              return (
-                <motion.div
-                  key={job.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className={`p-4 ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'} transition`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    {/* Job Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <p className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{job.customerName}</p>
-                        {hasInvoice && (
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700'}`}>
-                            ✓ Invoice Generated
-                          </span>
-                        )}
-                      </div>
-                      <p className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>📞 {job.customerPhone}</p>
-                      <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>📍 {job.customerAddress}</p>
-                      <p className={`text-xs mt-1 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>{job.problemDescription}</p>
+          ) : myJobs.map(job => {
+            const isCompleted = job.status === 'completed'
+            const hasInvoice = myInvoices.some(inv => inv.jobId === job.id)
+            return (
+              <div key={job.id} className={`p-4 ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'} transition`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <p className={`font-bold text-sm ${t}`}>{job.customerName}</p>
+                      {hasInvoice && <span className={`text-xs px-2 py-0.5 rounded-full ${isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700'}`}>✓ Invoice Done</span>}
                     </div>
-
-                    {/* Status Toggle & Generate Button */}
-                    <div className="flex flex-col items-end gap-2">
-                      {/* Toggle */}
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-semibold ${isCompleted ? (isDark ? 'text-green-400' : 'text-green-600') : (isDark ? 'text-amber-400' : 'text-amber-600')}`}>
-                          {isCompleted ? 'Completed' : 'Pending'}
-                        </span>
-                        <button
-                          onClick={() => toggleJobStatus(job)}
-                          disabled={toggling}
-                          className={`relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none disabled:opacity-60 ${
-                            isCompleted ? 'bg-green-500' : 'bg-gray-300'
-                          }`}
-                        >
-                          <motion.div
-                            animate={{ x: isCompleted ? 24 : 2 }}
-                            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                            className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-md"
-                          />
-                        </button>
-                      </div>
-
-                      {/* Generate Invoice Button */}
-                      {isCompleted && !hasInvoice && (
-                        <button
-                          onClick={() => openInvoiceForm(job)}
-                          className={`text-xs font-bold px-4 py-2 rounded-xl transition ${
-                            isDark 
-                              ? 'bg-cyan-500 text-white hover:bg-cyan-600'
-                              : 'bg-aqua-500 text-white hover:bg-aqua-600'
-                          }`}
-                        >
-                          📄 Generate Invoice
-                        </button>
-                      )}
-                    </div>
+                    <p className={`text-xs ${s}`}>📞 {job.customerPhone}</p>
+                    <p className={`text-xs ${s}`}>📍 {job.customerAddress}</p>
                   </div>
-                </motion.div>
-              )
-            })
-          )}
-        </div>
-      </div>
-
-      {/* Generated Invoices */}
-      {myInvoices.length > 0 && (
-        <div>
-          <h3 className={`font-bold text-lg mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>Generated Invoices</h3>
-          <div className="grid gap-3">
-            {myInvoices.map(inv => (
-              <div
-                key={inv.id}
-                onClick={() => setViewInvoice(inv)}
-                className={`rounded-2xl p-4 shadow-sm border cursor-pointer transition ${
-                  isDark 
-                    ? 'bg-dark-card border-white/10 hover:border-cyan-500/30'
-                    : 'bg-white border-gray-100 hover:border-aqua-200'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={`font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{inv.customerName}</p>
-                    <p className={`text-xs mt-0.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>📞 {inv.customerPhone}</p>
-                    <p className={`text-xs mt-0.5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>{inv.invoiceDate}</p>
-                    <div className="flex gap-2 mt-2">
-                      <p className={`text-sm font-bold ${isDark ? 'text-cyan-400' : 'text-aqua-600'}`}>Bill: ₹{inv.billAmount.toLocaleString('en-IN')}</p>
-                      <p className={`text-sm font-bold ${isDark ? 'text-green-400' : 'text-green-600'}`}>Received: ₹{inv.amountReceived.toLocaleString('en-IN')}</p>
-                      {inv.paymentPending > 0 && (
-                        <p className={`text-sm font-bold ${isDark ? 'text-red-400' : 'text-red-600'}`}>Pending: ₹{inv.paymentPending.toLocaleString('en-IN')}</p>
-                      )}
+                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-semibold ${isCompleted ? 'text-green-500' : 'text-amber-500'}`}>
+                        {isCompleted ? 'Completed' : 'Pending'}
+                      </span>
+                      <button
+                        onClick={() => toggleJobStatus(job)}
+                        disabled={toggling}
+                        className={`relative w-11 h-6 rounded-full transition-colors duration-300 focus:outline-none disabled:opacity-60 ${isCompleted ? 'bg-green-500' : isDark ? 'bg-white/20' : 'bg-gray-300'}`}
+                      >
+                        <motion.div
+                          animate={{ x: isCompleted ? 22 : 2 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                          className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-md"
+                        />
+                      </button>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                      isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-700'
-                    }`}>
-                      {inv.billNo}
-                    </span>
+                    {isCompleted && !hasInvoice && (
+                      <button
+                        onClick={() => openInvoiceForm(job)}
+                        className="text-xs font-bold px-3 py-1.5 rounded-xl bg-cyan-500 text-white hover:bg-cyan-600 transition"
+                      >
+                        📄 Generate Invoice
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* VIEW INVOICES */}
+      <div>
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+          <h3 className={`font-black text-base ${t}`}>📋 View Invoices ({myInvoices.length})</h3>
+          <div className="flex gap-2">
+            {[['all', 'All'], ['week', 'This Week'], ['month', 'This Month']].map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setFilterPeriod(key)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${filterPeriod === key ? 'bg-cyan-500 text-white' : isDark ? 'bg-white/10 text-white/60 hover:bg-white/20' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                {label}
+              </button>
             ))}
           </div>
         </div>
-      )}
 
-      {/* Generate Invoice Modal */}
+        {filteredInvoices.length === 0 ? (
+          <div className={`${cardBase} p-10 text-center`}>
+            <p className="text-3xl mb-2">📄</p>
+            <p className={`text-sm ${s}`}>No invoices found</p>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {filteredInvoices.map(inv => (
+              <motion.div
+                key={inv.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => setViewInvoice(inv)}
+                className={`${cardBase} p-4 cursor-pointer transition hover:border-cyan-400`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <p className={`font-bold text-sm ${t}`}>{inv.customerName}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${inv.paymentPending > 0 ? isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700' : isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700'}`}>
+                        {inv.paymentPending > 0 ? 'Pending' : '✓ Paid'}
+                      </span>
+                    </div>
+                    <p className={`text-xs ${s}`}>📞 {inv.customerPhone} • {inv.invoiceDate}</p>
+                    <div className="flex gap-3 mt-1.5 flex-wrap">
+                      <p className={`text-xs font-bold ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>₹{inv.billAmount.toLocaleString('en-IN')}</p>
+                      <p className={`text-xs font-bold text-green-500`}>Rcvd: ₹{inv.amountReceived.toLocaleString('en-IN')}</p>
+                      {inv.paymentPending > 0 && <p className="text-xs font-bold text-red-500">Due: ₹{inv.paymentPending.toLocaleString('en-IN')}</p>}
+                    </div>
+                  </div>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-700'}`}>
+                    {inv.billNo}
+                  </span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* GENERATE INVOICE MODAL */}
       <Modal open={!!selectedJob} onClose={() => setSelectedJob(null)} title="Generate Invoice" size="xl">
         {selectedJob && (
-          <form onSubmit={handleGenerate} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
-            <div className="grid grid-cols-2 gap-3">
+          <form onSubmit={handleGenerate} className="space-y-4 max-h-[75vh] overflow-y-auto px-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase">Customer Name</label>
-                <input type="text" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} required className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-300" />
+                <label className={labelCls}>Customer Name</label>
+                <input type="text" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} required className={inputCls} />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase">Phone Number</label>
-                <input type="tel" value={form.customerPhone} onChange={e => setForm(f => ({ ...f, customerPhone: e.target.value }))} required className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-300" />
+                <label className={labelCls}>Phone Number</label>
+                <input type="tel" value={form.customerPhone} onChange={e => setForm(f => ({ ...f, customerPhone: e.target.value }))} required className={inputCls} />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase">Location / Address</label>
-              <textarea value={form.customerAddress} onChange={e => setForm(f => ({ ...f, customerAddress: e.target.value }))} required rows={2} className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-300 resize-none" />
+              <label className={labelCls}>Location / Address</label>
+              <textarea value={form.customerAddress} onChange={e => setForm(f => ({ ...f, customerAddress: e.target.value }))} required rows={2} className={`${inputCls} resize-none`} />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase">Service Type</label>
-                <input type="text" value={form.serviceType} onChange={e => setForm(f => ({ ...f, serviceType: e.target.value }))} required className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-300" />
+                <label className={labelCls}>Service Type</label>
+                <input type="text" value={form.serviceType} onChange={e => setForm(f => ({ ...f, serviceType: e.target.value }))} required className={inputCls} />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase">Date</label>
-                <input type="text" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-300" />
+                <label className={labelCls}>Date</label>
+                <input type="text" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required className={inputCls} />
               </div>
             </div>
 
+            {/* Components */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-gray-500 uppercase">Components Used</label>
-                <button type="button" onClick={addComponent} className="text-xs text-aqua-600 font-semibold">+ Add</button>
+                <label className={labelCls}>Components Used</label>
+                <button type="button" onClick={addComponent} className="text-xs font-bold text-cyan-500 hover:text-cyan-600">+ Add</button>
               </div>
               {form.components.map((comp, i) => (
                 <div key={i} className="flex gap-2 mb-2">
-                  <select value={comp.name} onChange={e => updateComponent(i, 'name', e.target.value)} className="flex-1 border border-gray-200 rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-aqua-300">
-                    <option value="">Select from stock</option>
+                  <select value={comp.name} onChange={e => updateComponent(i, 'name', e.target.value)} className={`flex-1 border rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
+                    <option value="">Select component</option>
                     {myStock.map(s => (
-                      <option key={s.id} value={s.productName}>{s.productName} (Available: {(s.assignedQuantity || 0) - (s.usedQuantity || 0)})</option>
+                      <option key={s.id} value={s.productName}>{s.productName}</option>
                     ))}
                   </select>
-                  <input type="number" value={comp.quantity} onChange={e => updateComponent(i, 'quantity', Number(e.target.value))} min={1} placeholder="Qty" className="w-16 border border-gray-200 rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-aqua-300" />
-                  <input type="number" value={comp.amount} onChange={e => updateComponent(i, 'amount', Number(e.target.value))} placeholder="₹" className="w-20 border border-gray-200 rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-aqua-300" />
-                  <button type="button" onClick={() => removeComponent(i)} className="text-red-400 text-lg">×</button>
+                  <input type="number" value={comp.quantity} onChange={e => updateComponent(i, 'quantity', Number(e.target.value))} min={1} placeholder="Qty" className={`w-16 border rounded-xl px-2 py-2 text-xs text-center focus:outline-none focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`} />
+                  <input type="number" value={comp.amount} onChange={e => updateComponent(i, 'amount', Number(e.target.value))} placeholder="₹" className={`w-20 border rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`} />
+                  <button type="button" onClick={() => removeComponent(i)} className="text-red-400 text-lg px-1">×</button>
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            {/* Bill Amount + Amount Received + Mode of Payment */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase">Bill Amount (₹)</label>
-                <input type="number" value={form.billAmount} onChange={e => setForm(f => ({ ...f, billAmount: e.target.value }))} required className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-300" />
+                <label className={labelCls}>Bill Amount (₹)</label>
+                <input type="number" value={form.billAmount} onChange={e => setForm(f => ({ ...f, billAmount: e.target.value }))} required min="0" className={inputCls} />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase">Amount Received (₹)</label>
-                <input type="number" value={form.amountReceived} onChange={e => setForm(f => ({ ...f, amountReceived: e.target.value }))} required placeholder="Enter 0 if pending" className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-300" />
+                <label className={labelCls}>Amount Received (₹)</label>
+                <input type="number" value={form.amountReceived} onChange={e => setForm(f => ({ ...f, amountReceived: e.target.value }))} required min="0" placeholder="0 if pending" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Mode of Payment</label>
+                <select value={form.modeOfPayment} onChange={e => setForm(f => ({ ...f, modeOfPayment: e.target.value }))} className={inputCls}>
+                  {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
               </div>
             </div>
 
-            {Number(form.billAmount) > 0 && Number(form.amountReceived) >= 0 && (
-              <div className="bg-aqua-50 rounded-xl p-4">
+            {/* Summary */}
+            {Number(form.billAmount) > 0 && (
+              <div className={`rounded-xl p-4 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
                 <div className="flex justify-between text-sm mb-1">
-                  <span>Components Total:</span>
-                  <span className="font-bold">₹{componentsTotal.toLocaleString('en-IN')}</span>
+                  <span className={s}>Components Total:</span>
+                  <span className={`font-bold ${t}`}>₹{componentsTotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span>Bill Amount:</span>
-                  <span className="font-bold">₹{Number(form.billAmount).toLocaleString('en-IN')}</span>
+                  <span className={s}>Bill Amount:</span>
+                  <span className={`font-bold ${t}`}>₹{Number(form.billAmount).toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span>Amount Received:</span>
-                  <span className="font-bold text-green-600">₹{Number(form.amountReceived).toLocaleString('en-IN')}</span>
+                  <span className={s}>Amount Received:</span>
+                  <span className="font-bold text-green-500">₹{Number(form.amountReceived || 0).toLocaleString('en-IN')}</span>
                 </div>
-                {(Number(form.billAmount) - Number(form.amountReceived)) > 0 && (
-                  <div className="flex justify-between border-t border-aqua-200 pt-2 mt-2">
-                    <span className="font-bold text-red-600">Payment Pending:</span>
-                    <span className="text-xl font-black text-red-600">₹{(Number(form.billAmount) - Number(form.amountReceived)).toLocaleString('en-IN')}</span>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className={s}>Mode of Payment:</span>
+                  <span className={`font-bold ${t}`}>{form.modeOfPayment}</span>
+                </div>
+                {(Number(form.billAmount) - Number(form.amountReceived || 0)) > 0 && (
+                  <div className="flex justify-between border-t border-red-200 pt-2 mt-2">
+                    <span className="font-bold text-red-500">Payment Pending:</span>
+                    <span className="font-black text-red-500">₹{(Number(form.billAmount) - Number(form.amountReceived || 0)).toLocaleString('en-IN')}</span>
                   </div>
                 )}
               </div>
             )}
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-xs text-yellow-700">
-              📤 Invoice will be sent to admin. Stock will be auto-reduced. Admin can track pending payments.
-            </div>
-
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setSelectedJob(null)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm">Cancel</button>
-              <button type="submit" disabled={saving} className="flex-1 bg-aqua-500 text-white rounded-xl py-2.5 text-sm font-bold disabled:opacity-60">
+            <div className="flex gap-3 pt-1">
+              <button type="button" onClick={() => setSelectedJob(null)} className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition ${isDark ? 'border-white/10 text-white/60 hover:bg-white/10' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                Cancel
+              </button>
+              <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-cyan-500 text-white hover:bg-cyan-600 transition disabled:opacity-60">
                 {saving ? 'Generating...' : '📄 Generate Invoice'}
               </button>
             </div>
@@ -452,152 +462,19 @@ export default function TechnicianInvoice() {
         )}
       </Modal>
 
-      {/* CONTINUED IN NEXT FILE... */}
-
-      {/* View Invoice Modal with A4 Bill Format */}
-      <Modal open={!!viewInvoice} onClose={() => setViewInvoice(null)} title="Invoice Preview - A4 Format" size="xl">
+      {/* VIEW INVOICE MODAL */}
+      <Modal open={!!viewInvoice} onClose={() => setViewInvoice(null)} title="Invoice Preview" size="xl">
         {viewInvoice && (
           <div className="space-y-4">
-            {/* Scrollable A4 Preview Container */}
-            <div className="bg-gray-100 p-4 rounded-xl max-h-[70vh] overflow-y-auto">
-              {/* A4 Bill Format */}
-              <div 
-                ref={invoiceRef} 
-                className="bg-white mx-auto shadow-lg" 
-                style={{ 
-                  fontFamily: 'Arial, sans-serif', 
-                  width: '210mm', 
-                  minHeight: '297mm',
-                  padding: '20mm'
-                }}
-              >
-              {/* Header */}
-              <div className="text-center mb-6 border-b-2 border-gray-800 pb-4">
-                <h1 className="text-3xl font-black text-gray-900 mb-1">FRIENDS AQUA CARE</h1>
-                <p className="text-sm text-gray-700 font-semibold">Water Purifier Sales & Service</p>
-                <div className="mt-3 text-xs text-gray-600 space-y-0.5">
-                  <p>📍 Office Address: Coimbatore, Tamil Nadu</p>
-                  <p>📞 Phone Number: +91 9876543210</p>
-                  <p>📧 Email: friendsaquacare@gmail.com</p>
-                </div>
-              </div>
-
-              {/* Title */}
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-black text-gray-900 border-b border-gray-300 inline-block px-4 pb-1">SERVICE BILL / INVOICE</h2>
-              </div>
-
-              {/* Bill Info */}
-              <div className="flex justify-between mb-6 text-sm">
-                <div><span className="font-bold">Bill No:</span> {viewInvoice.billNo}</div>
-                <div><span className="font-bold">Date:</span> {viewInvoice.invoiceDate}</div>
-              </div>
-
-              {/* Customer Details */}
-              <div className="mb-6 border border-gray-300 rounded p-4">
-                <h3 className="font-black text-gray-900 mb-3 text-sm border-b border-gray-200 pb-2">CUSTOMER DETAILS</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex"><span className="font-bold w-40">Customer Name:</span><span>{viewInvoice.customerName}</span></div>
-                  <div className="flex"><span className="font-bold w-40">Phone Number:</span><span>{viewInvoice.customerPhone}</span></div>
-                  <div className="flex"><span className="font-bold w-40">Location / Address:</span><span>{viewInvoice.customerAddress}</span></div>
-                </div>
-              </div>
-
-              {/* Service Details */}
-              <div className="mb-6 border border-gray-300 rounded p-4">
-                <h3 className="font-black text-gray-900 mb-3 text-sm border-b border-gray-200 pb-2">SERVICE DETAILS</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex"><span className="font-bold w-40">Service Type:</span><span>{viewInvoice.serviceType}</span></div>
-                  <div className="flex"><span className="font-bold w-40">Technician Name:</span><span>{viewInvoice.technicianName}</span></div>
-                </div>
-              </div>
-
-              {/* Components Used Table */}
-              <div className="mb-6">
-                <h3 className="font-black text-gray-900 mb-3 text-sm border-b border-gray-200 pb-2">COMPONENTS USED</h3>
-                <table className="w-full border-collapse border border-gray-300 text-sm">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-gray-300 px-3 py-2 text-left font-bold">S.No</th>
-                      <th className="border border-gray-300 px-3 py-2 text-left font-bold">Component Name</th>
-                      <th className="border border-gray-300 px-3 py-2 text-center font-bold">Quantity</th>
-                      <th className="border border-gray-300 px-3 py-2 text-right font-bold">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {viewInvoice.components && viewInvoice.components.length > 0 ? (
-                      viewInvoice.components.map((comp, i) => (
-                        <tr key={i}>
-                          <td className="border border-gray-300 px-3 py-2">{i + 1}</td>
-                          <td className="border border-gray-300 px-3 py-2">{comp.name}</td>
-                          <td className="border border-gray-300 px-3 py-2 text-center">{comp.quantity}</td>
-                          <td className="border border-gray-300 px-3 py-2 text-right">₹{comp.amount.toLocaleString('en-IN')}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr><td colSpan="4" className="border border-gray-300 px-3 py-2 text-center text-gray-500">No components used</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Payment Details */}
-              <div className="mb-6 border border-gray-300 rounded p-4">
-                <h3 className="font-black text-gray-900 mb-3 text-sm border-b border-gray-200 pb-2">PAYMENT DETAILS</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="font-bold">Components Cost:</span>
-                    <span>₹ {viewInvoice.componentsTotal.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between border-t-2 border-gray-800 pt-2 mt-2">
-                    <span className="font-black text-base">Total Bill Amount:</span>
-                    <span className="font-black text-base">₹ {viewInvoice.billAmount.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-bold text-green-700">Amount Received:</span>
-                    <span className="font-bold text-green-700">₹ {viewInvoice.amountReceived.toLocaleString('en-IN')}</span>
-                  </div>
-                  {viewInvoice.paymentPending > 0 && (
-                    <div className="flex justify-between bg-red-50 p-2 rounded">
-                      <span className="font-black text-red-700">Payment Pending:</span>
-                      <span className="font-black text-red-700">₹ {viewInvoice.paymentPending.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Signatures */}
-              <div className="flex justify-between mt-12 pt-8 border-t border-gray-300">
-                <div className="text-center">
-                  <div className="border-t border-gray-800 w-40 mb-1"></div>
-                  <p className="text-xs font-bold">Customer Signature</p>
-                </div>
-                <div className="text-center">
-                  <div className="border-t border-gray-800 w-40 mb-1"></div>
-                  <p className="text-xs font-bold">Technician Signature</p>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="text-center mt-8 pt-4 border-t-2 border-gray-800">
-                <p className="text-sm font-bold text-gray-900">Thank you for choosing FRIENDS AQUA CARE</p>
-              </div>
+            <div className="bg-gray-100 p-4 rounded-xl max-h-[65vh] overflow-y-auto">
+              <InvoicePDF ref={invoiceRef} inv={viewInvoice} />
             </div>
-            </div>
-
-            {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={downloadPDF}
-                className="bg-aqua-500 text-white rounded-xl py-3 text-sm font-bold hover:bg-aqua-600 transition flex items-center justify-center gap-2"
-              >
+              <button onClick={downloadPDF} className="bg-cyan-500 text-white rounded-xl py-3 text-sm font-bold hover:bg-cyan-600 transition flex items-center justify-center gap-2">
                 📥 Download PDF
               </button>
-              <button
-                onClick={shareWhatsApp}
-                className="bg-green-500 text-white rounded-xl py-3 text-sm font-bold hover:bg-green-600 transition flex items-center justify-center gap-2"
-              >
-                📱 Download & Share WhatsApp
+              <button onClick={shareWhatsApp} className="bg-green-500 text-white rounded-xl py-3 text-sm font-bold hover:bg-green-600 transition flex items-center justify-center gap-2">
+                📱 Share WhatsApp
               </button>
             </div>
           </div>

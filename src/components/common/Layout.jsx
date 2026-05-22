@@ -33,8 +33,8 @@ export default function Layout({ children, navItems, title }) {
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   const isAdmin = profile?.role === 'admin'
-  const inInventory = location.pathname.startsWith('/inventory')
-  const switchTo = inInventory ? '/admin' : '/inventory'
+  const inInventory = location.pathname.startsWith('/admin/inventory')
+  const switchTo = inInventory ? '/admin' : '/admin/inventory'
   const switchLabel = inInventory ? 'Admin Panel' : 'Inventory'
 
   // Check if we're in a sub-section (not root dashboard)
@@ -267,11 +267,11 @@ export default function Layout({ children, navItems, title }) {
 
             {/* Inventory pill */}
             <motion.button
-              onClick={() => navigate('/inventory')}
+              onClick={() => navigate('/admin/inventory')}
               whileTap={{ scale: 0.94, y: 1 }}
               whileHover={{ y: -1 }}
               className={`flex items-center gap-2 px-7 py-2.5 rounded-full text-sm font-bold transition-all duration-200
-                ${inInventory
+                ${location.pathname.startsWith('/admin/inventory')
                   ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-[0_4px_20px_rgba(139,92,246,0.6),inset_0_1px_0_rgba(255,255,255,0.25)]'
                   : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-700'
                 }`}

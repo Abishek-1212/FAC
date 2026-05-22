@@ -6,13 +6,32 @@ import { motion } from 'framer-motion'
 import { useTheme } from '../../context/ThemeContext'
 import RecentServiceJobs from './RecentServiceJobs'
 
+// ── Stock Bar Component ───────────────────────────────────────────────────────
+function StockBar({ label, value, max, color, isDark }) {
+  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-1">
+        <span className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-500'}`}>{label}</span>
+        <span className={`text-xs font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{value}</span>
+      </div>
+      <div className={`w-full h-3 rounded-full overflow-hidden ${isDark ? 'bg-white/10' : 'bg-gray-100'}`}>
+        <div
+          className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, background: color, minWidth: value > 0 ? '8px' : '0px' }}
+        />
+      </div>
+    </div>
+  )
+}
+
 const STAT_CARDS = [
-  { key: 'jobs',        icon: '🔧', label: 'Total Jobs',     gradient: 'from-cyan-500 to-cyan-600' },
-  { key: 'pending',     icon: '⏳', label: 'Pending Jobs',   gradient: 'from-amber-500 to-orange-600' },
-  { key: 'technicians', icon: '👷', label: 'Technicians',    gradient: 'from-violet-500 to-purple-600' },
-  { key: 'products',    icon: '📦', label: 'Products',       gradient: 'from-blue-500 to-blue-600' },
-  { key: 'revenue',     icon: '💰', label: 'Total Revenue',  gradient: 'from-emerald-500 to-green-600' },
-  { key: 'missing',     icon: '⚠️', label: 'Missing Stock',  gradient: 'from-red-500 to-rose-600' },
+  { key: 'jobs',        icon: '🔧', label: 'Total Jobs',    gradient: 'from-cyan-500 to-cyan-600' },
+  { key: 'pending',     icon: '⏳', label: 'Pending Jobs',  gradient: 'from-amber-500 to-orange-600' },
+  { key: 'technicians', icon: '👷', label: 'Technicians',   gradient: 'from-violet-500 to-purple-600' },
+  { key: 'products',    icon: '📦', label: 'Products',      gradient: 'from-blue-500 to-blue-600' },
+  { key: 'revenue',     icon: '💰', label: 'Total Revenue', gradient: 'from-emerald-500 to-green-600' },
+  { key: 'missing',     icon: '⚠️', label: 'Missing Stock', gradient: 'from-red-500 to-rose-600' },
 ]
 
 export default function AdminHome() {
@@ -20,25 +39,46 @@ export default function AdminHome() {
   const { isDark } = useTheme()
   const [stats, setStats] = useState({ jobs: 0, pending: 0, products: 0, technicians: 0, revenue: 0, missing: 0, unreadInvoices: 0 })
   const [recentJobs, setRecentJobs] = useState([])
+  const [technicians, setTechnicians] = useState([])
+  const [techStock, setTechStock] = useState([])
+  const [stockNotifications, setStockNotifications] = useState([])
 
   useEffect(() => {
     const unsubs = []
+
+    // Technicians
+    unsubs.push(onSnapshot(
+      query(collection(db, 'users'), where('role', '==', 'technician')),
+      snap => {
+        setTechnicians(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        setStats(s => ({ ...s, technicians: snap.size }))
+      }
+    ))
+
+    // Technician stock — from technician_stock collection
+    unsubs.push(onSnapshot(
+      collection(db, 'technician_stock'),
+      snap => setTechStock(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    ))
+
+    // Service jobs
     unsubs.push(onSnapshot(collection(db, 'service_jobs'), snap => {
-      const data = snap.docs.map(d => d.data())
-      const pending = data.filter(d => ['pending', 'assigned'].includes(d.status)).length
-      setStats(s => ({ ...s, jobs: snap.size, pending }))
-      setRecentJobs(
-        snap.docs.map(d => ({ id: d.id, ...d.data() }))
-          .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
-      )
+      const jobs = snap.docs.map(d => d.data())
+      setStats(s => ({ ...s, jobs: snap.size, pending: jobs.filter(j => ['pending', 'assigned'].includes(j.status)).length }))
+      setRecentJobs(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)))
     }))
+
+    // Products
     unsubs.push(onSnapshot(collection(db, 'products'), snap => setStats(s => ({ ...s, products: snap.size }))))
-    unsubs.push(onSnapshot(query(collection(db, 'users'), where('role', '==', 'technician')), snap => setStats(s => ({ ...s, technicians: snap.size }))))
+
+    // Invoices
     unsubs.push(onSnapshot(collection(db, 'invoices'), snap => {
       const revenue = snap.docs.reduce((sum, d) => sum + (d.data().totalAmount || 0), 0)
       const unreadInvoices = snap.docs.filter(d => d.data().submittedByTechnician && !d.data().adminViewed).length
       setStats(s => ({ ...s, revenue, unreadInvoices }))
     }))
+
+    // Missing stock
     unsubs.push(onSnapshot(collection(db, 'job_stock_assignment'), snap => {
       const missing = snap.docs.reduce((sum, d) => {
         const x = d.data()
@@ -47,13 +87,27 @@ export default function AdminHome() {
       }, 0)
       setStats(s => ({ ...s, missing }))
     }))
+
+    // Stock taken notifications
+    unsubs.push(onSnapshot(
+      query(collection(db, 'notifications'), where('type', '==', 'stock_taken')),
+      snap => {
+        const notifications = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+          .slice(0, 5) // Show only last 5
+        setStockNotifications(notifications)
+      }
+    ))
+
     return () => unsubs.forEach(u => u())
   }, [])
 
   const getValue = (key) => key === 'revenue' ? `₹${stats.revenue.toLocaleString('en-IN')}` : stats[key]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20 md:pb-0">
+
       {/* Invoice notification */}
       {stats.unreadInvoices > 0 && (
         <motion.div
@@ -61,18 +115,14 @@ export default function AdminHome() {
           animate={{ opacity: 1, scale: 1 }}
           onClick={() => navigate('/admin/invoices')}
           className={`relative overflow-hidden rounded-2xl p-5 flex items-center justify-between cursor-pointer border transition group ${
-            isDark 
-              ? 'glass-strong border-rose-500/30 hover:border-rose-400/50' 
+            isDark
+              ? 'glass-strong border-rose-500/30 hover:border-rose-400/50'
               : 'bg-white border-rose-300 hover:border-rose-400 shadow-lg'
           }`}
         >
-          <div className={`absolute inset-0 ${
-            isDark ? 'bg-gradient-to-r from-rose-500/10 to-pink-600/10' : 'bg-gradient-to-r from-rose-50 to-pink-50'
-          }`} />
+          <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-r from-rose-500/10 to-pink-600/10' : 'bg-gradient-to-r from-rose-50 to-pink-50'}`} />
           <div className="relative flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
-              isDark ? 'bg-rose-500/20' : 'bg-rose-100'
-            }`}>🔔</div>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${isDark ? 'bg-rose-500/20' : 'bg-rose-100'}`}>🔔</div>
             <div>
               <p className={`font-black text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>New Invoice Notifications</p>
               <p className={`text-xs mt-0.5 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
@@ -81,23 +131,17 @@ export default function AdminHome() {
             </div>
           </div>
           <div className="relative flex items-center gap-3">
-            <span className={`w-10 h-10 text-sm font-black rounded-xl flex items-center justify-center shadow-lg ${
-              isDark ? 'bg-rose-500 text-white' : 'bg-rose-500 text-white'
-            }`}>
+            <span className="w-10 h-10 text-sm font-black rounded-xl flex items-center justify-center shadow-lg bg-rose-500 text-white">
               {stats.unreadInvoices}
             </span>
-            <span className={`text-xl group-hover:translate-x-1 transition-transform ${
-              isDark ? 'text-white/40' : 'text-gray-400'
-            }`}>›</span>
+            <span className={`text-xl group-hover:translate-x-1 transition-transform ${isDark ? 'text-white/40' : 'text-gray-400'}`}>›</span>
           </div>
         </motion.div>
       )}
 
       {/* Quick Actions */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${
-          isDark ? 'text-white/40' : 'text-gray-500'
-        }`}>QUICK ACTIONS</p>
+      <div>
+        <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>QUICK ACTIONS</p>
         <div className="grid grid-cols-2 gap-4">
           {[
             { label: 'New Service Job', icon: '🔧', path: '/admin/jobs',      gradient: 'from-cyan-500 to-cyan-600' },
@@ -110,7 +154,7 @@ export default function AdminHome() {
               key={action.label}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.15 + i * 0.05 }}
+              transition={{ delay: 0.05 + i * 0.05 }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => navigate(action.path)}
@@ -118,27 +162,20 @@ export default function AdminHome() {
                 isDark ? 'glass-strong border-white/5' : 'bg-white border-sky-200 shadow-md hover:shadow-xl'
               }`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} transition-opacity ${
-                isDark ? 'opacity-0 group-hover:opacity-20' : 'opacity-0 group-hover:opacity-10'
-              }`} />
-              <div className={`absolute -bottom-4 -right-4 w-24 h-24 rounded-full blur-2xl ${
-                isDark ? 'bg-white/5' : 'bg-sky-100/50'
-              }`} />
+              <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 group-hover:opacity-10 transition-opacity`} />
               <span className="text-3xl relative z-10">{action.icon}</span>
               <p className={`font-bold text-sm mt-3 relative z-10 ${isDark ? 'text-white' : 'text-gray-900'}`}>{action.label}</p>
             </motion.button>
           ))}
         </div>
-      </motion.div>
+      </div>
 
-      {/* Recent jobs */}
+      {/* Recent Jobs */}
       <RecentServiceJobs jobs={recentJobs} />
 
       {/* Overview Stats */}
       <div>
-        <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${
-          isDark ? 'text-white/40' : 'text-gray-500'
-        }`}>OVERVIEW</p>
+        <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>OVERVIEW</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {STAT_CARDS.map((card, i) => (
             <motion.div
@@ -151,9 +188,7 @@ export default function AdminHome() {
                 isDark ? 'glass-strong border-white/5' : 'bg-white border-sky-200 shadow-md hover:shadow-xl'
               }`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} transition-opacity ${
-                isDark ? 'opacity-0 group-hover:opacity-10' : 'opacity-0 group-hover:opacity-5'
-              }`} />
+              <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-5 transition-opacity`} />
               <div className="relative">
                 <span className="text-3xl">{card.icon}</span>
                 <p className={`text-3xl font-black mt-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>{getValue(card.key)}</p>
@@ -163,6 +198,7 @@ export default function AdminHome() {
           ))}
         </div>
       </div>
+
     </div>
   )
 }

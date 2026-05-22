@@ -2,20 +2,73 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /service_jobs/{document=**} {
+    // Service Jobs - Allow technicians to read their assigned jobs
+    match /service_jobs/{jobId} {
       allow read: if request.auth != null && (
         request.auth.token.role == 'admin' ||
-        (request.auth.token.role == 'technician' && resource.data.technicianId == request.auth.uid && resource.data.stockAssigned == true)
+        (request.auth.token.role == 'technician' && resource.data.technicianId == request.auth.uid)
       );
       allow create: if request.auth != null && request.auth.token.role == 'admin';
-      allow update: if request.auth != null && request.auth.token.role == 'admin';
+      allow update: if request.auth != null && (
+        request.auth.token.role == 'admin' ||
+        (request.auth.token.role == 'technician' && resource.data.technicianId == request.auth.uid)
+      );
       allow delete: if request.auth != null && request.auth.token.role == 'admin';
     }
 
-    match /users/{document=**} {
+    // Users collection
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (
+        request.auth.token.role == 'admin' ||
+        request.auth.uid == userId
+      );
+    }
+
+    // Job Stock Assignments
+    match /job_stock_assignment/{assignmentId} {
       allow read, write: if request.auth != null;
     }
 
+    // Technician Stock
+    match /technician_stock/{stockId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Stock Assignments
+    match /stock_assignments/{assignmentId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Invoices
+    match /invoices/{invoiceId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.auth.token.role == 'admin';
+    }
+
+    // Job Completion Reports
+    match /job_completion_reports/{reportId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Products
+    match /products/{productId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.role == 'admin';
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // User notifications subcollection
+    match /users/{userId}/notifications/{notificationId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Default fallback rule (for development - remove in production)
     match /{document=**} {
       allow read, write: if request.time < timestamp.date(2026, 6, 12);
     }

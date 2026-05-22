@@ -156,35 +156,32 @@ export default function TechnicianHome() {
         <p className="text-white/60 text-sm mt-2">You have <span className="font-bold">{active.length}</span> active job{active.length !== 1 ? 's' : ''}</p>
       </motion.div>
 
-      {/* Stock Button */}
-      <motion.button
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => setStockMenuOpen(true)}
-        className={`w-full rounded-2xl p-4 shadow-lg border transition-all ${
-          isDark
-            ? 'bg-gradient-to-r from-orange-500 to-orange-600 border-orange-400/20 shadow-orange-500/20'
-            : 'bg-gradient-to-r from-orange-500 to-orange-600 border-orange-400/20 shadow-orange-300'
-        }`}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-              <span className="text-2xl">📦</span>
-            </div>
-            <div className="text-left">
-              <p className="text-white font-black text-lg">Stock Management</p>
-              <p className="text-white/80 text-xs">Take stock or view your inventory</p>
-            </div>
-          </div>
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-      </motion.button>
+      {/* Navigation Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: 'My Reports', icon: '📋', desc: 'View completion reports', path: '/technician/reports', gradient: 'from-blue-500 to-blue-600' },
+          { label: 'My Stock', icon: '📦', desc: 'Manage your stock', path: '/technician/stock', gradient: 'from-purple-500 to-purple-600' },
+          { label: 'My Invoices', icon: '📑', desc: 'View & download invoices', path: '/technician/my-invoices', gradient: 'from-emerald-500 to-emerald-600' },
+          { label: 'Take Stock', icon: '📤', desc: 'Take from inventory', path: '/technician/take-stock', gradient: 'from-cyan-500 to-cyan-600' },
+        ].map((card, i) => (
+          <motion.button
+            key={card.path}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 + i * 0.05 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => navigate(card.path)}
+            className={`relative overflow-hidden rounded-2xl p-4 text-left border ${
+              isDark ? 'bg-white/5 border-white/10 hover:border-white/20' : 'bg-white border-gray-100 hover:shadow-md hover:border-gray-200'
+            } transition-all`}
+          >
+            <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 hover:opacity-10 transition-opacity`} />
+            <span className="text-2xl">{card.icon}</span>
+            <p className={`font-black text-sm mt-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{card.label}</p>
+            <p className={`text-xs mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{card.desc}</p>
+          </motion.button>
+        ))}
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-3">
@@ -415,7 +412,7 @@ export default function TechnicianHome() {
       {/* Jobs List */}
       {jobs.length > 0 ? (
         <AnimatePresence mode="popLayout">
-          <div className="grid gap-3 max-h-[calc(100vh-400px)] overflow-y-auto scrollbar-hide">
+          <div className="grid gap-3">
             {filtered.map((job, i) => {
               const meta = STATUS_META[job.status] || STATUS_META.pending
               const isUrgent = job.priority === 'urgent'

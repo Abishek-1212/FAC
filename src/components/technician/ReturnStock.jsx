@@ -16,7 +16,7 @@ export default function ReturnStock() {
   useEffect(() => {
     if (!user) return
     return onSnapshot(
-      query(collection(db, 'technician_stock'), where('technicianId', '==', user.uid), where('status', '==', 'taken')),
+      query(collection(db, 'technician_stock'), where('technicianId', '==', user.uid), where('status', '==', 'active')),
       snap => {
         const stocks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         setMyStock(stocks)
@@ -74,7 +74,7 @@ export default function ReturnStock() {
       await updateDoc(doc(db, 'technician_stock', stockId), {
         returnedQuantity: newReturned,
         usedQuantity: newUsed,
-        status: newRemaining === 0 ? 'completed' : 'taken',
+        status: newRemaining === 0 ? 'completed' : 'active',
         lastReturnedAt: serverTimestamp(),
       })
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { doc, onSnapshot, updateDoc, collection, query, where, serverTimestamp, addDoc } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc, collection, query, where, serverTimestamp, addDoc, getDocs, getDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
 import Modal from '../common/Modal'
@@ -9,6 +10,7 @@ import Modal from '../common/Modal'
 export default function JobDetail() {
   const { jobId } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [job, setJob] = useState(null)
   const [assignments, setAssignments] = useState([])
   const [itemTracking, setItemTracking] = useState({})
@@ -20,6 +22,58 @@ export default function JobDetail() {
   const [personalStockUsage, setPersonalStockUsage] = useState([])
   const [personalStockSaved, setPersonalStockSaved] = useState(false)
   const [technicianStock, setTechnicianStock] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // Load job data
+  useEffect(() => {
+    if (!jobId) {
+      navigate('/technician')
+      return
+    }
+    
+    setLoading(true)
+    setError(null)
+    
+    try {
+      const unsubscribe = onSnapshot(
+        doc(db, 'service_jobs', jobId), 
+        (snap) => {
+          if (snap.exists()) {
+            setJob({ id: snap.id, ...snap.data() })
+            setLoading(false)
+          } else {
+            setError('Job not found')
+            setLoading(false)
+            toast.error('Job not found')
+            setTimeout(() => navigate('/technician'), 2000)
+          }
+        },
+        (err) => {
+          console.error('Firestore error:', err)
+          setError(err.message)
+          setLoading(false)
+          toast.error('Error loading job')
+          setTimeout(() => navigate('/technician'), 2000)
+        }
+      )
+      return unsubscribe
+    } catch (err) {
+      console.error('Setup error:', err)
+      setError(err.message)
+      setLoading(false)
+    }
+  }, [jobId, navigate])
+
+  // Load job stock assignments
+  useEffect(() => {
+    if (!jobId) return
+    const unsubscribe = onSnapshot(
+      query(collection(db, 'job_stock_assignment'), where('jobId', '==', jobId)),
+      snap => setAssignments(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    )
+    return unsubscribe
+  }, [jobId])
 
   useEffect(() => {
     if (!job?.technicianId) return
@@ -92,12 +146,45 @@ export default function JobDetail() {
           return
         }
 
+        // Update job stock assignment
         await updateDoc(doc(db, 'job_stock_assignment', a.id), {
           usedQuantity: used,
           damagedQuantity: damaged,
           status: 'tracked',
           lastUpdated: serverTimestamp(),
         })
+
+        // Update technician stock
+        const techStockQuery = query(
+          collection(db, 'technician_stock'),
+          where('technicianId', '==', job.technicianId),
+          where('productId', '==', a.productId),
+          where('status', '==', 'active')
+        )
+        const techStockSnap = await getDocs(techStockQuery)
+        
+        if (!techStockSnap.empty) {
+          const techStockDoc = techStockSnap.docs[0]
+          const currentUsed = techStockDoc.data().usedQuantity || 0
+          const currentDamaged = techStockDoc.data().damagedQuantity || 0
+          
+          await updateDoc(doc(db, 'technician_stock', techStockDoc.id), {
+            usedQuantity: currentUsed + used,
+            damagedQuantity: currentDamaged + damaged,
+            lastUpdated: serverTimestamp(),
+          })
+        }
+
+        // Auto-deduct from inventory
+        const invRef = doc(db, 'inventory', a.productId)
+        const invSnap = await getDoc(invRef)
+        if (invSnap.exists()) {
+          const currentQty = invSnap.data().quantity || 0
+          await updateDoc(invRef, {
+            quantity: Math.max(0, currentQty - total),
+            lastUpdated: serverTimestamp(),
+          })
+        }
       }
       setTrackingSaved(true)
       toast.success('✅ Item tracking saved! You can now complete the job.')
@@ -180,9 +267,36 @@ export default function JobDetail() {
     }
   }
 
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <div className="w-12 h-12 border-4 border-aqua-500 border-t-transparent rounded-full animate-spin mb-4" />
+      <p className="text-gray-500 text-sm">Loading job details...</p>
+    </div>
+  )
+
+  if (error) return (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <p className="text-4xl mb-4">⚠️</p>
+      <p className="text-red-600 text-sm font-semibold">{error}</p>
+      <button 
+        onClick={() => navigate('/technician')} 
+        className="mt-4 px-4 py-2 bg-aqua-500 text-white rounded-lg text-sm font-bold"
+      >
+        Back to Jobs
+      </button>
+    </div>
+  )
+
   if (!job) return (
-    <div className="flex items-center justify-center h-40">
-      <div className="w-8 h-8 border-4 border-aqua-500 border-t-transparent rounded-full animate-spin" />
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <p className="text-4xl mb-4">📋</p>
+      <p className="text-gray-500 text-sm">Job not found</p>
+      <button 
+        onClick={() => navigate('/technician')} 
+        className="mt-4 px-4 py-2 bg-aqua-500 text-white rounded-lg text-sm font-bold"
+      >
+        Back to Jobs
+      </button>
     </div>
   )
 
