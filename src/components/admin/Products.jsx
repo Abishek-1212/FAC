@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   collection, onSnapshot, addDoc, updateDoc,
-  deleteDoc, doc, serverTimestamp,
+  deleteDoc, doc, serverTimestamp, query, where, getDocs
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import Modal from '../common/Modal'
@@ -71,7 +71,7 @@ export default function Products() {
   // ── product actions ───────────────────────────────────────────────────────
   const openAdd  = () => { setForm(EMPTY_PRODUCT); setEditing(null); setModal(true) }
   const openEdit = (p) => {
-    setForm({ name: p.name, sku: p.sku || '', category: p.category || '', price: String(p.price || ''), description: p.description || '' })
+    setForm({ name: p.name, sku: p.sku || '', category: p.category || '', price: String(p.price || ''), description: p.description || '', oldName: p.name })
     setEditing(p.id)
     setModal(true)
   }
@@ -81,8 +81,25 @@ export default function Products() {
     setSaving(true)
     try {
       const data = { ...form, price: Number(form.price) }
+      delete data.oldName
+      
       if (editing) {
         await updateDoc(doc(db, 'products', editing), data)
+        
+        // Query inventory by OLD product name and update to new values
+        const invQuery = query(collection(db, 'inventory'), where('productName', '==', form.oldName))
+        const invSnap = await getDocs(invQuery)
+        
+        for (const invDoc of invSnap.docs) {
+          await updateDoc(doc(db, 'inventory', invDoc.id), {
+            productName: data.name,
+            name: data.name,
+            price: data.price,
+            category: data.category,
+            lastUpdated: serverTimestamp()
+          })
+        }
+        
         toast.success('Product updated')
       } else {
         await addDoc(collection(db, 'products'), { ...data, createdAt: serverTimestamp() })

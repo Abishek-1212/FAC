@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, updateDoc, doc, addDoc, getDoc, serverTimestamp, query, where } from 'firebase/firestore'
+import { collection, onSnapshot, updateDoc, doc, addDoc, getDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -75,11 +75,15 @@ export default function VerifyReturn() {
 
         // Add returned stock back to inventory
         if (returned > 0) {
-          const invRef = doc(db, 'inventory', assignment.productId)
-          const invSnap = await getDoc(invRef)
-          if (invSnap.exists()) {
-            await updateDoc(invRef, {
-              quantity: (invSnap.data().quantity || 0) + returned,
+          // Find inventory by product name instead of productId
+          const invRef = collection(db, 'inventory')
+          const q = query(invRef, where('productName', '==', assignment.productName))
+          const invSnap = await getDocs(q)
+          
+          if (!invSnap.empty) {
+            const invDoc = invSnap.docs[0]
+            await updateDoc(doc(db, 'inventory', invDoc.id), {
+              quantity: (invDoc.data().quantity || 0) + returned,
               lastUpdated: serverTimestamp(),
             })
           }

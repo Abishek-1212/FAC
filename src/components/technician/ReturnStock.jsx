@@ -82,6 +82,7 @@ export default function ReturnStock() {
       if (data.returning > 0) {
         const invRef = doc(db, 'inventory', stock.productId)
         const invSnap = await getDoc(invRef)
+        
         if (invSnap.exists()) {
           await updateDoc(invRef, {
             quantity: (invSnap.data().quantity || 0) + data.returning,

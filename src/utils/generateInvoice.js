@@ -40,11 +40,12 @@ export const generateInvoice = (invoiceData) => {
     serviceDate,
     serviceType,
     problemDescription,
-    serviceCharge = 0,
-    discount = 0,
-    tax = 0,
-    products = [], // Array of { name, qty, unit: 'Nos', price, nestedItems: [] }
-    notes = '',
+    totalAmount = 0,
+    discountType = 'percentage',
+    discountValue = 0,
+    discountAmount = 0,
+    grandTotal = 0,
+    products = [], // Array of { name, qty }
     inventoryMetrics = { assigned: 0, used: 0, returned: 0 }
   } = invoiceData
 
@@ -176,7 +177,7 @@ export const generateInvoice = (invoiceData) => {
   doc.text(`Name: ${customerName}`, margin + 3, currentY + 13.5)
   doc.text(`Phone: ${customerPhone}`, margin + 3, currentY + 18)
   
-  const cleanAddress = (customerAddress || '').replace(/\n/g, ' ')
+  const cleanAddress = (customerAddress || 'N/A').replace(/\n/g, ' ')
   const splitCustAddress = doc.splitTextToSize(`Address: ${cleanAddress}`, cardWidth - 6)
   doc.text(splitCustAddress, margin + 3, currentY + 22.5)
 
@@ -210,38 +211,23 @@ export const generateInvoice = (invoiceData) => {
   currentY += cardHeight + 8
 
   // ========================================================
-  // LINE ITEMS TABLE (With Structural Nested Sub-rows)
+  // LINE ITEMS TABLE (Products with S.No and Quantity only)
   // ========================================================
   const formattedTableData = []
   let serialCounter = 1
 
   products.forEach((product) => {
-    const itemTotal = Number(product.qty || 0) * Number(product.price || 0)
-    // Parent primary line entry
     formattedTableData.push([
       serialCounter.toString(),
       product.name || 'Service Item',
-      product.qty ? product.qty.toString() : '0',
-      product.unit || 'Nos',
-      formatCurrency(product.price),
-      formatCurrency(itemTotal)
+      product.qty ? product.qty.toString() : '0'
     ])
     serialCounter++
-
-    // Inject nested inclusions context safely beneath the product row
-    if (product.nestedItems && product.nestedItems.length > 0) {
-      const inlineComponentsText = `Included Accessories: ${product.nestedItems.join('  •  ')}`
-      formattedTableData.push([
-        '', 
-        inlineComponentsText,
-        '', '', '', ''
-      ])
-    }
   })
 
   autoTable(doc, {
     startY: currentY,
-    head: [['S.No', 'Product / Particular', 'Quantity', 'Unit', 'Unit Price', 'Amount']],
+    head: [['S.No', 'Product / Particular', 'Quantity']],
     body: formattedTableData,
     theme: 'grid',
     headStyles: {
@@ -264,31 +250,13 @@ export const generateInvoice = (invoiceData) => {
       valign: 'middle'
     },
     columnStyles: {
-      0: { cellWidth: 12, halign: 'center' },
-      1: { cellWidth: 75, halign: 'left' },
-      2: { cellWidth: 22, halign: 'center' },
-      3: { cellWidth: 18, halign: 'center' },
-      4: { cellWidth: 32, halign: 'right' },
-      5: { cellWidth: 35, halign: 'right' }
+      0: { cellWidth: 20, halign: 'center' },
+      1: { cellWidth: 130, halign: 'left' },
+      2: { cellWidth: 44, halign: 'center' }
     },
     margin: { left: margin, right: margin },
     alternateRowStyles: {
       fillColor: rowHighlight
-    },
-    didParseCell: function(data) {
-      // Style logic transformations for nesting layouts
-      if (data.row.section === 'body' && data.column.index === 1) {
-        if (data.cell.raw.startsWith('Included Accessories:')) {
-          data.cell.styles.fontStyle = 'italic'
-          data.cell.styles.fontSize = 7.5
-          data.cell.styles.textColor = [13, 148, 136] // Deep teal color tint
-          data.cell.styles.fillColor = [255, 255, 255] // Force white blockout row background
-        }
-      }
-      // Strip horizontal borders out for the inner inclusions subtext row
-      if (data.row.section === 'body' && data.row.raw[0] === '') {
-        data.cell.styles.fillColor = [255, 255, 255]
-      }
     }
   })
 
@@ -323,18 +291,7 @@ export const generateInvoice = (invoiceData) => {
     doc.text(bankVals[idx], margin + 28, currentY + (idx * 4))
   })
 
-  // Stock Logistics / Inventory Tracker subcard
-  currentY += 24
-  doc.setFillColor(248, 250, 252)
-  doc.rect(margin, currentY, 65, 14, 'F')
-  doc.rect(margin, currentY, 65, 14, 'S')
-  
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(7.5)
-  doc.text(`Assigned: ${inventoryMetrics.assigned}   |   Used: ${inventoryMetrics.used}   |   Returned: ${inventoryMetrics.returned}`, margin + 3, currentY + 5)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(13, 148, 136)
-  doc.text('Inventory Updated', margin + 3, currentY + 10)
+
 
   // Restore alignment anchor baseline pointer for summary values cards
   currentY = savedSplitPositionBaselineY
@@ -342,21 +299,17 @@ export const generateInvoice = (invoiceData) => {
   // ========================================================
   // SUMMARY CALCULATIONS SECTION (Right Aligned Card)
   // ========================================================
-  const calculatedItemsTotal = products.reduce((sum, p) => sum + (Number(p.qty || 0) * Number(p.price || 0)), 0)
-  const finalGrandTotalValue = (calculatedItemsTotal + Number(serviceCharge)) - Number(discount) + Number(tax)
-
-  const summaryLabels = ['Products Total:', 'Service Charge:', 'Discount:', 'Tax:', 'GRAND TOTAL:']
+  const summaryLabels = ['Total Amount:', 'Discount:', 'GRAND TOTAL:']
   const summaryValues = [
-    formatCurrency(calculatedItemsTotal),
-    formatCurrency(serviceCharge),
-    formatCurrency(discount),
-    formatCurrency(tax),
-    formatCurrency(finalGrandTotalValue)
+    formatCurrency(totalAmount),
+    formatCurrency(discountAmount),
+    formatCurrency(grandTotal)
   ]
 
   summaryLabels.forEach((label, idx) => {
     const rowY = currentY + (idx * 5)
     const isTotal = idx === summaryLabels.length - 1
+    const isDiscount = idx === 1
     
     if (isTotal) {
       doc.setFont('helvetica', 'bold')
@@ -368,7 +321,14 @@ export const generateInvoice = (invoiceData) => {
       doc.line(pageWidth - margin - 75, rowY - 1, pageWidth - margin, rowY - 1)
       doc.text(label, pageWidth - margin - 72, rowY + 4)
       doc.text(summaryValues[idx], pageWidth - margin, rowY + 4, { align: 'right' })
-    } else {
+    } else if (isDiscount && discountAmount > 0) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.5)
+      doc.setTextColor(13, 148, 136) // Green for discount
+      const discountLabel = discountType === 'percentage' ? `${label} (${discountValue}%)` : label
+      doc.text(discountLabel, pageWidth - margin - 72, rowY)
+      doc.text(`-${summaryValues[idx]}`, pageWidth - margin, rowY, { align: 'right' })
+    } else if (!isDiscount) {
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8.5)
       doc.setTextColor(...darkText)
@@ -376,18 +336,6 @@ export const generateInvoice = (invoiceData) => {
       doc.text(summaryValues[idx], pageWidth - margin, rowY, { align: 'right' })
     }
   })
-
-  // Notes execution layout rendering
-  if (notes && notes.trim()) {
-    currentY += 32
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8)
-    doc.setTextColor(...darkText)
-    doc.text('Remarks/Notes:', margin, currentY)
-    doc.setFont('helvetica', 'normal')
-    const splitNotesText = doc.splitTextToSize(notes, contentWidth)
-    doc.text(splitNotesText, margin, currentY + 3.5)
-  }
 
   // ========================================================
   // SIGNATURE PANELS SECTION
@@ -444,7 +392,7 @@ export const generateInvoice = (invoiceData) => {
     invoiceNo: invoiceNumber,
     customerName: customerName || 'Customer',
     serviceDate: computedDate,
-    totalAmount: finalGrandTotalValue,
+    totalAmount: grandTotal,
     technician: technicianName || 'Unassigned',
     fileName: fileName,
     documentInstance: doc // Accessible for direct transformations to blob streams for Firebase uploads

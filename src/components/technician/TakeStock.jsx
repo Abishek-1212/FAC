@@ -589,6 +589,11 @@ export default function TakeStock() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {technicianStock.map((stock, idx) => {
                 const remaining = stock.takenQuantity - stock.usedQuantity - stock.returnedQuantity - (stock.damagedQuantity || 0)
+                // Get real-time product data
+                const product = products.find(p => p.id === stock.productId)
+                const productName = product?.name || stock.productName
+                const productPrice = product?.price || stock.productPrice || 0
+                const productCategory = product?.category || 'Uncategorized'
                 
                 return (
                   <motion.div
@@ -608,15 +613,25 @@ export default function TakeStock() {
                         <h4 className={`font-bold text-sm truncate ${
                           isDark ? 'text-white' : 'text-gray-900'
                         }`}>
-                          {stock.productName}
+                          {productName}
                         </h4>
-                        {stock.productPrice > 0 && (
-                          <p className={`text-xs mt-0.5 ${
-                            isDark ? 'text-cyan-400' : 'text-cyan-600'
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-xs font-medium ${
+                            isDark ? 'text-white/50' : 'text-gray-500'
                           }`}>
-                            ₹{stock.productPrice.toLocaleString('en-IN')}/unit
-                          </p>
-                        )}
+                            {productCategory}
+                          </span>
+                          {productPrice > 0 && (
+                            <>
+                              <span className={`text-xs ${isDark ? 'text-white/30' : 'text-gray-300'}`}>•</span>
+                              <span className={`text-xs font-semibold ${
+                                isDark ? 'text-cyan-400' : 'text-cyan-600'
+                              }`}>
+                                ₹{productPrice.toLocaleString('en-IN')}/unit
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap ml-2 ${
                         remaining > 0

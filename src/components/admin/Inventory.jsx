@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import Modal from '../common/Modal'
 import ManageStock from './ManageStock'
+import { syncInventoryWithProducts } from '../../utils/syncInventory'
 
 export default function Inventory() {
   const { isDark } = useTheme()
@@ -35,6 +36,7 @@ export default function Inventory() {
   const [addingStock, setAddingStock] = useState(false)
   const [stockItems, setStockItems] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
     const unsubs = []
@@ -111,7 +113,24 @@ export default function Inventory() {
     try {
       const data = { ...productForm, price: Number(productForm.price) }
       if (editingProductFull) {
+        const oldProduct = products.find(p => p.id === editingProductFull)
         await updateDoc(doc(db, 'products', editingProductFull), data)
+        
+        // Update inventory collection if product name or price changed
+        const invRef = collection(db, 'inventory')
+        const q = query(invRef, where('productName', '==', oldProduct.name))
+        const snapshot = await getDocs(q)
+        if (!snapshot.empty) {
+          const invDoc = snapshot.docs[0]
+          await updateDoc(doc(db, 'inventory', invDoc.id), {
+            productName: data.name,
+            name: data.name,
+            price: data.price,
+            category: data.category,
+            lastUpdated: serverTimestamp(),
+          })
+        }
+        
         toast.success('✅ Product updated')
       } else {
         await addDoc(collection(db, 'products'), { ...data, createdAt: serverTimestamp() })
@@ -168,6 +187,23 @@ export default function Inventory() {
       toast.success('✅ Category deleted')
     } catch (err) {
       toast.error(err.message)
+    }
+  }
+
+  const handleSyncInventory = async () => {
+    if (!confirm('Sync all inventory items with latest product data? This will update prices and names.')) return
+    setSyncing(true)
+    try {
+      const result = await syncInventoryWithProducts()
+      if (result.success) {
+        toast.success(`✅ Synced ${result.updatedCount} items successfully!`)
+      } else {
+        toast.error(`Failed: ${result.error}`)
+      }
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -308,6 +344,13 @@ export default function Inventory() {
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500 border border-cyan-500 text-white text-xs font-bold hover:bg-cyan-600 transition"
           >
             <span className="text-xs">+</span> Add Product
+          </button>
+          <button
+            onClick={handleSyncInventory}
+            disabled={syncing}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500 border border-purple-500 text-white text-xs font-bold hover:bg-purple-600 transition disabled:opacity-60"
+          >
+            {syncing ? '🔄 Syncing...' : '🔄 Sync Inventory'}
           </button>
         </div>
       </div>

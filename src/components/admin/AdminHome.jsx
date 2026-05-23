@@ -27,12 +27,12 @@ function StockBar({ label, value, max, color, isDark }) {
 }
 
 const STAT_CARDS = [
-  { key: 'jobs',        icon: '🔧', label: 'Total Jobs',    gradient: 'from-cyan-500 to-cyan-600' },
-  { key: 'pending',     icon: '⏳', label: 'Pending Jobs',  gradient: 'from-amber-500 to-orange-600' },
-  { key: 'technicians', icon: '👷', label: 'Technicians',   gradient: 'from-violet-500 to-purple-600' },
-  { key: 'products',    icon: '📦', label: 'Products',      gradient: 'from-blue-500 to-blue-600' },
-  { key: 'revenue',     icon: '💰', label: 'Total Revenue', gradient: 'from-emerald-500 to-green-600' },
-  { key: 'missing',     icon: '⚠️', label: 'Missing Stock', gradient: 'from-red-500 to-rose-600' },
+  { key: 'jobs',        label: 'Total Jobs',    gradient: 'from-cyan-500 to-cyan-600' },
+  { key: 'pending',     label: 'Pending Jobs',  gradient: 'from-amber-500 to-orange-600' },
+  { key: 'technicians', label: 'Technicians',   gradient: 'from-violet-500 to-purple-600' },
+  { key: 'products',    label: 'Products',      gradient: 'from-blue-500 to-blue-600' },
+  { key: 'revenue',     label: 'Total Revenue', gradient: 'from-emerald-500 to-green-600' },
+  { key: 'missing',     label: 'Missing Stock', gradient: 'from-red-500 to-rose-600' },
 ]
 
 export default function AdminHome() {
@@ -76,7 +76,7 @@ export default function AdminHome() {
 
     // Invoices
     unsubs.push(onSnapshot(collection(db, 'invoices'), snap => {
-      const revenue = snap.docs.reduce((sum, d) => sum + (d.data().totalAmount || 0), 0)
+      const revenue = snap.docs.reduce((sum, d) => sum + (d.data().amountReceived || 0), 0)
       const unreadInvoices = snap.docs.filter(d => d.data().submittedByTechnician && !d.data().adminViewed).length
       setStats(s => ({ ...s, revenue, unreadInvoices }))
     }))
@@ -121,77 +121,16 @@ export default function AdminHome() {
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        className={`rounded-2xl p-6 text-white bg-gradient-to-r from-aqua-500 to-cyan-600 shadow-lg relative`}
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-white/70 text-sm font-medium">Welcome back 👋</p>
-            <h2 className="text-3xl font-black mt-1">{profile?.name?.split(' ')[0] || 'Admin'}</h2>
-            <p className="text-white/60 text-sm mt-2">Managing {stats.jobs} total jobs</p>
-          </div>
-          
-          {/* Avatar with Dropdown */}
-          <div className="relative">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowAvatarMenu(!showAvatarMenu)
-              }}
-              className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center font-bold text-white hover:bg-white/30 transition-all"
-            >
-              {getInitials(profile?.name)}
-            </motion.button>
-
-            <AnimatePresence>
-              {showAvatarMenu && (
-                <>
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={() => setShowAvatarMenu(false)}
-                    className="fixed inset-0 z-40"
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                    className="absolute right-0 top-14 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50"
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowAvatarMenu(false)
-                        navigate('/admin/profile')
-                      }}
-                      className="w-full px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3"
-                    >
-                      <span className="text-lg">👤</span>
-                      View Profile
-                    </button>
-                    <div className="h-px bg-gray-100" />
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowAvatarMenu(false)
-                        handleLogout()
-                      }}
-                      className="w-full px-4 py-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3"
-                    >
-                      <span className="text-lg">🚪</span>
-                      Logout
-                    </button>
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Hi, {profile?.name?.split(' ')[0] || 'Admin'}
+          </h1>
+          <p className={`text-sm mt-1 ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+            Welcome to your dashboard
+          </p>
         </div>
-      </motion.div>
+      </div>
 
       {/* Invoice notification */}
       {stats.unreadInvoices > 0 && (
@@ -227,13 +166,13 @@ export default function AdminHome() {
       {/* Quick Actions */}
       <div>
         <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>QUICK ACTIONS</p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           {[
-            { label: 'New Service Job', icon: '🔧', path: '/admin/jobs',      gradient: 'from-cyan-500 to-cyan-600' },
-            { label: 'Add Technician',  icon: '👷', path: '/admin/employees', gradient: 'from-violet-500 to-purple-600' },
-            { label: 'Verify Stock',    icon: '✅', path: '/admin/verify-stock', gradient: 'from-blue-500 to-indigo-600' },
-            { label: 'View Invoices',   icon: '🧾', path: '/admin/invoices',  gradient: 'from-emerald-500 to-green-600' },
-            { label: 'Reports',         icon: '📊', path: '/admin/reports',   gradient: 'from-orange-500 to-red-600' },
+            { label: 'Service Job', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>, path: '/admin/jobs', gradient: 'from-cyan-500 to-blue-600', iconBg: isDark ? 'bg-cyan-500/20' : 'bg-cyan-50', iconColor: isDark ? 'text-cyan-400' : 'text-cyan-600' },
+            { label: 'View Invoices', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>, path: '/admin/invoices', gradient: 'from-emerald-500 to-green-600', iconBg: isDark ? 'bg-emerald-500/20' : 'bg-emerald-50', iconColor: isDark ? 'text-emerald-400' : 'text-emerald-600' },
+            { label: 'Verify Stock', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>, path: '/admin/verify-stock', gradient: 'from-blue-500 to-indigo-600', iconBg: isDark ? 'bg-blue-500/20' : 'bg-blue-50', iconColor: isDark ? 'text-blue-400' : 'text-blue-600' },
+            { label: 'Reports', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>, path: '/admin/reports', gradient: 'from-orange-500 to-red-600', iconBg: isDark ? 'bg-orange-500/20' : 'bg-orange-50', iconColor: isDark ? 'text-orange-400' : 'text-orange-600' },
+            { label: 'Add Technician', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>, path: '/admin/employees', gradient: 'from-violet-500 to-purple-600', iconBg: isDark ? 'bg-violet-500/20' : 'bg-violet-50', iconColor: isDark ? 'text-violet-400' : 'text-violet-600' },
           ].map((action, i) => (
             <motion.button
               key={action.label}
@@ -243,20 +182,21 @@ export default function AdminHome() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => navigate(action.path)}
-              className={`relative overflow-hidden rounded-2xl p-5 text-left border group ${
-                isDark ? 'glass-strong border-white/5' : 'bg-white border-sky-200 shadow-md hover:shadow-xl'
+              className={`relative overflow-hidden rounded-xl p-4 text-left border transition-all ${
+                isDark ? 'bg-dark-card border-white/10 hover:border-white/20' : 'bg-white border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
               }`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 group-hover:opacity-10 transition-opacity`} />
-              <span className="text-3xl relative z-10">{action.icon}</span>
-              <p className={`font-bold text-sm mt-3 relative z-10 ${isDark ? 'text-white' : 'text-gray-900'}`}>{action.label}</p>
+              <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 hover:opacity-5 transition-opacity`} />
+              <div className="relative flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg ${action.iconBg} flex items-center justify-center ${action.iconColor}`}>
+                  {action.icon}
+                </div>
+                <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{action.label}</p>
+              </div>
             </motion.button>
           ))}
         </div>
       </div>
-
-      {/* Recent Jobs */}
-      <RecentServiceJobs jobs={recentJobs} />
 
       {/* Overview Stats */}
       <div>
@@ -275,9 +215,8 @@ export default function AdminHome() {
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-5 transition-opacity`} />
               <div className="relative">
-                <span className="text-3xl">{card.icon}</span>
-                <p className={`text-3xl font-black mt-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>{getValue(card.key)}</p>
-                <p className={`text-xs font-semibold mt-1 ${isDark ? 'text-white/50' : 'text-gray-600'}`}>{card.label}</p>
+                <p className={`text-3xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{getValue(card.key)}</p>
+                <p className={`text-xs font-semibold mt-2 ${isDark ? 'text-white/50' : 'text-gray-600'}`}>{card.label}</p>
               </div>
             </motion.div>
           ))}

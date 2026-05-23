@@ -150,9 +150,9 @@ export default function ManageStock({ searchQuery = '' }) {
 
               <div className={`${cardBase} overflow-hidden`}>
                 {/* Table Header */}
-                <div className={`grid grid-cols-12 gap-2 px-4 py-3 border-b text-xs font-bold uppercase tracking-wider ${isDark ? 'border-white/10 text-white/40' : 'border-gray-100 text-gray-400'}`}>
+                <div className={`grid grid-cols-12 gap-3 px-4 py-3 border-b text-xs font-bold uppercase tracking-wider ${isDark ? 'border-white/10 text-white/40' : 'border-gray-100 text-gray-400'}`}>
                   <div className="col-span-4">Product</div>
-                  <div className="col-span-2 text-center">Available</div>
+                  <div className="col-span-2 text-center">Available Stock</div>
                   <div className="col-span-3 text-center">New Stock</div>
                   <div className="col-span-3 text-right">Action</div>
                 </div>
@@ -169,7 +169,7 @@ export default function ManageStock({ searchQuery = '' }) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: i * 0.03 }}
-                        className={`grid grid-cols-12 gap-2 items-center px-4 py-3.5 transition ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
+                        className={`grid grid-cols-12 gap-3 items-center px-4 py-3.5 transition ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
                       >
                         {/* Product Name */}
                         <div className="col-span-4 min-w-0">
@@ -190,7 +190,7 @@ export default function ManageStock({ searchQuery = '' }) {
                         </div>
 
                         {/* New Stock Input */}
-                        <div className="col-span-3 px-2">
+                        <div className="col-span-3">
                           <input
                             type="number"
                             min="0"

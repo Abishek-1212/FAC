@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, query, where, updateDoc, doc, serverTimestamp, addDoc, deleteDoc } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, updateDoc, doc, serverTimestamp, addDoc, deleteDoc, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useTheme } from '../../context/ThemeContext'
 import { motion } from 'framer-motion'
@@ -102,6 +102,20 @@ export default function VerifyStock() {
         quantity: qty,
         timestamp: serverTimestamp(),
       })
+      
+      // Add returned quantity back to admin inventory
+      const invQuery = query(collection(db, 'inventory'), where('productName', '==', selectedStock.productName))
+      const invSnap = await getDocs(invQuery)
+      
+      if (!invSnap.empty) {
+        const invDoc = invSnap.docs[0]
+        const currentQty = invDoc.data().quantity || 0
+        await updateDoc(doc(db, 'inventory', invDoc.id), {
+          quantity: currentQty + qty,
+          totalStock: (invDoc.data().totalStock || 0) + qty,
+          lastUpdated: serverTimestamp(),
+        })
+      }
       
       if (shouldDelete) {
         // Delete the stock record completely

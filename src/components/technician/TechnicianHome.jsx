@@ -37,10 +37,7 @@ export default function TechnicianHome() {
   const [jobs, setJobs] = useState([])
   const [availableJobs, setAvailableJobs] = useState([])
   const [showAvailable, setShowAvailable] = useState(false)
-  const [periodFilter, setPeriodFilter] = useState('today')
   const [statusFilter, setStatusFilter] = useState('active')
-  const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' })
-  const [showDatePicker, setShowDatePicker] = useState(false)
   const [invoiceModal, setInvoiceModal] = useState(false)
   const [selectedJobForInvoice, setSelectedJobForInvoice] = useState(null)
   const [stockMenuOpen, setStockMenuOpen] = useState(false)
@@ -49,14 +46,50 @@ export default function TechnicianHome() {
 
   useEffect(() => {
     if (!user) return
+    
+    // Get today's date range (start and end of today)
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const todayEnd = new Date(todayStart)
+    todayEnd.setDate(todayEnd.getDate() + 1)
+    
     const u1 = onSnapshot(
       query(collection(db, 'service_jobs'), where('technicianId', '==', user.uid)),
-      snap => setJobs(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)))
+      snap => {
+        const allJobs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        
+        // Filter jobs to only show today's jobs
+        const todayJobs = allJobs.filter(job => {
+          // Check createdAt date
+          if (job.createdAt) {
+            const jobDate = job.createdAt.toDate ? job.createdAt.toDate() : new Date(job.createdAt.seconds * 1000)
+            return jobDate >= todayStart && jobDate < todayEnd
+          }
+          return false
+        })
+        
+        setJobs(todayJobs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)))
+      }
     )
+    
     const u2 = onSnapshot(
       query(collection(db, 'service_jobs'), where('assignmentMode', '==', 'broadcast'), where('status', '==', 'pending')),
-      snap => setAvailableJobs(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)))
+      snap => {
+        const allAvailable = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        
+        // Filter available jobs to only show today's jobs
+        const todayAvailable = allAvailable.filter(job => {
+          if (job.createdAt) {
+            const jobDate = job.createdAt.toDate ? job.createdAt.toDate() : new Date(job.createdAt.seconds * 1000)
+            return jobDate >= todayStart && jobDate < todayEnd
+          }
+          return false
+        })
+        
+        setAvailableJobs(todayAvailable.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)))
+      }
     )
+    
     return () => { u1(); u2() }
   }, [user])
 
@@ -75,71 +108,14 @@ export default function TechnicianHome() {
     }
   }
 
-  const getDateRange = () => {
-    if (periodFilter === 'custom' && customDateRange.start && customDateRange.end) {
-      return { 
-        start: new Date(customDateRange.start), 
-        end: new Date(new Date(customDateRange.end).getTime() + 86400000)
-      }
-    }
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    
-    switch(periodFilter) {
-      case 'today':
-        return { start: today, end: tomorrow }
-      case 'week':
-        const weekStart = new Date(today)
-        weekStart.setDate(today.getDate() - today.getDay())
-        const weekEnd = new Date(weekStart)
-        weekEnd.setDate(weekEnd.getDate() + 7)
-        return { start: weekStart, end: weekEnd }
-      case 'month':
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-        return { start: monthStart, end: monthEnd }
-      default:
-        return { start: new Date(0), end: new Date(8640000000000000) }
-    }
-  }
 
-  const filterJobsByDateRange = (jobsList) => {
-    const { start, end } = getDateRange()
-    return jobsList.filter(j => {
-      const jobDate = j.createdAt?.toDate ? j.createdAt.toDate() : new Date(j.createdAt?.seconds * 1000 || 0)
-      return jobDate >= start && jobDate < end
-    })
-  }
-
-  const getStatusOptions = () => {
-    return periodFilter === 'today' 
-      ? ['active', 'completed', 'total']
-      : ['completed', 'missed']
-  }
 
   const active = jobs.filter(j => ['assigned', 'in_progress'].includes(j.status))
   const pending = jobs.filter(j => j.status === 'pending')
   const completed = jobs.filter(j => ['completed', 'verified'].includes(j.status))
   const total = jobs
-  const missed = jobs.filter(j => j.status === 'pending' || j.status === 'assigned')
 
-  const dateFilteredActive = filterJobsByDateRange(active)
-  const dateFilteredCompleted = filterJobsByDateRange(completed)
-  const dateFilteredMissed = filterJobsByDateRange(missed)
-  const dateFilteredTotal = filterJobsByDateRange(total)
-
-  let filtered = []
-  if (periodFilter === 'today') {
-    filtered = statusFilter === 'active' ? dateFilteredActive : statusFilter === 'completed' ? dateFilteredCompleted : dateFilteredTotal
-  } else {
-    filtered = statusFilter === 'completed' ? dateFilteredCompleted : dateFilteredMissed
-  }
-
-  const resetStatusFilter = () => {
-    setStatusFilter(periodFilter === 'today' ? 'active' : 'completed')
-  }
+  const filtered = statusFilter === 'active' ? active : statusFilter === 'completed' ? completed : total
 
   const handleLogout = async () => {
     await logout()
@@ -169,7 +145,6 @@ export default function TechnicianHome() {
         {[
           { label: 'My Reports', path: '/technician/reports' },
           { label: 'My Stock', path: '/technician/stock' },
-          { label: 'My Invoices', path: '/technician/my-invoices' },
           { label: 'Take Stock', path: '/technician/take-stock' },
         ].map((card, i) => (
           <motion.button
@@ -273,25 +248,20 @@ export default function TechnicianHome() {
         <div className={`h-px ${isDark ? 'bg-white/10' : 'bg-gray-200'}`} />
       )}
 
-      {/* Period Filter Pills */}
+      {/* Status Filter Pills */}
       {jobs.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {[
-            { key: 'today', label: 'Today' },
-            { key: 'week', label: 'This Week' },
-            { key: 'month', label: 'This Month' },
-            { key: 'custom', label: 'Custom Range' },
-          ].map(({ key, label }) => (
+            { key: 'active', label: 'Active', count: active.length },
+            { key: 'completed', label: 'Completed', count: completed.length },
+            { key: 'all', label: 'All', count: total.length },
+          ].map(({ key, label, count }) => (
             <motion.button
               key={key}
               whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                setPeriodFilter(key)
-                if (key === 'custom') setShowDatePicker(true)
-                resetStatusFilter()
-              }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                periodFilter === key
+              onClick={() => setStatusFilter(key)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                statusFilter === key
                   ? isDark
                     ? 'bg-blue-500 text-white'
                     : 'bg-blue-600 text-white'
@@ -301,97 +271,15 @@ export default function TechnicianHome() {
               }`}
             >
               {label}
+              <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+                statusFilter === key
+                  ? 'bg-white/20 text-white'
+                  : isDark ? 'bg-white/10 text-white/40' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {count}
+              </span>
             </motion.button>
           ))}
-        </div>
-      )}
-
-      {/* Custom Date Range Picker */}
-      {showDatePicker && periodFilter === 'custom' && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`rounded-2xl p-4 border ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'}`}
-        >
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className={`text-xs font-bold mb-2 block ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Start Date</label>
-              <input
-                type="date"
-                value={customDateRange.start}
-                onChange={(e) => setCustomDateRange({ ...customDateRange, start: e.target.value })}
-                className={`w-full px-3 py-2 rounded-lg text-sm border transition-all ${
-                  isDark
-                    ? 'bg-white/5 border-white/10 text-white focus:border-blue-500'
-                    : 'bg-white border-gray-200 text-gray-900 focus:border-blue-500'
-                } focus:outline-none`}
-              />
-            </div>
-            <div>
-              <label className={`text-xs font-bold mb-2 block ${isDark ? 'text-white/60' : 'text-gray-600'}`}>End Date</label>
-              <input
-                type="date"
-                value={customDateRange.end}
-                onChange={(e) => setCustomDateRange({ ...customDateRange, end: e.target.value })}
-                className={`w-full px-3 py-2 rounded-lg text-sm border transition-all ${
-                  isDark
-                    ? 'bg-white/5 border-white/10 text-white focus:border-blue-500'
-                    : 'bg-white border-gray-200 text-gray-900 focus:border-blue-500'
-                } focus:outline-none`}
-              />
-            </div>
-          </div>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowDatePicker(false)}
-            className={`w-full py-2 rounded-lg text-sm font-bold transition-all ${
-              isDark
-                ? 'bg-blue-500 text-white hover:bg-blue-600'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
-            Apply Range
-          </motion.button>
-        </motion.div>
-      )}
-
-      {/* Status Filter Pills */}
-      {jobs.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {getStatusOptions().map((key) => {
-            const statusConfig = {
-              active: { label: 'Active', count: dateFilteredActive.length },
-              completed: { label: 'Completed', count: dateFilteredCompleted.length },
-              missed: { label: 'Missed', count: dateFilteredMissed.length },
-              total: { label: 'All', count: dateFilteredTotal.length },
-            }
-            const config = statusConfig[key]
-            return (
-              <motion.button
-                key={key}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setStatusFilter(key)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  statusFilter === key
-                    ? isDark
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-blue-600 text-white'
-                    : isDark
-                    ? 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                {config.label}
-                <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
-                  statusFilter === key
-                    ? 'bg-white/20 text-white'
-                    : isDark ? 'bg-white/10 text-white/40' : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {config.count}
-                </span>
-              </motion.button>
-            )
-          })}
         </div>
       )}
 
@@ -432,60 +320,67 @@ export default function TechnicianHome() {
                   </div>
 
                   {/* Contact Info */}
-                  <div className={`text-xs space-y-0.5 ml-4 mb-2 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                    <p className="truncate">📞 {job.customerPhone}</p>
-                    <p className="truncate">📍 {job.customerAddress}</p>
+                  <div className={`text-xs space-y-1.5 ml-4 mb-3 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                    <div className="flex items-center gap-2">
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      <p className="truncate font-medium">{job.customerPhone}</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <p className="truncate flex-1 font-medium">{job.customerAddress}</p>
+                    </div>
                   </div>
 
-                  {/* Bottom Row: Service Type, Priority, In Progress */}
+                  {/* Bottom Row: Service Type, Date, Priority */}
                   <div className="flex flex-wrap items-center justify-between gap-2 ml-4">
                     <div className="flex flex-wrap items-center gap-2">
                     {job.serviceType && (
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex items-center gap-1.5 ${
                         job.serviceType === 'New Fitting'
-                          ? isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-600'
-                          : isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-50 text-orange-600'
+                          ? isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'
+                          : isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-50 text-orange-700'
                       }`}>
-                        {job.serviceType === 'New Fitting' ? '🔧' : '🛠️'}
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {job.serviceType}
                       </span>
                     )}
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
-                      isDark ? 'text-white/40' : 'text-gray-400'
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-lg whitespace-nowrap flex items-center gap-1.5 ${
+                      isDark ? 'bg-white/5 text-white/50' : 'bg-gray-100 text-gray-600'
                     }`}>
-                      📅 {formatDate(job.createdAt)}
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {formatDate(job.createdAt)}
                     </span>
                     {isUrgent && (
-                      <span className={`text-xs px-2 py-1 rounded-full font-bold whitespace-nowrap ${
-                        isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-600'
+                      <span className={`text-xs px-2.5 py-1 rounded-lg font-bold whitespace-nowrap flex items-center gap-1.5 ${
+                        isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700'
                       }`}>
-                        🔴
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        Urgent
                       </span>
                     )}
                     {job.status === 'in_progress' && (
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex items-center gap-1.5 ${
                         isDark ? 'bg-violet-500/20 text-violet-300' : 'bg-violet-100 text-violet-700'
                       }`}>
-                        ⏱️
+                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        In Progress
                       </span>
                     )}
                     </div>
-                    {['completed', 'verified'].includes(job.status) && (
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedJobForInvoice(job)
-                          setInvoiceModal(true)
-                        }}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap transition-all ${
-                          isDark
-                            ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
-                            : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                        }`}
-                      >
-                        📄 Invoice
-                      </motion.button>
-                    )}
                   </div>
                 </motion.div>
               )
@@ -500,10 +395,10 @@ export default function TechnicianHome() {
                 }`}
               >
                 <p className="text-4xl mb-3">
-                  {statusFilter === 'active' ? '🎉' : statusFilter === 'completed' ? '✅' : statusFilter === 'missed' ? '⚠️' : '📋'}
+                  {statusFilter === 'active' ? '🎉' : statusFilter === 'completed' ? '✅' : '📋'}
                 </p>
                 <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-                  {statusFilter === 'active' ? 'No active jobs' : statusFilter === 'completed' ? 'No completed jobs' : statusFilter === 'missed' ? 'No missed jobs' : 'No jobs'}
+                  {statusFilter === 'active' ? 'No active jobs' : statusFilter === 'completed' ? 'No completed jobs' : 'No jobs'}
                 </p>
               </motion.div>
             )}
