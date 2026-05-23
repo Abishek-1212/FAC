@@ -136,7 +136,7 @@ export default function MyStock() {
       {/* Direct Stock Stats */}
       <div>
         <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-          My Personal Stock
+          Company Stock Summary
         </p>
         <div className="grid grid-cols-4 gap-2">
           {[
@@ -166,7 +166,7 @@ export default function MyStock() {
       {directStock.length > 0 && (
         <div>
           <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-            Personal Stock Items
+            Company Stock Items
           </p>
           <div className="grid gap-3">
             {directStock.map(a => {

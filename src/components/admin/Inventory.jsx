@@ -1,29 +1,54 @@
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, doc, updateDoc, addDoc, query, where, serverTimestamp } from 'firebase/firestore'
+import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, query, where, serverTimestamp, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useTheme } from '../../context/ThemeContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
+import Modal from '../common/Modal'
+import ManageStock from './ManageStock'
 
 export default function Inventory() {
   const { isDark } = useTheme()
+  const navigate = useNavigate()
   const [invProducts, setInvProducts] = useState([])
+  const [products, setProducts] = useState([])
   const [techStock, setTechStock] = useState([])
+  const [personalStock, setPersonalStock] = useState([])
   const [technicians, setTechnicians] = useState([])
   const [editingId, setEditingId] = useState(null)
   const [editQty, setEditQty] = useState('')
   const [saving, setSaving] = useState(false)
-  const [showAddProduct, setShowAddProduct] = useState(false)
-  const [addForm, setAddForm] = useState({ name: '', price: '', dealerName: '' })
-  const [adding, setAdding] = useState(false)
+  const [activeTab, setActiveTab] = useState('manage')
+  const [editingProduct, setEditingProduct] = useState(null)
+  const [editPrice, setEditPrice] = useState('')
+  const [showProductModal, setShowProductModal] = useState(false)
+  const [productForm, setProductForm] = useState({ name: '', sku: '', category: '', price: '', description: '' })
+  const [editingProductFull, setEditingProductFull] = useState(null)
+  const [categories, setCategories] = useState([])
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [newCategory, setNewCategory] = useState('')
+  const [addingCategory, setAddingCategory] = useState(false)
+  const [showStockModal, setShowStockModal] = useState(false)
+  const [stockForm, setStockForm] = useState({ category: '', productId: '', quantity: '' })
+  const [producerName, setProducerName] = useState('')
+  const [addingStock, setAddingStock] = useState(false)
+  const [stockItems, setStockItems] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     const unsubs = []
     unsubs.push(onSnapshot(collection(db, 'inventory'), snap => {
       setInvProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     }))
-    unsubs.push(onSnapshot(collection(db, 'technician_stock'), snap => {
-      setTechStock(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    unsubs.push(onSnapshot(collection(db, 'products'), snap => {
+      setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    }))
+    unsubs.push(onSnapshot(collection(db, 'product_categories'), snap => {
+      setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name)))
+    }))
+    unsubs.push(onSnapshot(collection(db, 'technician_personal_stock'), snap => {
+      setPersonalStock(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     }))
     unsubs.push(onSnapshot(
       query(collection(db, 'users'), where('role', '==', 'technician')),
@@ -32,27 +57,199 @@ export default function Inventory() {
     return () => unsubs.forEach(u => u())
   }, [])
 
-  const handleAddProduct = async (e) => {
-    e.preventDefault()
-    if (!addForm.name.trim() || !addForm.price) return
-    setAdding(true)
+
+
+  const startEditProduct = (product) => {
+    setEditingProduct(product.id)
+    setEditPrice((product.price || 0).toString())
+  }
+
+  const cancelEditProduct = () => {
+    setEditingProduct(null)
+    setEditPrice('')
+  }
+
+  const savePrice = async (productId) => {
+    if (editPrice === '') return
+    setSaving(true)
     try {
-      await addDoc(collection(db, 'inventory'), {
-        productName: addForm.name.trim(),
-        name: addForm.name.trim(),
-        price: Number(addForm.price),
-        dealerName: addForm.dealerName.trim(),
-        quantity: 0,
-        totalStock: 0,
-        createdAt: serverTimestamp(),
+      await updateDoc(doc(db, 'products', productId), {
+        price: Number(editPrice),
+        lastUpdated: serverTimestamp(),
       })
-      toast.success('✅ Product added')
-      setAddForm({ name: '', price: '', dealerName: '' })
-      setShowAddProduct(false)
+      toast.success('✅ Price updated')
+      setEditingProduct(null)
+      setEditPrice('')
     } catch (err) {
       toast.error(err.message)
     } finally {
-      setAdding(false)
+      setSaving(false)
+    }
+  }
+
+  const openAddProduct = () => {
+    setProductForm({ name: '', sku: '', category: '', price: '', description: '' })
+    setEditingProductFull(null)
+    setShowProductModal(true)
+  }
+
+  const openEditProduct = (product) => {
+    setProductForm({
+      name: product.name,
+      sku: product.sku || '',
+      category: product.category || '',
+      price: String(product.price || ''),
+      description: product.description || ''
+    })
+    setEditingProductFull(product.id)
+    setShowProductModal(true)
+  }
+
+  const handleSaveProduct = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const data = { ...productForm, price: Number(productForm.price) }
+      if (editingProductFull) {
+        await updateDoc(doc(db, 'products', editingProductFull), data)
+        toast.success('✅ Product updated')
+      } else {
+        await addDoc(collection(db, 'products'), { ...data, createdAt: serverTimestamp() })
+        toast.success('✅ Product added')
+      }
+      setShowProductModal(false)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteProduct = async (id) => {
+    if (!confirm('Delete this product?')) return
+    try {
+      await deleteDoc(doc(db, 'products', id))
+      toast.success('✅ Product deleted')
+      setShowProductModal(false)
+    } catch (err) {
+      toast.error(err.message)
+    }
+  }
+
+  const handleAddCategory = async (e) => {
+    e.preventDefault()
+    const name = newCategory.trim()
+    if (!name) return
+    if (categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+      toast.error('Category already exists')
+      return
+    }
+    setAddingCategory(true)
+    try {
+      await addDoc(collection(db, 'product_categories'), { name, createdAt: serverTimestamp() })
+      toast.success(`✅ "${name}" added`)
+      setNewCategory('')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setAddingCategory(false)
+    }
+  }
+
+  const handleDeleteCategory = async (cat) => {
+    const inUse = products.some(p => p.category === cat.name)
+    if (inUse) {
+      toast.error(`"${cat.name}" is used by products. Reassign them first.`)
+      return
+    }
+    if (!confirm(`Delete category "${cat.name}"?`)) return
+    try {
+      await deleteDoc(doc(db, 'product_categories', cat.id))
+      toast.success('✅ Category deleted')
+    } catch (err) {
+      toast.error(err.message)
+    }
+  }
+
+  const openManageStock = () => {
+    setStockForm({ category: '', productId: '', quantity: '' })
+    setProducerName('')
+    setStockItems([])
+    setShowStockModal(true)
+  }
+
+  const addStockItem = () => {
+    if (!producerName.trim()) {
+      toast.error('Please enter producer name first')
+      return
+    }
+    if (!stockForm.productId || !stockForm.quantity) {
+      toast.error('Please select product and enter quantity')
+      return
+    }
+    const product = products.find(p => p.id === stockForm.productId)
+    const newItem = {
+      id: Date.now(),
+      productId: stockForm.productId,
+      productName: product.name,
+      category: stockForm.category,
+      quantity: Number(stockForm.quantity),
+      producerName: producerName.trim(),
+      price: product.price
+    }
+    setStockItems([...stockItems, newItem])
+    setStockForm({ category: stockForm.category, productId: '', quantity: '' })
+  }
+
+  const removeStockItem = (id) => {
+    setStockItems(stockItems.filter(item => item.id !== id))
+  }
+
+  const handleAddStock = async (e) => {
+    e.preventDefault()
+    if (stockItems.length === 0) {
+      toast.error('Please add at least one product')
+      return
+    }
+    setAddingStock(true)
+    try {
+      for (const item of stockItems) {
+        const product = products.find(p => p.id === item.productId)
+        const invRef = collection(db, 'inventory')
+        const q = query(invRef, where('productName', '==', product.name))
+        const snapshot = await getDocs(q)
+        
+        if (!snapshot.empty) {
+          // Update existing
+          const existing = snapshot.docs[0]
+          const existingData = existing.data()
+          await updateDoc(doc(db, 'inventory', existing.id), {
+            quantity: (existingData.quantity || 0) + item.quantity,
+            totalStock: (existingData.totalStock || 0) + item.quantity,
+            producerName: item.producerName || existingData.producerName,
+            lastUpdated: serverTimestamp(),
+          })
+        } else {
+          // Add new
+          await addDoc(invRef, {
+            productName: product.name,
+            name: product.name,
+            price: product.price,
+            category: product.category,
+            producerName: item.producerName,
+            quantity: item.quantity,
+            totalStock: item.quantity,
+            createdAt: serverTimestamp(),
+          })
+        }
+      }
+      toast.success(`✅ Stock updated for ${stockItems.length} product(s)`)
+      setShowStockModal(false)
+      setStockItems([])
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setAddingStock(false)
     }
   }
 
@@ -94,285 +291,356 @@ export default function Inventory() {
     <div className="space-y-6 pb-20 md:pb-0">
 
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
+      <div className="flex flex-col items-center gap-4">
+        <div className="text-center">
           <h2 className={`text-2xl font-black ${t}`}>Inventory Management</h2>
           <p className={`text-sm mt-0.5 ${s}`}>Manage stock levels and technician assignments</p>
         </div>
-        <button
-          onClick={() => setShowAddProduct(v => !v)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500 text-white text-sm font-bold hover:bg-cyan-600 transition"
-        >
-          <span className="text-lg">+</span> Add Product
-        </button>
+        <div className={`flex items-center gap-3 border rounded-full p-1 ${isDark ? 'border-white/20' : 'border-gray-300'}`}>
+          <button
+            onClick={() => setShowCategoryModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500 border border-cyan-500 text-white text-xs font-bold hover:bg-cyan-600 transition"
+          >
+            Manage Categories
+          </button>
+          <button
+            onClick={openAddProduct}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500 border border-cyan-500 text-white text-xs font-bold hover:bg-cyan-600 transition"
+          >
+            <span className="text-xs">+</span> Add Product
+          </button>
+        </div>
       </div>
 
-      {/* Add Product Form */}
-      <AnimatePresence>
-        {showAddProduct && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className={`rounded-2xl border p-5 ${isDark ? 'bg-white/5 border-cyan-500/30' : 'bg-cyan-50 border-cyan-200'}`}
+      {/* Search Bar */}
+      <div className="relative">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by product name..."
+          className={`w-full px-4 py-3 pl-12 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white placeholder-white/30' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`}
+        />
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg">🔍</span>
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs transition ${isDark ? 'bg-white/10 text-white/60 hover:bg-white/20' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
           >
-            <h3 className={`font-black text-base mb-4 ${t}`}>➕ Add New Product</h3>
-            <form onSubmit={handleAddProduct} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Product Name *</label>
-                <input type="text" placeholder="e.g. Spun Filter" value={addForm.name}
-                  onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} required className={inputCls} />
-              </div>
-              <div>
-                <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Price (₹) *</label>
-                <input type="number" placeholder="e.g. 150" min="0" value={addForm.price}
-                  onChange={e => setAddForm(f => ({ ...f, price: e.target.value }))} required className={inputCls} />
-              </div>
-              <div>
-                <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Dealer Name</label>
-                <input type="text" placeholder="e.g. Ravi Traders" value={addForm.dealerName}
-                  onChange={e => setAddForm(f => ({ ...f, dealerName: e.target.value }))} className={inputCls} />
-              </div>
-              <div className="sm:col-span-3 flex gap-3 pt-1">
-                <button type="button" onClick={() => { setShowAddProduct(false); setAddForm({ name: '', price: '', dealerName: '' }) }}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${isDark ? 'bg-white/10 text-white/70 hover:bg-white/20' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>
-                  Cancel
-                </button>
-                <button type="submit" disabled={adding}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-cyan-500 text-white hover:bg-cyan-600 transition disabled:opacity-60">
-                  {adding ? 'Adding...' : '✅ Add Product'}
-                </button>
-              </div>
-            </form>
-          </motion.div>
+            ✕
+          </button>
         )}
-      </AnimatePresence>
+      </div>
+
+      {/* Tab Pills */}
+      <div className="flex justify-center">
+        <div className={`flex gap-3 border rounded-full p-1 ${isDark ? 'border-white/20' : 'border-gray-300'}`}>
+          <button
+            onClick={() => setActiveTab('manage')}
+            className={`px-4 py-2 rounded-full text-xs font-bold transition border ${
+              activeTab === 'manage'
+                ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30 border-cyan-500'
+                : isDark ? 'bg-transparent text-white/60 hover:bg-white/10 border-white/10' : 'bg-transparent text-gray-600 hover:bg-gray-200 border-black/20'
+            }`}
+          >
+            MANAGE STOCK
+          </button>
+          <button
+            onClick={() => setActiveTab('inventory')}
+            className={`px-4 py-2 rounded-full text-xs font-bold transition border ${
+              activeTab === 'inventory'
+                ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30 border-cyan-500'
+                : isDark ? 'bg-transparent text-white/60 hover:bg-white/10 border-white/10' : 'bg-transparent text-gray-600 hover:bg-gray-200 border-black/20'
+            }`}
+          >
+           INVENTORY STOCK
+          </button>
+        </div>
+      </div>
+
+
 
       {/* SECTION 1: PRODUCT INVENTORY — Table Layout */}
+      {activeTab === 'inventory' && (
       <div>
         <div className="flex items-center gap-2 mb-3">
           <div className={`w-1 h-6 rounded-full ${isDark ? 'bg-cyan-400' : 'bg-cyan-500'}`} />
           <h3 className={`text-lg font-black ${t}`}>Product Inventory</h3>
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isDark ? 'bg-white/10 text-white/50' : 'bg-gray-100 text-gray-500'}`}>
-            {invProducts.length} products
-          </span>
         </div>
 
-        {invProducts.length === 0 ? (
+        {products.length === 0 ? (
           <div className={`${cardBase} p-12 text-center`}>
             <p className="text-4xl mb-3">📦</p>
             <p className={`text-sm ${s}`}>No products yet. Click "Add Product" to get started.</p>
           </div>
-        ) : (
-          <div className={`${cardBase} overflow-hidden`}>
-            {/* Table Header */}
-            <div className={`grid grid-cols-12 px-4 py-3 border-b text-xs font-bold uppercase tracking-wider ${isDark ? 'border-white/10 text-white/40' : 'border-gray-100 text-gray-400'}`}>
-              <div className="col-span-5">Product</div>
-              <div className="col-span-3 text-right">Price</div>
-              <div className="col-span-4 text-right">Quantity</div>
-            </div>
-
-            {/* Table Rows */}
-            <div className={`divide-y ${isDark ? 'divide-white/5' : 'divide-gray-50'}`}>
-              {invProducts.map((product, i) => {
-                const isEditing = editingId === product.id
-                const qty = product.quantity || 0
-                const isOut = qty === 0
-
-                return (
-                  <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.03 }}
-                    className={`grid grid-cols-12 items-center px-4 py-3.5 transition ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
-                  >
-                    {/* Product Name + Dealer */}
-                    <div className="col-span-5 min-w-0">
-                      <p className={`font-bold text-sm truncate ${t}`}>{product.productName || product.name}</p>
-                      {product.dealerName && (
-                        <p className={`text-xs truncate ${s}`}>{product.dealerName}</p>
-                      )}
-                    </div>
-
-                    {/* Price */}
-                    <div className="col-span-3 text-right">
-                      <p className={`text-sm font-bold ${isDark ? 'text-green-300' : 'text-green-600'}`}>
-                        ₹{(product.price || 0).toLocaleString('en-IN')}
-                      </p>
-                    </div>
-
-                    {/* Quantity — inline edit on click */}
-                    <div className="col-span-4 flex items-center justify-end gap-2">
-                      {isEditing ? (
-                        <>
-                          <input
-                            type="number"
-                            min="0"
-                            value={editQty}
-                            onChange={e => setEditQty(e.target.value)}
-                            autoFocus
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') saveQty(product.id)
-                              if (e.key === 'Escape') cancelEdit()
-                            }}
-                            className={`w-20 px-2 py-1.5 rounded-lg border text-sm font-black text-center focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/10 border-white/20 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
-                          />
-                          <button
-                            onClick={() => saveQty(product.id)}
-                            disabled={saving}
-                            className="px-2.5 py-1.5 rounded-lg bg-cyan-500 text-white text-xs font-bold hover:bg-cyan-600 transition disabled:opacity-60"
-                          >
-                            ✓
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition ${isDark ? 'bg-white/10 text-white/60 hover:bg-white/20' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                          >
-                            ✕
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => startEdit(product)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition group ${
-                            isOut
-                              ? isDark ? 'bg-red-500/15 hover:bg-red-500/25' : 'bg-red-50 hover:bg-red-100'
-                              : isDark ? 'bg-blue-500/15 hover:bg-blue-500/25' : 'bg-blue-50 hover:bg-blue-100'
-                          }`}
-                        >
-                          <span className={`text-sm font-black ${isOut ? isDark ? 'text-red-300' : 'text-red-600' : isDark ? 'text-blue-300' : 'text-blue-600'}`}>
-                            {qty}
-                          </span>
-                          <svg className={`w-3 h-3 opacity-0 group-hover:opacity-100 transition ${isOut ? isDark ? 'text-red-300' : 'text-red-500' : isDark ? 'text-blue-300' : 'text-blue-500'}`}
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Hint */}
-        {invProducts.length > 0 && (
-          <p className={`text-xs mt-2 ml-1 ${s}`}>💡 Click on the quantity number to edit it inline</p>
-        )}
-      </div>
-
-      {/* SECTION 2: TECHNICIAN STOCK DETAILS */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <div className={`w-1 h-6 rounded-full ${isDark ? 'bg-purple-400' : 'bg-purple-500'}`} />
-          <h3 className={`text-lg font-black ${t}`}>Technician Stock Details</h3>
-        </div>
-
-        {technicians.length === 0 ? (
-          <div className={`${cardBase} p-12 text-center`}>
-            <p className="text-4xl mb-3">👷</p>
-            <p className={`text-sm ${s}`}>No technicians found</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {technicians.map((tech, i) => {
-              const items = techStock.filter(s => s.technicianId === tech.id && s.status === 'active')
-              const totalTaken = items.reduce((sum, s) => sum + (s.takenQuantity || 0), 0)
-              const totalUsed = items.reduce((sum, s) => sum + (s.usedQuantity || 0), 0)
-              const totalReturned = items.reduce((sum, s) => sum + (s.returnedQuantity || 0), 0)
-              const totalDamaged = items.reduce((sum, s) => sum + (s.damagedQuantity || 0), 0)
-              const totalRemaining = items.reduce((sum, s) => sum + Math.max(
-                (s.takenQuantity || 0) - (s.usedQuantity || 0) - (s.returnedQuantity || 0) - (s.damagedQuantity || 0), 0
-              ), 0)
-
-              return (
-                <motion.div key={tech.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className={`rounded-2xl border overflow-hidden ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}
-                >
-                  <div className={`px-5 py-4 border-b ${isDark ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-white/10' : 'bg-gradient-to-r from-purple-50 to-pink-50 border-gray-100'}`}>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black flex-shrink-0 ${isDark ? 'bg-purple-500/30 text-purple-300' : 'bg-purple-500 text-white'}`}>
-                        {(tech.name || 'T').charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-black text-base ${t}`}>{tech.name || 'Unknown'}</p>
-                        <p className={`text-xs ${s}`}>📞 {tech.phone || tech.phoneNumber || '—'}</p>
-                      </div>
-                      <div className="flex gap-2 flex-wrap">
-                        {[
-                          { label: 'Taken', value: totalTaken, color: isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700' },
-                          { label: 'Used', value: totalUsed, color: isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700' },
-                          { label: 'Returned', value: totalReturned, color: isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700' },
-                          { label: 'Damaged', value: totalDamaged, color: isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700' },
-                          { label: 'Remaining', value: totalRemaining, color: isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700' },
-                        ].map(stat => (
-                          <div key={stat.label} className={`text-center px-2.5 py-1.5 rounded-lg ${stat.color}`}>
-                            <p className="text-base font-black leading-none">{stat.value}</p>
-                            <p className="text-[10px] font-semibold opacity-70 mt-0.5">{stat.label}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+        ) : (() => {
+          const grouped = {}
+          // Filter products based on search query
+          const filteredProducts = products.filter(p => 
+            p.name.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+          
+          filteredProducts.forEach(p => {
+            const cat = p.category || 'Uncategorized'
+            if (!grouped[cat]) grouped[cat] = []
+            grouped[cat].push(p)
+          })
+          
+          if (filteredProducts.length === 0) {
+            return (
+              <div className={`${cardBase} p-12 text-center`}>
+                <p className="text-4xl mb-3">🔍</p>
+                <p className={`text-sm ${s}`}>No products found matching "{searchQuery}"</p>
+              </div>
+            )
+          }
+          
+          return (
+            <div className="space-y-6">
+              {Object.entries(grouped).map(([category, categoryProducts]) => (
+                <div key={category}>
+                  {/* Category Header */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-1 h-5 rounded-full ${isDark ? 'bg-purple-400' : 'bg-purple-500'}`} />
+                    <h4 className={`text-base font-black ${t}`}>{category}</h4>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isDark ? 'bg-white/10 text-white/50' : 'bg-gray-100 text-gray-500'}`}>
+                      {categoryProducts.length} items
+                    </span>
                   </div>
 
-                  {items.length === 0 ? (
-                    <div className="px-5 py-8 text-center">
-                      <p className={`text-sm ${s}`}>No stock assigned yet</p>
+                  {/* Products Table */}
+                  <div className={`${cardBase} overflow-hidden`}>
+                    {/* Table Header */}
+                    <div className={`grid grid-cols-12 px-4 py-3 border-b text-xs font-bold uppercase tracking-wider ${isDark ? 'border-white/10 text-white/40' : 'border-gray-100 text-gray-400'}`}>
+                      <div className="col-span-10">Product</div>
+                      <div className="col-span-2 text-right">Price</div>
                     </div>
-                  ) : (
-                    <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {items.map((item) => {
-                        const remaining = Math.max(
-                          (item.takenQuantity || 0) - (item.usedQuantity || 0) - (item.returnedQuantity || 0) - (item.damagedQuantity || 0), 0
-                        )
+
+                    {/* Table Rows */}
+                    <div className={`divide-y ${isDark ? 'divide-white/5' : 'divide-gray-50'}`}>
+                      {categoryProducts.map((product, i) => {
+                        const invItem = invProducts.find(inv => inv.productName === product.name || inv.name === product.name)
+                        const stockQty = invItem?.quantity || 0
+
                         return (
-                          <div key={item.id} className={`rounded-xl p-4 border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <p className={`font-black text-sm ${t}`}>{item.productName}</p>
-                                {item.productPrice > 0 && (
-                                  <p className={`text-xs mt-0.5 ${isDark ? 'text-purple-400' : 'text-purple-600'}`}>
-                                    ₹{item.productPrice.toLocaleString('en-IN')}/unit
-                                  </p>
-                                )}
-                              </div>
-                              <span className={`text-xs font-bold px-2 py-1 rounded-lg ${remaining > 0 ? isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700' : isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700'}`}>
-                                {remaining > 0 ? `${remaining} left` : 'All used'}
+                          <motion.div
+                            key={product.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: i * 0.03 }}
+                            className={`grid grid-cols-12 items-center px-4 py-3.5 transition ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
+                          >
+                            {/* Product Name + Description */}
+                            <div className="col-span-10 min-w-0 cursor-pointer" onClick={() => openEditProduct(product)}>
+                              <p className={`font-bold text-sm truncate ${t}`}>{product.name}</p>
+                              {product.description && (
+                                <p className={`text-xs truncate ${s}`}>{product.description}</p>
+                              )}
+                            </div>
+
+                            {/* Price */}
+                            <div className="col-span-2 flex items-center justify-end gap-2">
+                              <span className={`text-sm font-black ${isDark ? 'text-green-300' : 'text-green-600'}`}>
+                                ₹{(product.price || 0).toLocaleString('en-IN')}
                               </span>
                             </div>
-                            <div className="grid grid-cols-4 gap-1.5">
-                              {[
-                                { label: 'Took', value: item.takenQuantity || 0, color: isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-700' },
-                                { label: 'Used', value: item.usedQuantity || 0, color: isDark ? 'bg-green-500/15 text-green-300' : 'bg-green-50 text-green-700' },
-                                { label: 'Ret', value: item.returnedQuantity || 0, color: isDark ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700' },
-                                { label: 'Dmg', value: item.damagedQuantity || 0, color: isDark ? 'bg-red-500/15 text-red-300' : 'bg-red-50 text-red-700' },
-                              ].map(stat => (
-                                <div key={stat.label} className={`text-center p-1.5 rounded-lg ${stat.color}`}>
-                                  <p className="text-sm font-black">{stat.value}</p>
-                                  <p className="text-[9px] font-semibold opacity-70">{stat.label}</p>
-                                </div>
-                              ))}
-                            </div>
-                            {item.takenAt && (
-                              <p className={`text-[10px] mt-2 ${s}`}>
-                                📅 {item.takenAt.toDate ? new Date(item.takenAt.toDate()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
-                              </p>
-                            )}
-                          </div>
+                          </motion.div>
                         )
                       })}
                     </div>
-                  )}
-                </motion.div>
-              )
-            })}
-          </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+
+        {/* Hint */}
+        {products.length > 0 && (
+          <p className={`text-xs mt-2 ml-1 ${s}`}>💡 Click on the product name to edit details</p>
         )}
       </div>
+      )}
+
+      {/* SECTION 0: MANAGE STOCK */}
+      {activeTab === 'manage' && <ManageStock searchQuery={searchQuery} />}
+
+      {/* Add/Edit Product Modal */}
+      <Modal open={showProductModal} onClose={() => setShowProductModal(false)} title={editingProductFull ? 'Edit Product' : 'Add Product'}>
+        <form onSubmit={handleSaveProduct} className="space-y-3 max-h-[55vh] overflow-y-auto pr-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Product Name *</label>
+              <input type="text" value={productForm.name} onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))} required className={inputCls} />
+            </div>
+            <div>
+              <label className={`text-xs font-semibold block mb-1.5 ${s}`}>SKU (optional)</label>
+              <input type="text" value={productForm.sku} onChange={e => setProductForm(f => ({ ...f, sku: e.target.value }))} className={inputCls} />
+            </div>
+          </div>
+          <div>
+            <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Price (₹) *</label>
+            <input type="number" value={productForm.price} onChange={e => setProductForm(f => ({ ...f, price: e.target.value }))} required className={inputCls} />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className={`text-xs font-semibold ${s}`}>Category *</label>
+              <button type="button" onClick={() => { setShowProductModal(false); setShowCategoryModal(true) }} className="text-xs text-cyan-600 font-semibold hover:text-cyan-700 transition">+ Manage</button>
+            </div>
+            <select value={productForm.category} onChange={e => setProductForm(f => ({ ...f, category: e.target.value }))} required className={inputCls}>
+              <option value="">Select category</option>
+              {categories.map(c => (<option key={c.id} value={c.name}>{c.name}</option>))}
+            </select>
+            {categories.length === 0 && (<p className="text-xs text-amber-600 mt-1.5 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">⚠️ No categories yet. Add one first.</p>)}
+          </div>
+          <div>
+            <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Description</label>
+            <textarea value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Enter product description..." className={inputCls} />
+          </div>
+          <div className="flex gap-2 pt-3 border-t border-gray-100 sticky bottom-0 bg-white">
+            {editingProductFull && (<button type="button" onClick={() => handleDeleteProduct(editingProductFull)} className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${isDark ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300' : 'bg-red-50 hover:bg-red-100 text-red-700'}`}>🗑️ Delete</button>)}
+            <button type="submit" disabled={saving} className="flex-1 bg-cyan-500 text-white rounded-lg py-2 text-sm font-semibold hover:bg-cyan-600 transition disabled:opacity-60">{saving ? 'Saving...' : editingProductFull ? 'Update' : 'Add Product'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Manage Categories Modal */}
+      <Modal open={showCategoryModal} onClose={() => setShowCategoryModal(false)} title="Manage Categories">
+        <div className="space-y-4">
+          <form onSubmit={handleAddCategory} className="flex gap-2">
+            <input value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="New category name..." className={inputCls} />
+            <button type="submit" disabled={addingCategory || !newCategory.trim()} className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-cyan-600 transition disabled:opacity-50">{addingCategory ? '...' : 'Add'}</button>
+          </form>
+          {categories.length === 0 ? (
+            <div className={`text-center py-8 rounded-xl ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}><p className={`text-sm ${s}`}>No categories yet. Add one above.</p></div>
+          ) : (
+            <div className="grid gap-2 max-h-64 overflow-y-auto">
+              {categories.map(cat => (
+                <div key={cat.id} className={`flex items-center justify-between rounded-xl px-4 py-3 transition group ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                  <span className={`text-sm font-semibold ${t}`}>{cat.name}</span>
+                  <button onClick={() => handleDeleteCategory(cat)} className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm transition opacity-0 group-hover:opacity-100 ${isDark ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' : 'bg-red-50 text-red-400 hover:bg-red-100'}`}>🗑️</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className={`text-xs bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 ${isDark ? 'bg-blue-500/10 border-blue-500/30 text-blue-300' : 'text-blue-600'}`}>ℹ️ Categories in use by products cannot be deleted.</p>
+        </div>
+      </Modal>
+
+      {/* Manage Stock Modal */}
+      <Modal open={showStockModal} onClose={() => setShowStockModal(false)} title="Manage Stock">
+        <div className="space-y-4">
+          {/* Add Stock Form */}
+          <div className="space-y-3">
+            <div>
+              <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Producer Name *</label>
+              <input
+                type="text"
+                value={producerName}
+                onChange={e => setProducerName(e.target.value)}
+                placeholder="Enter producer name"
+                className={inputCls}
+              />
+            </div>
+
+            <div>
+              <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Category *</label>
+              <select
+                value={stockForm.category}
+                onChange={e => setStockForm(f => ({ ...f, category: e.target.value, productId: '' }))}
+                className={inputCls}
+              >
+                <option value="">Select category</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Product *</label>
+              <select
+                value={stockForm.productId}
+                onChange={e => setStockForm(f => ({ ...f, productId: e.target.value }))}
+                disabled={!stockForm.category}
+                className={inputCls}
+              >
+                <option value="">Select product</option>
+                {products.filter(p => p.category === stockForm.category).map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Quantity *</label>
+              <input
+                type="number"
+                min="1"
+                value={stockForm.quantity}
+                onChange={e => setStockForm(f => ({ ...f, quantity: e.target.value }))}
+                placeholder="Enter quantity"
+                className={inputCls}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={addStockItem}
+              className="w-full bg-blue-500 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-blue-600 transition"
+            >
+              + Add to List
+            </button>
+          </div>
+
+          {/* Stock Items List */}
+          {stockItems.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className={`text-xs font-semibold ${s}`}>Added Items ({stockItems.length})</label>
+              </div>
+              <div className="max-h-64 overflow-y-auto space-y-2">
+                {stockItems.map(item => (
+                  <div key={item.id} className={`flex items-center justify-between p-3 rounded-xl ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-bold truncate ${t}`}>{item.productName}</p>
+                      <p className={`text-xs ${s}`}>
+                        {item.quantity} units
+                        {item.producerName && ` • ${item.producerName}`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => removeStockItem(item.id)}
+                      className={`ml-3 w-8 h-8 rounded-lg flex items-center justify-center transition ${isDark ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' : 'bg-red-50 text-red-500 hover:bg-red-100'}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-3 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}">
+            <button
+              type="button"
+              onClick={() => setShowStockModal(false)}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${isDark ? 'bg-white/10 text-white/70 hover:bg-white/20' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAddStock}
+              disabled={addingStock || stockItems.length === 0}
+              className="flex-1 bg-green-500 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-green-600 transition disabled:opacity-60"
+            >
+              {addingStock ? 'Updating...' : `✅ Update Stock (${stockItems.length})`}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

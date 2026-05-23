@@ -31,7 +31,7 @@ function formatDate(ts) {
 }
 
 export default function TechnicianHome() {
-  const { user, profile } = useAuth()
+  const { user, profile, logout } = useAuth()
   const { isDark } = useTheme()
   const navigate = useNavigate()
   const [jobs, setJobs] = useState([])
@@ -44,6 +44,7 @@ export default function TechnicianHome() {
   const [invoiceModal, setInvoiceModal] = useState(false)
   const [selectedJobForInvoice, setSelectedJobForInvoice] = useState(null)
   const [stockMenuOpen, setStockMenuOpen] = useState(false)
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false)
 
   const STATUS_META = isDark ? STATUS_META_DARK : STATUS_META_LIGHT
 
@@ -141,6 +142,16 @@ export default function TechnicianHome() {
     setStatusFilter(periodFilter === 'today' ? 'active' : 'completed')
   }
 
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
+  const getInitials = (name) => {
+    if (!name) return 'U'
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
+
   const stats = [
     { label: 'Active', value: active.length, icon: '🔄', color: 'from-violet-500 to-violet-600' },
     { label: 'Pending', value: pending.length, icon: '⏳', color: 'from-amber-500 to-amber-600' },
@@ -149,11 +160,77 @@ export default function TechnicianHome() {
 
   return (
     <div className="space-y-5 pb-20 md:pb-0">
-      {/* Greeting */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className={`rounded-2xl p-6 text-white bg-gradient-to-r from-aqua-500 to-cyan-600 shadow-lg`}>
-        <p className="text-white/70 text-sm font-medium">Welcome back 👋</p>
-        <h2 className="text-3xl font-black mt-1">{profile?.name?.split(' ')[0]}</h2>
-        <p className="text-white/60 text-sm mt-2">You have <span className="font-bold">{active.length}</span> active job{active.length !== 1 ? 's' : ''}</p>
+      {/* Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        className={`rounded-2xl p-6 text-white bg-gradient-to-r from-aqua-500 to-cyan-600 shadow-lg relative`}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <p className="text-white/70 text-sm font-medium">Welcome back 👋</p>
+            <h2 className="text-3xl font-black mt-1">{profile?.name?.split(' ')[0] || 'Technician'}</h2>
+            <p className="text-white/60 text-sm mt-2">You have {active.length} active job{active.length !== 1 ? 's' : ''}</p>
+          </div>
+          
+          {/* Avatar with Dropdown */}
+          <div className="relative">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowAvatarMenu(!showAvatarMenu)
+              }}
+              className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center font-bold text-white hover:bg-white/30 transition-all"
+            >
+              {getInitials(profile?.name)}
+            </motion.button>
+
+            <AnimatePresence>
+              {showAvatarMenu && (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShowAvatarMenu(false)}
+                    className="fixed inset-0 z-40"
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    className="absolute right-0 top-14 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50"
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowAvatarMenu(false)
+                        navigate('/technician/profile')
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3"
+                    >
+                      <span className="text-lg">👤</span>
+                      View Profile
+                    </button>
+                    <div className="h-px bg-gray-100" />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowAvatarMenu(false)
+                        handleLogout()
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3"
+                    >
+                      <span className="text-lg">🚪</span>
+                      Logout
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </motion.div>
 
       {/* Navigation Cards */}

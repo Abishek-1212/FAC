@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme } from '../../context/ThemeContext'
+import { useAuth } from '../../context/AuthContext'
 import RecentServiceJobs from './RecentServiceJobs'
 
 // ── Stock Bar Component ───────────────────────────────────────────────────────
@@ -37,11 +38,13 @@ const STAT_CARDS = [
 export default function AdminHome() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
+  const { profile, logout } = useAuth()
   const [stats, setStats] = useState({ jobs: 0, pending: 0, products: 0, technicians: 0, revenue: 0, missing: 0, unreadInvoices: 0 })
   const [recentJobs, setRecentJobs] = useState([])
   const [technicians, setTechnicians] = useState([])
   const [techStock, setTechStock] = useState([])
   const [stockNotifications, setStockNotifications] = useState([])
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false)
 
   useEffect(() => {
     const unsubs = []
@@ -105,8 +108,90 @@ export default function AdminHome() {
 
   const getValue = (key) => key === 'revenue' ? `₹${stats.revenue.toLocaleString('en-IN')}` : stats[key]
 
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
+  const getInitials = (name) => {
+    if (!name) return 'A'
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
+      {/* Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        className={`rounded-2xl p-6 text-white bg-gradient-to-r from-aqua-500 to-cyan-600 shadow-lg relative`}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <p className="text-white/70 text-sm font-medium">Welcome back 👋</p>
+            <h2 className="text-3xl font-black mt-1">{profile?.name?.split(' ')[0] || 'Admin'}</h2>
+            <p className="text-white/60 text-sm mt-2">Managing {stats.jobs} total jobs</p>
+          </div>
+          
+          {/* Avatar with Dropdown */}
+          <div className="relative">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowAvatarMenu(!showAvatarMenu)
+              }}
+              className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center font-bold text-white hover:bg-white/30 transition-all"
+            >
+              {getInitials(profile?.name)}
+            </motion.button>
+
+            <AnimatePresence>
+              {showAvatarMenu && (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShowAvatarMenu(false)}
+                    className="fixed inset-0 z-40"
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    className="absolute right-0 top-14 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50"
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowAvatarMenu(false)
+                        navigate('/admin/profile')
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3"
+                    >
+                      <span className="text-lg">👤</span>
+                      View Profile
+                    </button>
+                    <div className="h-px bg-gray-100" />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowAvatarMenu(false)
+                        handleLogout()
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3"
+                    >
+                      <span className="text-lg">🚪</span>
+                      Logout
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Invoice notification */}
       {stats.unreadInvoices > 0 && (
@@ -145,8 +230,8 @@ export default function AdminHome() {
         <div className="grid grid-cols-2 gap-4">
           {[
             { label: 'New Service Job', icon: '🔧', path: '/admin/jobs',      gradient: 'from-cyan-500 to-cyan-600' },
-            { label: 'Add Product',     icon: '📦', path: '/admin/products',  gradient: 'from-blue-500 to-blue-600' },
             { label: 'Add Technician',  icon: '👷', path: '/admin/employees', gradient: 'from-violet-500 to-purple-600' },
+            { label: 'Verify Stock',    icon: '✅', path: '/admin/verify-stock', gradient: 'from-blue-500 to-indigo-600' },
             { label: 'View Invoices',   icon: '🧾', path: '/admin/invoices',  gradient: 'from-emerald-500 to-green-600' },
             { label: 'Reports',         icon: '📊', path: '/admin/reports',   gradient: 'from-orange-500 to-red-600' },
           ].map((action, i) => (

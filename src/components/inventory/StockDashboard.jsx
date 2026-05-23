@@ -38,7 +38,6 @@ export default function StockDashboard() {
         <div className="grid grid-cols-2 gap-4">
           {[
             { label: 'Receive Stock', icon: '📥', path: '/inventory/receive', gradient: 'from-green-500 to-emerald-600' },
-            { label: 'Assign Stock',  icon: '📤', path: '/inventory/assign',  gradient: 'from-blue-500 to-blue-600' },
             { label: 'Verify Returns', icon: '↩️', path: '/inventory/returns', gradient: 'from-purple-500 to-purple-600' },
           ].map((action, i) => (
             <motion.button
