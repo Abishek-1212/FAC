@@ -44,7 +44,6 @@ export default function TechnicianHome() {
   const [invoiceModal, setInvoiceModal] = useState(false)
   const [selectedJobForInvoice, setSelectedJobForInvoice] = useState(null)
   const [stockMenuOpen, setStockMenuOpen] = useState(false)
-  const [showAvatarMenu, setShowAvatarMenu] = useState(false)
 
   const STATUS_META = isDark ? STATUS_META_DARK : STATUS_META_LIGHT
 
@@ -147,11 +146,6 @@ export default function TechnicianHome() {
     navigate('/login')
   }
 
-  const getInitials = (name) => {
-    if (!name) return 'U'
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-  }
-
   const stats = [
     { label: 'Active', value: active.length, icon: '🔄', color: 'from-violet-500 to-violet-600' },
     { label: 'Pending', value: pending.length, icon: '⏳', color: 'from-amber-500 to-amber-600' },
@@ -163,83 +157,20 @@ export default function TechnicianHome() {
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: -10 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        className={`rounded-2xl p-6 text-white bg-gradient-to-r from-aqua-500 to-cyan-600 shadow-lg relative`}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-2"
       >
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-white/70 text-sm font-medium">Welcome back 👋</p>
-            <h2 className="text-3xl font-black mt-1">{profile?.name?.split(' ')[0] || 'Technician'}</h2>
-            <p className="text-white/60 text-sm mt-2">You have {active.length} active job{active.length !== 1 ? 's' : ''}</p>
-          </div>
-          
-          {/* Avatar with Dropdown */}
-          <div className="relative">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowAvatarMenu(!showAvatarMenu)
-              }}
-              className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center font-bold text-white hover:bg-white/30 transition-all"
-            >
-              {getInitials(profile?.name)}
-            </motion.button>
-
-            <AnimatePresence>
-              {showAvatarMenu && (
-                <>
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={() => setShowAvatarMenu(false)}
-                    className="fixed inset-0 z-40"
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                    className="absolute right-0 top-14 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50"
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowAvatarMenu(false)
-                        navigate('/technician/profile')
-                      }}
-                      className="w-full px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3"
-                    >
-                      <span className="text-lg">👤</span>
-                      View Profile
-                    </button>
-                    <div className="h-px bg-gray-100" />
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowAvatarMenu(false)
-                        handleLogout()
-                      }}
-                      className="w-full px-4 py-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3"
-                    >
-                      <span className="text-lg">🚪</span>
-                      Logout
-                    </button>
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
+        <p className={`text-sm font-medium ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Welcome back,</p>
+        <h2 className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{profile?.name || 'Technician'}</h2>
       </motion.div>
 
       {/* Navigation Cards */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: 'My Reports', icon: '📋', desc: 'View completion reports', path: '/technician/reports', gradient: 'from-blue-500 to-blue-600' },
-          { label: 'My Stock', icon: '📦', desc: 'Manage your stock', path: '/technician/stock', gradient: 'from-purple-500 to-purple-600' },
-          { label: 'My Invoices', icon: '📑', desc: 'View & download invoices', path: '/technician/my-invoices', gradient: 'from-emerald-500 to-emerald-600' },
-          { label: 'Take Stock', icon: '📤', desc: 'Take from inventory', path: '/technician/take-stock', gradient: 'from-cyan-500 to-cyan-600' },
+          { label: 'My Reports', path: '/technician/reports' },
+          { label: 'My Stock', path: '/technician/stock' },
+          { label: 'My Invoices', path: '/technician/my-invoices' },
+          { label: 'Take Stock', path: '/technician/take-stock' },
         ].map((card, i) => (
           <motion.button
             key={card.path}
@@ -248,34 +179,14 @@ export default function TechnicianHome() {
             transition={{ delay: 0.1 + i * 0.05 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => navigate(card.path)}
-            className={`relative overflow-hidden rounded-2xl p-4 text-left border ${
-              isDark ? 'bg-white/5 border-white/10 hover:border-white/20' : 'bg-white border-gray-100 hover:shadow-md hover:border-gray-200'
-            } transition-all`}
+            className={`rounded-2xl p-4 border-2 transition-all ${
+              isDark 
+                ? 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-500/50' 
+                : 'bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
+            }`}
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 hover:opacity-10 transition-opacity`} />
-            <span className="text-2xl">{card.icon}</span>
-            <p className={`font-black text-sm mt-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{card.label}</p>
-            <p className={`text-xs mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{card.desc}</p>
+            <p className={`font-black text-sm text-center ${isDark ? 'text-blue-300' : 'text-blue-900'}`}>{card.label}</p>
           </motion.button>
-        ))}
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-3 gap-3">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className={`rounded-2xl p-4 shadow-sm border ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'}`}
-          >
-            <p className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>{stat.label}</p>
-            <div className="flex items-end justify-between mt-2">
-              <p className={`text-3xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{stat.value}</p>
-              <span className="text-2xl">{stat.icon}</span>
-            </div>
-          </motion.div>
         ))}
       </div>
 
@@ -366,11 +277,11 @@ export default function TechnicianHome() {
       {jobs.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {[
-            { key: 'today', label: 'Today', icon: '📅' },
-            { key: 'week', label: 'This Week', icon: '📆' },
-            { key: 'month', label: 'This Month', icon: '📊' },
-            { key: 'custom', label: 'Custom Range', icon: '📍' },
-          ].map(({ key, label, icon }) => (
+            { key: 'today', label: 'Today' },
+            { key: 'week', label: 'This Week' },
+            { key: 'month', label: 'This Month' },
+            { key: 'custom', label: 'Custom Range' },
+          ].map(({ key, label }) => (
             <motion.button
               key={key}
               whileTap={{ scale: 0.95 }}
@@ -379,17 +290,16 @@ export default function TechnicianHome() {
                 if (key === 'custom') setShowDatePicker(true)
                 resetStatusFilter()
               }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                 periodFilter === key
                   ? isDark
-                    ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
-                    : 'bg-aqua-500 text-white shadow-md shadow-aqua-200'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-blue-600 text-white'
                   : isDark
-                  ? 'bg-white/5 text-white/60 border border-white/10 hover:border-cyan-500/30'
-                  : 'bg-white text-gray-500 border border-gray-200 hover:border-aqua-300'
+                  ? 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
               }`}
             >
-              <span>{icon}</span>
               {label}
             </motion.button>
           ))}
@@ -412,8 +322,8 @@ export default function TechnicianHome() {
                 onChange={(e) => setCustomDateRange({ ...customDateRange, start: e.target.value })}
                 className={`w-full px-3 py-2 rounded-lg text-sm border transition-all ${
                   isDark
-                    ? 'bg-white/5 border-white/10 text-white focus:border-cyan-500'
-                    : 'bg-white border-gray-200 text-gray-900 focus:border-aqua-500'
+                    ? 'bg-white/5 border-white/10 text-white focus:border-blue-500'
+                    : 'bg-white border-gray-200 text-gray-900 focus:border-blue-500'
                 } focus:outline-none`}
               />
             </div>
@@ -425,8 +335,8 @@ export default function TechnicianHome() {
                 onChange={(e) => setCustomDateRange({ ...customDateRange, end: e.target.value })}
                 className={`w-full px-3 py-2 rounded-lg text-sm border transition-all ${
                   isDark
-                    ? 'bg-white/5 border-white/10 text-white focus:border-cyan-500'
-                    : 'bg-white border-gray-200 text-gray-900 focus:border-aqua-500'
+                    ? 'bg-white/5 border-white/10 text-white focus:border-blue-500'
+                    : 'bg-white border-gray-200 text-gray-900 focus:border-blue-500'
                 } focus:outline-none`}
               />
             </div>
@@ -436,8 +346,8 @@ export default function TechnicianHome() {
             onClick={() => setShowDatePicker(false)}
             className={`w-full py-2 rounded-lg text-sm font-bold transition-all ${
               isDark
-                ? 'bg-cyan-500 text-white hover:bg-cyan-600'
-                : 'bg-aqua-500 text-white hover:bg-aqua-600'
+                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >
             Apply Range
@@ -450,10 +360,10 @@ export default function TechnicianHome() {
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {getStatusOptions().map((key) => {
             const statusConfig = {
-              active: { label: 'Active', icon: '🔄', count: dateFilteredActive.length },
-              completed: { label: 'Completed', icon: '✅', count: dateFilteredCompleted.length },
-              missed: { label: 'Missed', icon: '❌', count: dateFilteredMissed.length },
-              total: { label: 'Total', icon: '📋', count: dateFilteredTotal.length },
+              active: { label: 'Active', count: dateFilteredActive.length },
+              completed: { label: 'Completed', count: dateFilteredCompleted.length },
+              missed: { label: 'Missed', count: dateFilteredMissed.length },
+              total: { label: 'All', count: dateFilteredTotal.length },
             }
             const config = statusConfig[key]
             return (
@@ -461,17 +371,16 @@ export default function TechnicianHome() {
                 key={key}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setStatusFilter(key)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                   statusFilter === key
                     ? isDark
-                      ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
-                      : 'bg-aqua-500 text-white shadow-md shadow-aqua-200'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-blue-600 text-white'
                     : isDark
-                    ? 'bg-white/5 text-white/60 border border-white/10 hover:border-cyan-500/30'
-                    : 'bg-white text-gray-500 border border-gray-200 hover:border-aqua-300'
+                    ? 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                 }`}
               >
-                <span>{config.icon}</span>
                 {config.label}
                 <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
                   statusFilter === key
