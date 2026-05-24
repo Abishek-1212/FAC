@@ -38,7 +38,7 @@ export default function Layout({ children, navItems, title }) {
   const switchLabel = inInventory ? 'Admin Panel' : 'Inventory'
   
   // Hide header for specific pages
-  const hideHeader = location.pathname === '/admin/jobs' || location.pathname === '/admin/invoices' || location.pathname === '/admin/verify-stock' || location.pathname === '/admin/reports' || location.pathname === '/admin/employees' || location.pathname === '/admin/follow-up'
+  const hideHeader = location.pathname === '/admin/jobs' || location.pathname === '/admin/invoices' || location.pathname === '/admin/verify-stock' || location.pathname === '/admin/reports' || location.pathname === '/admin/employees' || location.pathname === '/admin/follow-up' || location.pathname === '/admin/attendance'
 
   // Check if we're in a sub-section (not root dashboard)
   const isInSection = location.pathname !== '/admin' && location.pathname !== '/technician' && location.pathname !== '/inventory' && !location.pathname.startsWith('/admin/') && !location.pathname.startsWith('/inventory/')

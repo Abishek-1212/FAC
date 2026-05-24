@@ -29,7 +29,8 @@ export default function TechnicianLayout({ children }) {
     '/technician/stock',
     '/technician/my-invoices',
     '/technician/take-stock',
-    '/technician/return-stock'
+    '/technician/return-stock',
+    '/technician/attendance'
   ].includes(location.pathname)
 
   const openProfile = () => {

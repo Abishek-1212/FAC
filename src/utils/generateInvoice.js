@@ -45,6 +45,7 @@ export const generateInvoice = (invoiceData) => {
     discountValue = 0,
     discountAmount = 0,
     grandTotal = 0,
+    amountReceived = 0,
     products = [], // Array of { name, qty }
     inventoryMetrics = { assigned: 0, used: 0, returned: 0 }
   } = invoiceData
@@ -279,19 +280,21 @@ export const generateInvoice = (invoiceData) => {
   // ========================================================
   // SUMMARY CALCULATIONS SECTION (Right Aligned Card)
   // ========================================================
-  const summaryLabels = ['Total Amount:', 'Discount:', 'GRAND TOTAL:']
+  const summaryLabels = ['Total Amount:', 'Discount:', 'GRAND TOTAL:', 'Amount Received:']
   const summaryValues = [
     formatCurrency(totalAmount),
     formatCurrency(discountAmount),
-    formatCurrency(grandTotal)
+    formatCurrency(grandTotal),
+    formatCurrency(amountReceived)
   ]
 
   summaryLabels.forEach((label, idx) => {
     const rowY = currentY + (idx * 5)
-    const isTotal = idx === summaryLabels.length - 1
+    const isGrandTotal = idx === 2
+    const isAmountReceived = idx === 3
     const isDiscount = idx === 1
     
-    if (isTotal) {
+    if (isGrandTotal) {
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(10)
       doc.setTextColor(...primaryColor)
@@ -299,6 +302,12 @@ export const generateInvoice = (invoiceData) => {
       doc.setLineWidth(0.4)
       doc.setDrawColor(...primaryColor)
       doc.line(pageWidth - margin - 75, rowY - 1, pageWidth - margin, rowY - 1)
+      doc.text(label, pageWidth - margin - 72, rowY + 4)
+      doc.text(summaryValues[idx], pageWidth - margin, rowY + 4, { align: 'right' })
+    } else if (isAmountReceived) {
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(9)
+      doc.setTextColor(13, 148, 136) // Green for amount received
       doc.text(label, pageWidth - margin - 72, rowY + 4)
       doc.text(summaryValues[idx], pageWidth - margin, rowY + 4, { align: 'right' })
     } else if (isDiscount && discountAmount > 0) {

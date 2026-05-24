@@ -7,6 +7,7 @@ import TakeStock from '../components/technician/TakeStock'
 import ReturnStock from '../components/technician/ReturnStock'
 import ViewInvoices from '../components/technician/ViewInvoices'
 import CompletionReports from '../components/technician/CompletionReports'
+import Attendance from '../components/technician/Attendance'
 
 const NAV = [
   { to: '/technician', icon: '\u{1F527}', label: 'My Jobs' },
@@ -26,6 +27,7 @@ export default function TechnicianDashboard() {
         <Route path="take-stock" element={<TakeStock />} />
         <Route path="return-stock" element={<ReturnStock />} />
         <Route path="my-invoices" element={<ViewInvoices />} />
+        <Route path="attendance" element={<Attendance />} />
         <Route path="*" element={<Navigate to="/technician" replace />} />
       </Routes>
     </TechnicianLayout>

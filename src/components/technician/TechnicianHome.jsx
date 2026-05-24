@@ -146,6 +146,7 @@ export default function TechnicianHome() {
           { label: 'My Reports', path: '/technician/reports' },
           { label: 'My Stock', path: '/technician/stock' },
           { label: 'Take Stock', path: '/technician/take-stock' },
+          { label: 'My Attendance', path: '/technician/attendance' },
         ].map((card, i) => (
           <motion.button
             key={card.path}

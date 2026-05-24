@@ -45,7 +45,8 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
       discountType: 'percentage',
       discountValue: 0,
       paymentType: 'Cash',
-      personalStockUsage: []
+      personalStockUsage: [],
+      amountReceived: ''
     }
   }
   
@@ -54,6 +55,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
   const [discountValue, setDiscountValue] = useState(() => getInitialFormData().discountValue)
   const [paymentType, setPaymentType] = useState(() => getInitialFormData().paymentType)
   const [personalStockUsage, setPersonalStockUsage] = useState(() => getInitialFormData().personalStockUsage)
+  const [amountReceived, setAmountReceived] = useState(() => getInitialFormData().amountReceived || '')
 
   // Load saved form data from localStorage when job changes
   useEffect(() => {
@@ -70,6 +72,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
         setDiscountValue(parsed.discountValue || 0)
         setPaymentType(parsed.paymentType || 'Cash')
         setPersonalStockUsage(parsed.personalStockUsage || [])
+        setAmountReceived(parsed.amountReceived || '')
         // All items start expanded by default
         const expandedSet = new Set()
         parsed.personalStockUsage?.forEach((_, index) => {
@@ -92,11 +95,12 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
       discountType,
       discountValue,
       paymentType,
-      personalStockUsage
+      personalStockUsage,
+      amountReceived
     }
     
     localStorage.setItem(savedFormKey, JSON.stringify(formData))
-  }, [job?.id, totalAmount, discountType, discountValue, paymentType, personalStockUsage, invoiceSaved])
+  }, [job?.id, totalAmount, discountType, discountValue, paymentType, personalStockUsage, amountReceived, invoiceSaved])
 
   useEffect(() => {
     if (!open || !job?.id) return
@@ -322,6 +326,18 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
   }
 
   const handleGenerateInvoice = async () => {
+    // Validate amount received
+    const receivedAmount = parseFloat(amountReceived) || 0
+    if (receivedAmount === 0) {
+      toast.error('Please enter the amount received from customer')
+      return
+    }
+    
+    if (receivedAmount > grandTotal) {
+      toast.error(`Amount received cannot exceed Grand Total (₹${grandTotal.toFixed(2)})`)
+      return
+    }
+    
     setSaving(true)
     try {
       // Validate personal stock usage if any
@@ -347,6 +363,8 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
 
       const billNo = `FAC-${Date.now()}`
       const billAmount = grandTotal
+      const pendingAmount = grandTotal - receivedAmount
+      const paymentStatus = receivedAmount >= grandTotal ? 'Paid' : 'Pending'
       
       // Combine products from completion report and personal stock usage (only used items for invoice)
       const allUsedProducts = [
@@ -369,12 +387,14 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
         discountValue: parseFloat(discountValue) || 0,
         discountAmount,
         billAmount,
-        amountReceived: billAmount,
-        paymentPending: 0,
+        amountReceived: receivedAmount,
+        paymentPending: pendingAmount,
+        paymentStatus: paymentStatus,
         modeOfPayment: paymentType,
         invoiceDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
         submittedByTechnician: true,
         adminViewed: false,
+        updatedToAdmin: true,
         generatedDate: serverTimestamp(),
         invoiceNumber: billNo,
         createdAt: serverTimestamp(),
@@ -399,9 +419,9 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
             // Log transaction
             await addDoc(collection(db, 'stock_transactions'), {
               type: 'job_usage',
-              jobId: job.id,
-              technicianId: job.technicianId,
-              technicianName: job.technicianName,
+              jobId: job.id || '',
+              technicianId: job.technicianId || '',
+              technicianName: job.technicianName || '',
               productId: item.productId,
               productName: item.productName,
               usedQuantity: used,
@@ -423,7 +443,10 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
         onInvoiceSaved()
       }
       
-      toast.success('✅ Invoice saved successfully!')
+      const statusMessage = paymentStatus === 'Paid' 
+        ? '✅ Invoice saved and updated to admin! Payment marked as Paid.' 
+        : `✅ Invoice saved and updated to admin! Payment marked as Pending (₹${pendingAmount.toFixed(2)} remaining).`
+      toast.success(statusMessage)
       setSaving(false)
       setShowSaveConfirmation(false)
       return billNo
@@ -910,6 +933,53 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
               </div>
             </div>
 
+            {/* Amount Received Section */}
+            {!invoiceSaved && (
+              <div className={`rounded-xl md:rounded-2xl p-4 md:p-6 border ${
+                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+              }`}>
+                <label className={`text-sm font-bold block mb-2 md:mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  💵 Amount Received from Customer (₹) *
+                </label>
+                <input
+                  type="number"
+                  value={amountReceived}
+                  onChange={(e) => setAmountReceived(e.target.value)}
+                  placeholder={`Enter amount (max ₹${grandTotal.toFixed(2)})`}
+                  className={`w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl text-base md:text-lg font-semibold focus:outline-none focus:ring-2 transition ${
+                    isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                  } border ${
+                    amountReceived && parseFloat(amountReceived) > 0 && parseFloat(amountReceived) <= grandTotal
+                      ? 'focus:ring-green-500 border-green-500'
+                      : amountReceived && parseFloat(amountReceived) > grandTotal
+                      ? 'focus:ring-red-500 border-red-500'
+                      : 'focus:ring-cyan-500'
+                  }`}
+                />
+                {amountReceived && parseFloat(amountReceived) > grandTotal && (
+                  <p className="text-xs text-red-500 mt-2 font-semibold">
+                    ⚠️ Amount cannot exceed Grand Total (₹{grandTotal.toFixed(2)})
+                  </p>
+                )}
+                {amountReceived && parseFloat(amountReceived) > 0 && parseFloat(amountReceived) <= grandTotal && (
+                  <div className={`mt-2 p-2 rounded-lg ${isDark ? 'bg-blue-900/20 border border-blue-700/30' : 'bg-blue-50 border border-blue-200'}`}>
+                    {parseFloat(amountReceived) === grandTotal ? (
+                      <p className={`text-xs font-semibold ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                        ✅ Full payment - Status will be marked as "Paid"
+                      </p>
+                    ) : (
+                      <p className={`text-xs font-semibold ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                        ⚠️ Partial payment - Pending: ₹{(grandTotal - parseFloat(amountReceived)).toFixed(2)} - Status will be marked as "Pending"
+                      </p>
+                    )}
+                  </div>
+                )}
+                <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  📌 Enter the amount you received from the customer (can be partial or full payment)
+                </p>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex flex-col md:flex-row gap-2 md:gap-3 pt-2">
               <motion.button
@@ -949,6 +1019,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                     discountValue: parseFloat(discountValue) || 0,
                     discountAmount,
                     grandTotal,
+                    amountReceived: savedInvoiceData?.amountReceived || parseFloat(amountReceived) || 0,
                     products: allInvoiceProducts,
                   })
                   toast.success('📥 Invoice downloaded!')

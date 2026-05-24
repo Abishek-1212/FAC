@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme } from '../../context/ThemeContext'
 import Modal from '../common/Modal'
 import InvoiceModal from '../common/InvoiceModal'
-import PaymentStatusModal from '../common/PaymentStatusModal'
 import { generateInvoice } from '../../utils/generateInvoice'
 
 export default function CompletionReports() {
@@ -19,8 +18,6 @@ export default function CompletionReports() {
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [invoiceModal, setInvoiceModal] = useState(false)
   const [selectedReportForInvoice, setSelectedReportForInvoice] = useState(null)
-  const [paymentModal, setPaymentModal] = useState(false)
-  const [selectedReportForPayment, setSelectedReportForPayment] = useState(null)
   const [invoiceStatus, setInvoiceStatus] = useState({}) // Track which jobs have invoices
   const [viewInvoiceModal, setViewInvoiceModal] = useState(false)
   const [selectedInvoiceData, setSelectedInvoiceData] = useState(null)
@@ -318,7 +315,7 @@ export default function CompletionReports() {
                               <span>{report.totalUnaccounted} Unaccounted</span>
                             </span>
                           )}
-                          {/* Show Invoice button if no invoice exists, or Update button if invoice exists but not updated to admin */}
+                          {/* Show Invoice button if no invoice exists, or View Invoice + Updated text if invoice exists */}
                           {!invoiceStatus[report.jobId]?.exists ? (
                             <motion.button
                               whileTap={{ scale: 0.95 }}
@@ -338,49 +335,6 @@ export default function CompletionReports() {
                               </svg>
                               <span>Invoice</span>
                             </motion.button>
-                          ) : !invoiceStatus[report.jobId]?.updatedToAdmin ? (
-                            <div className="flex flex-col gap-2 w-full">
-                              <motion.button
-                                whileTap={{ scale: 0.95 }}
-                                onClick={async (e) => {
-                                  e.stopPropagation()
-                                  const invoicesSnap = await getDocs(query(collection(db, 'invoices'), where('jobId', '==', report.jobId)))
-                                  if (invoicesSnap.docs.length > 0) {
-                                    setSelectedInvoiceData({ invoice: invoicesSnap.docs[0].data(), report })
-                                    setViewInvoiceModal(true)
-                                  }
-                                }}
-                                className={`w-full text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center justify-center gap-1.5 ${
-                                  isDark
-                                    ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
-                                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                                }`}
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                                <span>View Invoice</span>
-                              </motion.button>
-                              <motion.button
-                                whileTap={{ scale: 0.95 }}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setSelectedReportForPayment(report)
-                                  setPaymentModal(true)
-                                }}
-                                className={`w-full text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center justify-center gap-1.5 ${
-                                  isDark
-                                    ? 'bg-green-500/20 text-green-300 hover:bg-green-500/30'
-                                    : 'bg-green-100 text-green-700 hover:bg-green-200'
-                                }`}
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span>Update to Admin</span>
-                              </motion.button>
-                            </div>
                           ) : (
                             <div className="flex flex-col gap-2 w-full">
                               <motion.button
@@ -413,7 +367,7 @@ export default function CompletionReports() {
                                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                 </svg>
-                                <span>Updated</span>
+                                <span>Updated to Admin</span>
                               </span>
                             </div>
                           )}
@@ -589,35 +543,6 @@ export default function CompletionReports() {
         />
       )}
 
-      {/* Payment Status Modal */}
-      {selectedReportForPayment && (
-        <PaymentStatusModal
-          open={paymentModal}
-          onClose={() => {
-            setPaymentModal(false)
-            setSelectedReportForPayment(null)
-          }}
-          report={selectedReportForPayment}
-          isDark={isDark}
-          onPaymentUpdated={() => {
-            // Refresh invoice status after payment update
-            const checkInvoice = async () => {
-              const invoicesSnap = await getDocs(query(collection(db, 'invoices'), where('jobId', '==', selectedReportForPayment.jobId)))
-              if (invoicesSnap.docs.length > 0) {
-                const invoice = invoicesSnap.docs[0].data()
-                setInvoiceStatus(prev => ({
-                  ...prev,
-                  [selectedReportForPayment.jobId]: {
-                    exists: true,
-                    updatedToAdmin: invoice.updatedToAdmin || false
-                  }
-                }))
-              }
-            }
-            checkInvoice()
-          }}
-        />
-      )}
 
       {/* View Invoice Modal */}
       <Modal 

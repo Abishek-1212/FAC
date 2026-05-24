@@ -412,55 +412,16 @@ export default function VerifyStock() {
                     {/* Action Buttons */}
                     <div className="flex gap-2">
                       {pending > 0 && (
-                        <>
-                          <button
-                            onClick={() => openReturnModal(stock)}
-                            disabled={verifying}
-                            className={`flex-1 rounded-lg py-2 text-xs font-bold transition ${
-                              isDark
-                                ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
-                                : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                            } disabled:opacity-50`}
-                          >
-                            ✅ Verify Return ({pending})
-                          </button>
-                          <button
-                            onClick={() => handleClearPending(stock)}
-                            disabled={verifying}
-                            className={`flex-1 rounded-lg py-2 text-xs font-bold transition ${
-                              isDark
-                                ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
-                                : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                            } disabled:opacity-50`}
-                          >
-                            Clear Pending
-                          </button>
-                        </>
-                      )}
-                      {damaged > 0 && (
                         <button
-                          onClick={() => handleClearDamaged(stock)}
+                          onClick={() => openReturnModal(stock)}
                           disabled={verifying}
                           className={`flex-1 rounded-lg py-2 text-xs font-bold transition ${
                             isDark
-                              ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
-                              : 'bg-red-50 text-red-700 hover:bg-red-100'
+                              ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
+                              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                           } disabled:opacity-50`}
                         >
-                          Clear Damaged ({damaged})
-                        </button>
-                      )}
-                      {pending === 0 && damaged === 0 && (
-                        <button
-                          onClick={() => handleResetStock(stock)}
-                          disabled={verifying}
-                          className={`flex-1 rounded-lg py-2 text-xs font-bold transition ${
-                            isDark
-                              ? 'bg-gray-500/20 text-gray-300 hover:bg-gray-500/30'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          } disabled:opacity-50`}
-                        >
-                          🔄 Reset Stock
+                          ✅ Verify Return ({pending})
                         </button>
                       )}
                     </div>
