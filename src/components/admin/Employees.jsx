@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, updateDoc, doc, setDoc } from 'firebase/firestore'
+import { collection, onSnapshot, updateDoc, doc, setDoc, query, where } from 'firebase/firestore'
 import { db, auth } from '../../firebase'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import Modal from '../common/Modal'
 import toast from 'react-hot-toast'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const ROLE_COLORS = {
   admin:      'bg-purple-100 text-purple-700',
@@ -94,6 +95,48 @@ export default function Employees() {
     toast.success(u.isActive ? 'Deactivated' : 'Activated')
   }
 
+  const [selectedTech, setSelectedTech] = useState(null)
+  const [techStats, setTechStats]       = useState(null)
+
+  const openTechStats = (tech) => {
+    setSelectedTech(tech)
+    setTechStats(null)
+    const unsubs = []
+
+    unsubs.push(onSnapshot(
+      query(collection(db, 'service_jobs'), where('technicianId', '==', tech.id)),
+      snap => {
+        const jobs = snap.docs.map(d => d.data())
+        setTechStats(s => ({
+          ...(s || {}),
+          totalJobs:    jobs.length,
+          newFitting:   jobs.filter(j => j.serviceType === 'New Fitting').length,
+          serviceRepair: jobs.filter(j => j.serviceType === 'Service / Repair').length,
+          completed:    jobs.filter(j => ['completed', 'verified'].includes(j.status)).length,
+          pending:      jobs.filter(j => ['pending', 'assigned', 'in_progress'].includes(j.status)).length,
+        }))
+      }
+    ))
+
+    // Damaged products from stock_transactions (logged when invoice is saved)
+    unsubs.push(onSnapshot(
+      query(collection(db, 'stock_transactions'), where('technicianId', '==', tech.id)),
+      snap => {
+        const txns = snap.docs.map(d => d.data()).filter(t => (t.damagedQuantity || 0) > 0)
+        // Aggregate by product name
+        const map = {}
+        txns.forEach(t => {
+          const key = t.productName || t.productId
+          if (!map[key]) map[key] = { productName: t.productName, quantity: 0 }
+          map[key].quantity += t.damagedQuantity || 0
+        })
+        setTechStats(s => ({ ...(s || {}), damagedProducts: Object.values(map) }))
+      }
+    ))
+
+    return () => unsubs.forEach(u => u())
+  }
+
   const technicians = users.filter(u => u.role === 'technician')
   const filtered    = filter === 'all' ? technicians : technicians.filter(u => u.isActive === (filter === 'active'))
 
@@ -161,8 +204,8 @@ export default function Employees() {
 
       <div className="grid gap-3">
         {filtered.map(u => (
-          <div key={u.id} className={`rounded-2xl p-4 shadow-sm border ${
-            isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'
+          <div key={u.id} onClick={() => openTechStats(u)} className={`rounded-2xl p-4 shadow-sm border cursor-pointer transition hover:shadow-md ${
+            isDark ? 'bg-dark-card border-white/10 hover:border-white/20' : 'bg-white border-gray-100 hover:border-gray-300'
           }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -184,7 +227,7 @@ export default function Employees() {
               </div>
               {u.id !== currentUser?.uid && (
                 <button
-                  onClick={() => toggleActive(u)}
+                  onClick={e => { e.stopPropagation(); toggleActive(u) }}
                   className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition ${
                     u.isActive
                       ? isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-50 text-green-600'
@@ -202,6 +245,92 @@ export default function Employees() {
         )}
       </div>
       </div>
+
+      <Modal open={!!selectedTech} onClose={() => { setSelectedTech(null); setTechStats(null) }} title="Technician Report">
+        {selectedTech && (
+          <div className="space-y-5">
+            {/* Profile */}
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg ${
+                isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-700'
+              }`}>
+                {selectedTech.name?.[0]?.toUpperCase()}
+              </div>
+              <div>
+                <p className={`font-black text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedTech.name}</p>
+                <p className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>{selectedTech.email}</p>
+              </div>
+            </div>
+
+            {!techStats ? (
+              <p className={`text-center text-sm py-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Loading...</p>
+            ) : (
+              <AnimatePresence>
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+
+                  {/* Job Stats */}
+                  <div>
+                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Job Statistics</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { label: 'Total Jobs',  value: techStats.totalJobs,   color: isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-50 text-cyan-700' },
+                        { label: 'Completed',   value: techStats.completed,   color: isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-50 text-green-700' },
+                        { label: 'Pending',     value: techStats.pending,     color: isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-50 text-amber-700' },
+                      ].map(stat => (
+                        <div key={stat.label} className={`rounded-xl p-3 text-center ${stat.color}`}>
+                          <p className="text-2xl font-black">{stat.value}</p>
+                          <p className="text-xs font-semibold mt-0.5 opacity-80">{stat.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Service Type */}
+                  <div>
+                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Service Type</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className={`rounded-xl p-3 text-center ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
+                        <p className="text-2xl font-black">{techStats.newFitting}</p>
+                        <p className="text-xs font-semibold mt-0.5 opacity-80">🔧 New Fitting</p>
+                      </div>
+                      <div className={`rounded-xl p-3 text-center ${isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-50 text-orange-700'}`}>
+                        <p className="text-2xl font-black">{techStats.serviceRepair}</p>
+                        <p className="text-xs font-semibold mt-0.5 opacity-80">🛠️ Service/Repair</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Damaged Products */}
+                  <div>
+                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                      Damaged Products ({(techStats.damagedProducts || []).length})
+                    </p>
+                    {!techStats.damagedProducts || techStats.damagedProducts.length === 0 ? (
+                      <p className={`text-sm text-center py-3 rounded-xl ${isDark ? 'bg-white/5 text-white/30' : 'bg-gray-50 text-gray-400'}`}>
+                        No damaged products recorded yet
+                      </p>
+                    ) : (
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {techStats.damagedProducts.map((p, i) => (
+                          <div key={i} className={`flex items-center justify-between rounded-xl px-3 py-2.5 ${
+                            isDark ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-100'
+                          }`}>
+                            <p className={`text-sm font-bold ${isDark ? 'text-red-300' : 'text-red-700'}`}>{p.productName || 'Unknown'}</p>
+                            <span className={`text-xs font-black px-2 py-1 rounded-lg ${isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-600'}`}>
+                              x{p.quantity}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </div>
+        )}
+      </Modal>
 
       <Modal open={modal} onClose={() => { setModal(false); setForm({ name: '', email: '', password: '', phone: '' }) }} title="Add Technician">
         <form onSubmit={handleAdd} className="space-y-3">

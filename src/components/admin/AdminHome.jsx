@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useNavigate } from 'react-router-dom'
@@ -79,7 +79,36 @@ export default function AdminHome() {
     return () => unsubs.forEach(u => u())
   }, [])
 
-  const getValue = (key) => key === 'revenue' ? `₹${stats.revenue.toLocaleString('en-IN')}` : stats[key]
+  const useCounter = (target) => {
+    const [count, setCount] = useState(0)
+    const prev = useRef(0)
+    useEffect(() => {
+      const start = prev.current
+      const diff = target - start
+      if (diff === 0) return
+      const duration = 400
+      const startTime = performance.now()
+      const frame = (now) => {
+        const progress = Math.min((now - startTime) / duration, 1)
+        const ease = 1 - Math.pow(1 - progress, 3)
+        setCount(Math.round(start + diff * ease))
+        if (progress < 1) requestAnimationFrame(frame)
+        else prev.current = target
+      }
+      requestAnimationFrame(frame)
+    }, [target])
+    return count
+  }
+
+  const jobs        = useCounter(stats.jobs)
+  const pending     = useCounter(stats.pending)
+  const technicians = useCounter(stats.technicians)
+  const products    = useCounter(stats.products)
+  const revenue     = useCounter(stats.revenue)
+  const missing     = useCounter(stats.missing)
+
+  const counted = { jobs, pending, technicians, products, revenue, missing }
+  const getValue = (key) => key === 'revenue' ? `₹${counted.revenue.toLocaleString('en-IN')}` : counted[key]
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
