@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fac-v1'
+const CACHE_NAME = 'fac-v2'
 const urlsToCache = [
   '/',
   '/index.html',
@@ -32,11 +32,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
 
+  // Network-first strategy for dynamic content
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) return response
-
-      return fetch(event.request).then((response) => {
+    fetch(event.request)
+      .then((response) => {
         if (!response || response.status !== 200 || response.type === 'error') {
           return response
         }
@@ -47,9 +46,12 @@ self.addEventListener('fetch', (event) => {
         })
 
         return response
-      }).catch(() => {
-        return caches.match('/index.html')
       })
-    })
+      .catch(() => {
+        // Fallback to cache only if network fails
+        return caches.match(event.request).then((response) => {
+          return response || caches.match('/index.html')
+        })
+      })
   )
 })

@@ -20,94 +20,14 @@ export default function JobDetail() {
   const [completionModal, setCompletionModal] = useState(false)
   const [completionNotes, setCompletionNotes] = useState('')
   const [trackingSaved, setTrackingSaved] = useState(false)
-  const [personalStockUsage, setPersonalStockUsage] = useState([])
-  const [personalStockSaved, setPersonalStockSaved] = useState(false)
   const [technicianStock, setTechnicianStock] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [products, setProducts] = useState([])
-  const [personalStock, setPersonalStock] = useState([])
   const [showInvoicePrompt, setShowInvoicePrompt] = useState(false)
   const [completedJobData, setCompletedJobData] = useState(null)
   const [invoiceModal, setInvoiceModal] = useState(false)
 
-  // Load products and inventory
-  useEffect(() => {
-    const unsubProducts = onSnapshot(collection(db, 'products'), snap => {
-      const loadedProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      console.log('Products loaded:', loadedProducts.length)
-      setProducts(loadedProducts)
-    })
-    
-    // Also load inventory to get categories and latest product info
-    const unsubInventory = onSnapshot(collection(db, 'inventory'), snap => {
-      const invProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      // Merge inventory data with products - inventory has priority for latest data
-      setProducts(prev => {
-        const merged = [...prev]
-        invProducts.forEach(inv => {
-          const existingIndex = merged.findIndex(p => p.id === inv.id || p.name === inv.productName || p.name === inv.name)
-          if (existingIndex >= 0) {
-            // Update with latest inventory data
-            merged[existingIndex] = { 
-              ...merged[existingIndex], 
-              ...inv, 
-              id: merged[existingIndex].id,
-              name: inv.productName || inv.name || merged[existingIndex].name,
-              price: inv.price || merged[existingIndex].price,
-              category: inv.category || merged[existingIndex].category
-            }
-          } else {
-            merged.push({ 
-              id: inv.id, 
-              name: inv.productName || inv.name, 
-              price: inv.price,
-              category: inv.category,
-              ...inv 
-            })
-          }
-        })
-        return merged
-      })
-    })
-    
-    return () => {
-      unsubProducts()
-      unsubInventory()
-    }
-  }, [])
 
-  // Load technician's personal stock
-  useEffect(() => {
-    if (!user) return
-    const unsubPersonalStock = onSnapshot(
-      query(collection(db, 'technician_stock'), where('technicianId', '==', user.uid), where('status', '==', 'active')),
-      snap => {
-        const loadedStock = snap.docs.map(d => ({ 
-          id: d.id, 
-          ...d.data(),
-          // Map technician_stock fields to match expected format
-          productId: d.data().productId,
-          productName: d.data().productName,
-          currentUnits: (d.data().takenQuantity || 0) - (d.data().usedQuantity || 0) - (d.data().returnedQuantity || 0) - (d.data().damagedQuantity || 0)
-        }))
-        console.log('Personal stock loaded:', loadedStock)
-        console.log('Products for matching:', products)
-        // Enrich with latest product data
-        const enrichedStock = loadedStock.map(stock => {
-          const product = products.find(p => p.id === stock.productId)
-          return {
-            ...stock,
-            productName: product?.name || stock.productName,
-            productPrice: product?.price || stock.productPrice,
-            category: product?.category || stock.category
-          }
-        })
-        setPersonalStock(enrichedStock)
-      }
-    )
-    return unsubPersonalStock
-  }, [user, products])
 
   // Load job data
   useEffect(() => {
@@ -183,54 +103,7 @@ export default function JobDetail() {
     }
   }
 
-  const addPersonalStockItem = () => {
-    setPersonalStockUsage([...personalStockUsage, { productId: '', productName: '', currentUnits: 0, used: '', damaged: '' }])
-  }
 
-  const removePersonalStockItem = (index) => {
-    setPersonalStockUsage(personalStockUsage.filter((_, i) => i !== index))
-  }
-
-  const updatePersonalStockItem = (index, field, value) => {
-    const updated = [...personalStockUsage]
-    if (field === 'productId') {
-      // When product is selected, fetch current units from personal stock
-      const product = products.find(p => p.id === value)
-      const stock = personalStock.find(s => s.productId === value)
-      updated[index] = {
-        ...updated[index],
-        productId: value,
-        productName: product?.name || stock?.productName || '',
-        currentUnits: stock?.currentUnits || 0
-      }
-    } else {
-      updated[index][field] = value
-    }
-    setPersonalStockUsage(updated)
-  }
-
-  const savePersonalStockTracking = () => {
-    // Validate all items have product selected and at least one quantity
-    for (const item of personalStockUsage) {
-      if (!item.productId) {
-        toast.error('Please select a product for all items')
-        return
-      }
-      const used = Number(item.used) || 0
-      const damaged = Number(item.damaged) || 0
-      if (used === 0 && damaged === 0) {
-        toast.error('Please enter used or damaged quantity for all items')
-        return
-      }
-      // Validate against current units
-      if (used + damaged > item.currentUnits) {
-        toast.error(`${item.productName}: Total exceeds current units (${item.currentUnits})`)
-        return
-      }
-    }
-    setPersonalStockSaved(true)
-    toast.success('✅ Personal stock tracking saved! You can now complete the job.')
-  }
 
   const saveItemTracking = async () => {
     setSaving(true)
@@ -315,38 +188,6 @@ export default function JobDetail() {
         usedPersonalStock: !hasAssignedStock,
       })
 
-      // If using personal stock, update the personal stock inventory
-      if (!hasAssignedStock && personalStockUsage.length > 0) {
-        for (const item of personalStockUsage) {
-          const used = Number(item.used) || 0
-          const damaged = Number(item.damaged) || 0
-          
-          // Find the stock entry from technician_stock
-          const stockEntry = personalStock.find(s => s.productId === item.productId)
-          if (stockEntry) {
-            // Update technician stock - add to used and damaged quantities
-            await updateDoc(doc(db, 'technician_stock', stockEntry.id), {
-              usedQuantity: (stockEntry.usedQuantity || 0) + used,
-              damagedQuantity: (stockEntry.damagedQuantity || 0) + damaged,
-              lastUpdated: serverTimestamp(),
-            })
-
-            // Log transaction for admin tracking
-            await addDoc(collection(db, 'stock_transactions'), {
-              type: 'job_usage',
-              jobId,
-              technicianId: user.uid,
-              technicianName: user.displayName || 'Technician',
-              productId: item.productId,
-              productName: item.productName,
-              usedQuantity: used,
-              damagedQuantity: damaged,
-              timestamp: serverTimestamp(),
-            })
-          }
-        }
-      }
-
       // Create completion report
       const reportData = {
         jobId,
@@ -378,16 +219,6 @@ export default function JobDetail() {
           }
         })
         reportData.totalUnaccounted = unaccounted
-      }
-
-      // Add personal stock usage if used
-      if (!hasAssignedStock && personalStockUsage.length > 0) {
-        reportData.personalStockUsage = personalStockUsage.map(item => ({
-          productId: item.productId,
-          productName: item.productName,
-          used: Number(item.used) || 0,
-          damaged: Number(item.damaged) || 0,
-        }))
       }
 
       await addDoc(collection(db, 'job_completion_reports'), reportData)
@@ -569,18 +400,6 @@ export default function JobDetail() {
               <p className="text-xs text-blue-600 mt-1">Save item tracking before completing the job</p>
             </div>
           )}
-          {!hasAssignedStock && !personalStockSaved && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-              <p className="text-xs font-bold text-amber-700">📝 Track your personal stock usage below</p>
-              <p className="text-xs text-amber-600 mt-1">Add items you used from your personal inventory</p>
-            </div>
-          )}
-          {!hasAssignedStock && personalStockSaved && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-              <p className="text-xs font-bold text-green-700">✅ Personal stock tracked</p>
-              <p className="text-xs text-green-600 mt-1">You can now complete the job</p>
-            </div>
-          )}
           <motion.button
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -588,9 +407,9 @@ export default function JobDetail() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => setCompletionModal(true)}
-            disabled={(hasAssignedStock && !trackingSaved) || (!hasAssignedStock && !personalStockSaved)}
+            disabled={hasAssignedStock && !trackingSaved}
             className={`w-full py-3.5 rounded-xl text-sm font-bold shadow-lg transition-all ${
-              ((hasAssignedStock && trackingSaved) || (!hasAssignedStock && personalStockSaved))
+              (!hasAssignedStock || trackingSaved)
                 ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-emerald-200 hover:shadow-xl'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
@@ -697,170 +516,7 @@ export default function JobDetail() {
         </motion.div>
       )}
 
-      {assignments.length === 0 && isInProgress && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
-            <h3 className="font-bold text-gray-900">📦 Personal Stock Usage</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Track items used from your personal inventory</p>
-          </div>
 
-          <div className="p-5 space-y-3">
-            {personalStockUsage.map((item, index) => (
-              <div key={index} className="bg-gray-50 rounded-xl p-3 space-y-2">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-bold text-gray-600">Item {index + 1}</p>
-                  <button
-                    onClick={() => removePersonalStockItem(index)}
-                    disabled={personalStockSaved}
-                    className="text-red-500 hover:text-red-700 disabled:opacity-50"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                
-                {/* Product Dropdown */}
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 block mb-1">Product Name *</label>
-                  <select
-                    value={item.productId}
-                    onChange={(e) => updatePersonalStockItem(index, 'productId', e.target.value)}
-                    disabled={personalStockSaved}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-50 disabled:bg-gray-100"
-                  >
-                    <option value="">Select a product...</option>
-                    {(() => {
-                      // Get already selected product IDs (excluding current item)
-                      const selectedProductIds = personalStockUsage
-                        .map((usageItem, idx) => idx !== index ? usageItem.productId : null)
-                        .filter(Boolean)
-                      
-                      // Filter personal stock: exclude already selected products and those with no units
-                      const availableStock = personalStock.filter(stock => {
-                        // Show if: has units AND (not selected elsewhere OR is the current selection)
-                        return stock.currentUnits > 0 && (!selectedProductIds.includes(stock.productId) || stock.productId === item.productId)
-                      })
-                      
-                      if (availableStock.length === 0) {
-                        return <option value="" disabled>No stock available. Take stock first.</option>
-                      }
-                      
-                      // Group personal stock by category
-                      const grouped = {}
-                      availableStock.forEach(stock => {
-                        // First try to find product in products collection
-                        let product = products.find(p => p.id === stock.productId)
-                        
-                        // If not found by ID, try by name
-                        if (!product) {
-                          product = products.find(p => p.name === stock.productName || p.productName === stock.productName)
-                        }
-                        
-                        const category = product?.category || 'Uncategorized'
-                        
-                        if (!grouped[category]) grouped[category] = []
-                        grouped[category].push({ 
-                          ...stock, 
-                          product: product || { 
-                            id: stock.productId, 
-                            name: stock.productName,
-                            category: 'Uncategorized'
-                          } 
-                        })
-                      })
-                      
-                      // Render options grouped by category
-                      return Object.entries(grouped).map(([category, items]) => (
-                        <optgroup key={category} label={category}>
-                          {items.map(stock => (
-                            <option key={stock.productId} value={stock.productId}>
-                              {stock.product.name} ({stock.currentUnits} available)
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))
-                    })()}
-                  </select>
-                  {personalStock.filter(s => s.currentUnits > 0).length === 0 && (
-                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                      <span>⚠️</span>
-                      <span>No personal stock available. Use "Take Stock" to get items from company inventory.</span>
-                    </p>
-                  )}
-                </div>
-
-                {/* Current Units Display */}
-                {item.productId && (
-                  <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-2">
-                    <p className="text-xs font-semibold text-cyan-700">Current Units Available</p>
-                    <p className="text-lg font-black text-cyan-600">{item.currentUnits}</p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-xs font-semibold text-emerald-600 block mb-1">✓ Used</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={item.currentUnits}
-                      placeholder="0"
-                      value={item.used}
-                      onChange={(e) => updatePersonalStockItem(index, 'used', e.target.value)}
-                      disabled={personalStockSaved || !item.productId}
-                      className="w-full border border-emerald-200 rounded-lg px-2.5 py-2 text-sm text-center font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-50 disabled:bg-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-red-600 block mb-1">✕ Damaged</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={item.currentUnits}
-                      placeholder="0"
-                      value={item.damaged}
-                      onChange={(e) => updatePersonalStockItem(index, 'damaged', e.target.value)}
-                      disabled={personalStockSaved || !item.productId}
-                      className="w-full border border-red-200 rounded-lg px-2.5 py-2 text-sm text-center font-bold text-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 disabled:opacity-50 disabled:bg-gray-100"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {!personalStockSaved && (
-              <button
-                onClick={addPersonalStockItem}
-                className="w-full border-2 border-dashed border-gray-300 rounded-xl py-3 text-sm font-bold text-gray-500 hover:border-emerald-400 hover:text-emerald-600 transition"
-              >
-                + Add Item
-              </button>
-            )}
-
-            {personalStockUsage.length > 0 && !personalStockSaved && (
-              <button
-                onClick={savePersonalStockTracking}
-                className="w-full bg-aqua-500 text-white rounded-xl py-2.5 text-sm font-bold hover:bg-aqua-600 transition"
-              >
-                💾 Save Personal Stock Tracking
-              </button>
-            )}
-
-            {personalStockSaved && (
-              <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-200">
-                <p className="text-sm font-bold text-emerald-700 text-center">✅ Personal stock tracking saved</p>
-              </div>
-            )}
-
-            {personalStockUsage.length === 0 && !personalStockSaved && (
-              <div className="text-center py-4">
-                <p className="text-sm text-gray-500">Click "Add Item" to track stock usage</p>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      )}
       
       {assignments.length === 0 && !isInProgress && !isCompleted && (
         <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
@@ -879,7 +535,7 @@ export default function JobDetail() {
           </div>
 
           {/* Summary */}
-          {hasAssignedStock ? (
+          {hasAssignedStock && (
             <div className="bg-gray-50 rounded-xl p-4 space-y-2">
               <p className="text-xs font-bold text-gray-600 uppercase tracking-wider">Admin-Assigned Stock Summary</p>
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -889,30 +545,6 @@ export default function JobDetail() {
                 {totalUnaccounted > 0 && (
                   <div className="col-span-2"><span className="text-gray-600">Unaccounted Items:</span> <span className="font-bold text-amber-600">{totalUnaccounted}</span></div>
                 )}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-              <p className="text-xs font-bold text-gray-600 uppercase tracking-wider">Personal Stock Summary</p>
-              <div className="space-y-1 text-sm">
-                {personalStockUsage.map((item, i) => {
-                  const usedQty = Number(item.used) || 0
-                  const damagedQty = Number(item.damaged) || 0
-                  // Get product name with fallback
-                  const productName = item.productName || 
-                    products.find(p => p.id === item.productId)?.name || 
-                    personalStock.find(s => s.productId === item.productId)?.productName || 
-                    'Unknown Product'
-                  return (
-                    <div key={i} className="flex justify-between">
-                      <span className="text-gray-700 font-medium">{productName}:</span>
-                      <span className="text-gray-600">
-                        <span className="text-emerald-600 font-bold">{usedQty} used</span>
-                        {damagedQty > 0 && <span className="text-red-600 font-bold">, {damagedQty} damaged</span>}
-                      </span>
-                    </div>
-                  )
-                })}
               </div>
             </div>
           )}

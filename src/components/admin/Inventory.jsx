@@ -526,10 +526,7 @@ export default function Inventory() {
             <input type="number" value={productForm.price} onChange={e => setProductForm(f => ({ ...f, price: e.target.value }))} required className={inputCls} />
           </div>
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className={`text-xs font-semibold ${s}`}>Category *</label>
-              <button type="button" onClick={() => { setShowProductModal(false); setShowCategoryModal(true) }} className="text-xs text-cyan-600 font-semibold hover:text-cyan-700 transition">+ Manage</button>
-            </div>
+            <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Category *</label>
             <select value={productForm.category} onChange={e => setProductForm(f => ({ ...f, category: e.target.value }))} required className={inputCls}>
               <option value="">Select category</option>
               {categories.map(c => (<option key={c.id} value={c.name}>{c.name}</option>))}

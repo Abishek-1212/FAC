@@ -8,6 +8,7 @@ import Invoices from '../components/admin/Invoices'
 import Reports from '../components/admin/Reports'
 import Inventory from '../components/admin/Inventory'
 import VerifyStock from '../components/admin/VerifyStock'
+import FollowUpService from '../components/admin/FollowUpService'
 
 const NAV = [
   { to: '/admin', icon: '🏠', label: 'Dashboard' },
@@ -25,6 +26,7 @@ export default function AdminDashboard() {
       <Routes>
         <Route index element={<AdminHome />} />
         <Route path="jobs" element={<ServiceJobs />} />
+        <Route path="follow-up" element={<FollowUpService />} />
         <Route path="products" element={<Products />} />
         <Route path="inventory" element={<Inventory />} />
         <Route path="employees" element={<Employees />} />

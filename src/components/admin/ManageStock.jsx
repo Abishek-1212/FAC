@@ -152,7 +152,7 @@ export default function ManageStock({ searchQuery = '' }) {
                 {/* Table Header */}
                 <div className={`grid grid-cols-12 gap-3 px-4 py-3 border-b text-xs font-bold uppercase tracking-wider ${isDark ? 'border-white/10 text-white/40' : 'border-gray-100 text-gray-400'}`}>
                   <div className="col-span-4">Product</div>
-                  <div className="col-span-2 text-center">Available Stock</div>
+                  <div className="col-span-2 text-center">Avail Stock</div>
                   <div className="col-span-3 text-center">New Stock</div>
                   <div className="col-span-3 text-right">Action</div>
                 </div>

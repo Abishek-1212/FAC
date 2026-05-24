@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, getDocs } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, getDocs, updateDoc, doc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { motion } from 'framer-motion'
 import Modal from './Modal'
@@ -9,20 +9,188 @@ import { generateInvoice } from '../../utils/generateInvoice'
 export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSaved }) {
   const [completionReport, setCompletionReport] = useState(null)
   const [products, setProducts] = useState([])
-  const [totalAmount, setTotalAmount] = useState(0)
-  const [discountType, setDiscountType] = useState('percentage') // 'percentage' or 'amount'
-  const [discountValue, setDiscountValue] = useState(0)
-  const [paymentType, setPaymentType] = useState('Cash')
-  const [saving, setSaving] = useState(false)
-  const [sharing, setSharing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [invoiceSaved, setInvoiceSaved] = useState(false)
   const [savedInvoiceData, setSavedInvoiceData] = useState(null)
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
+  const [personalStock, setPersonalStock] = useState([])
+  const [allProducts, setAllProducts] = useState([])
+  const [expandedStockItems, setExpandedStockItems] = useState(new Set())
+  const [saving, setSaving] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  
+  // Initialize state from localStorage or defaults
+  const getInitialFormData = () => {
+    if (!job?.id) return {
+      totalAmount: 0,
+      discountType: 'percentage',
+      discountValue: 0,
+      paymentType: 'Cash',
+      personalStockUsage: []
+    }
+    
+    const savedFormKey = `invoice_draft_${job.id}`
+    const savedData = localStorage.getItem(savedFormKey)
+    
+    if (savedData) {
+      try {
+        return JSON.parse(savedData)
+      } catch (err) {
+        console.error('Error loading saved invoice draft:', err)
+      }
+    }
+    
+    return {
+      totalAmount: 0,
+      discountType: 'percentage',
+      discountValue: 0,
+      paymentType: 'Cash',
+      personalStockUsage: []
+    }
+  }
+  
+  const [totalAmount, setTotalAmount] = useState(() => getInitialFormData().totalAmount)
+  const [discountType, setDiscountType] = useState(() => getInitialFormData().discountType)
+  const [discountValue, setDiscountValue] = useState(() => getInitialFormData().discountValue)
+  const [paymentType, setPaymentType] = useState(() => getInitialFormData().paymentType)
+  const [personalStockUsage, setPersonalStockUsage] = useState(() => getInitialFormData().personalStockUsage)
+
+  // Load saved form data from localStorage when job changes
+  useEffect(() => {
+    if (!open || !job?.id) return
+    
+    const savedFormKey = `invoice_draft_${job.id}`
+    const savedData = localStorage.getItem(savedFormKey)
+    
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData)
+        setTotalAmount(parsed.totalAmount || 0)
+        setDiscountType(parsed.discountType || 'percentage')
+        setDiscountValue(parsed.discountValue || 0)
+        setPaymentType(parsed.paymentType || 'Cash')
+        setPersonalStockUsage(parsed.personalStockUsage || [])
+        // All items start expanded by default
+        const expandedSet = new Set()
+        parsed.personalStockUsage?.forEach((_, index) => {
+          expandedSet.add(index)
+        })
+        setExpandedStockItems(expandedSet)
+      } catch (err) {
+        console.error('Error loading saved invoice draft:', err)
+      }
+    }
+  }, [job?.id]) // Only depend on job.id, not open
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    if (!job?.id || invoiceSaved) return
+    
+    const savedFormKey = `invoice_draft_${job.id}`
+    const formData = {
+      totalAmount,
+      discountType,
+      discountValue,
+      paymentType,
+      personalStockUsage
+    }
+    
+    localStorage.setItem(savedFormKey, JSON.stringify(formData))
+  }, [job?.id, totalAmount, discountType, discountValue, paymentType, personalStockUsage, invoiceSaved])
 
   useEffect(() => {
     if (!open || !job?.id) return
     setLoading(true)
+    
+    // Load all products for dropdown
+    const loadProducts = async () => {
+      try {
+        const productsSnapshot = await getDocs(collection(db, 'products'))
+        const inventorySnapshot = await getDocs(collection(db, 'inventory'))
+        
+        const loadedProducts = productsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+        const inventoryProducts = inventorySnapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+        
+        // Merge products with inventory data to get categories
+        const mergedProducts = loadedProducts.map(product => {
+          const invProduct = inventoryProducts.find(inv => 
+            inv.id === product.id || 
+            inv.productName === product.name || 
+            inv.name === product.name
+          )
+          return {
+            ...product,
+            category: invProduct?.category || product.category || 'Uncategorized'
+          }
+        })
+        
+        // Also add inventory products that might not be in products collection
+        inventoryProducts.forEach(inv => {
+          const exists = mergedProducts.find(p => 
+            p.id === inv.id || 
+            p.name === inv.productName || 
+            p.name === inv.name
+          )
+          if (!exists) {
+            mergedProducts.push({
+              id: inv.id,
+              name: inv.productName || inv.name,
+              category: inv.category || 'Uncategorized',
+              ...inv
+            })
+          }
+        })
+        
+        setAllProducts(mergedProducts)
+      } catch (err) {
+        console.error('Error loading products:', err)
+        toast.error('Failed to load products')
+      }
+    }
+    loadProducts()
+    
+    // Load technician's personal stock - need to find technician UID from technicianName
+    const loadPersonalStock = async () => {
+      if (!job.technicianName) return
+      
+      try {
+        // Find technician by name in users collection
+        const usersQuery = query(
+          collection(db, 'users'),
+          where('name', '==', job.technicianName),
+          where('role', '==', 'technician')
+        )
+        const usersSnap = await getDocs(usersQuery)
+        
+        if (usersSnap.empty) {
+          console.log('No technician found with name:', job.technicianName)
+          return
+        }
+        
+        const technicianId = usersSnap.docs[0].id
+        
+        // Now load their stock
+        const stockQuery = query(
+          collection(db, 'technician_stock'),
+          where('technicianId', '==', technicianId),
+          where('status', '==', 'active')
+        )
+        const unsubStock = onSnapshot(stockQuery, snap => {
+          const loadedStock = snap.docs.map(d => ({ 
+            id: d.id, 
+            ...d.data(),
+            currentUnits: (d.data().takenQuantity || 0) - (d.data().usedQuantity || 0) - (d.data().returnedQuantity || 0)
+          }))
+          setPersonalStock(loadedStock)
+        })
+        
+        return unsubStock
+      } catch (error) {
+        console.error('Error loading personal stock:', error)
+      }
+    }
+    
+    const stockUnsubPromise = loadPersonalStock()
     
     // Check if invoice already exists
     const checkInvoice = async () => {
@@ -88,7 +256,11 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
         setLoading(false)
       }
     )
-    return unsubscribe
+    
+    return () => {
+      unsubscribe()
+      if (stockUnsubPromise) stockUnsubPromise.then(unsub => unsub && unsub())
+    }
   }, [open, job?.id])
 
   const calculateDiscount = () => {
@@ -104,11 +276,84 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
   const discountAmount = calculateDiscount()
   const grandTotal = (parseFloat(totalAmount) || 0) - discountAmount
 
+  const addPersonalStockItem = () => {
+    const newIndex = personalStockUsage.length
+    setPersonalStockUsage([...personalStockUsage, { productId: '', productName: '', currentUnits: 0, used: '', damaged: '' }])
+    // Auto-expand new items
+    setExpandedStockItems(prev => new Set([...prev, newIndex]))
+  }
+
+  const removePersonalStockItem = (index) => {
+    setPersonalStockUsage(personalStockUsage.filter((_, i) => i !== index))
+    // Remove from expanded set and adjust indices
+    const newExpanded = new Set()
+    expandedStockItems.forEach(i => {
+      if (i < index) newExpanded.add(i)
+      else if (i > index) newExpanded.add(i - 1)
+    })
+    setExpandedStockItems(newExpanded)
+  }
+
+  const updatePersonalStockItem = (index, field, value) => {
+    const updated = [...personalStockUsage]
+    if (field === 'productId') {
+      const product = allProducts.find(p => p.id === value)
+      const stock = personalStock.find(s => s.productId === value)
+      updated[index] = {
+        ...updated[index],
+        productId: value,
+        productName: product?.name || stock?.productName || '',
+        currentUnits: stock?.currentUnits || 0
+      }
+    } else {
+      updated[index][field] = value
+    }
+    setPersonalStockUsage(updated)
+  }
+
+  const toggleStockItem = (index) => {
+    const newExpanded = new Set(expandedStockItems)
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index)
+    } else {
+      newExpanded.add(index)
+    }
+    setExpandedStockItems(newExpanded)
+  }
+
   const handleGenerateInvoice = async () => {
     setSaving(true)
     try {
+      // Validate personal stock usage if any
+      for (const item of personalStockUsage) {
+        if (!item.productId) {
+          toast.error('Please select a product for all personal stock items')
+          setSaving(false)
+          return
+        }
+        const used = Number(item.used) || 0
+        const damaged = Number(item.damaged) || 0
+        if (used === 0 && damaged === 0) {
+          toast.error('Please enter used or damaged quantity for all personal stock items')
+          setSaving(false)
+          return
+        }
+        if (used + damaged > item.currentUnits) {
+          toast.error(`${item.productName}: Total exceeds available units (${item.currentUnits})`)
+          setSaving(false)
+          return
+        }
+      }
+
       const billNo = `FAC-${Date.now()}`
       const billAmount = grandTotal
+      
+      // Combine products from completion report and personal stock usage (only used items for invoice)
+      const allUsedProducts = [
+        ...products,
+        ...personalStockUsage.map(item => ({ name: item.productName, qty: Number(item.used) || 0 }))
+      ]
+      
       const invoiceData = {
         billNo,
         jobId: job.id || '',
@@ -118,7 +363,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
         technicianId: job.technicianId || '',
         technicianName: job.technicianName || 'N/A',
         serviceType: job.serviceType || 'N/A',
-        components: products.map(p => ({ name: p.name || 'N/A', quantity: p.qty || 0 })),
+        components: allUsedProducts.map(p => ({ name: p.name || 'N/A', quantity: p.qty || 0 })),
         totalAmount: parseFloat(totalAmount) || 0,
         discountType,
         discountValue: parseFloat(discountValue) || 0,
@@ -137,10 +382,43 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
 
       await addDoc(collection(db, 'invoices'), invoiceData)
       
+      // Update personal stock if used
+      if (personalStockUsage.length > 0) {
+        for (const item of personalStockUsage) {
+          const used = Number(item.used) || 0
+          const damaged = Number(item.damaged) || 0
+          const stockEntry = personalStock.find(s => s.productId === item.productId)
+          
+          if (stockEntry) {
+            await updateDoc(doc(db, 'technician_stock', stockEntry.id), {
+              usedQuantity: (stockEntry.usedQuantity || 0) + used,
+              damagedQuantity: (stockEntry.damagedQuantity || 0) + damaged,
+              lastUpdated: serverTimestamp(),
+            })
+
+            // Log transaction
+            await addDoc(collection(db, 'stock_transactions'), {
+              type: 'job_usage',
+              jobId: job.id,
+              technicianId: job.technicianId,
+              technicianName: job.technicianName,
+              productId: item.productId,
+              productName: item.productName,
+              usedQuantity: used,
+              damagedQuantity: damaged,
+              timestamp: serverTimestamp(),
+            })
+          }
+        }
+      }
+      
+      // Clear localStorage draft after successful save
+      const savedFormKey = `invoice_draft_${job.id}`
+      localStorage.removeItem(savedFormKey)
+      
       setInvoiceSaved(true)
       setSavedInvoiceData(invoiceData)
       
-      // Notify parent component that invoice was saved
       if (onInvoiceSaved) {
         onInvoiceSaved()
       }
@@ -214,13 +492,13 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
               </div>
             </div>
 
-            {/* Products Section */}
-            <div className={`rounded-xl md:rounded-2xl p-4 md:p-6 border ${
-              isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-            }`}>
-              <h3 className={`text-base md:text-lg font-bold mb-3 md:mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>📦 Products Used</h3>
-              
-              {products.length > 0 ? (
+            {/* Products Section - Only show if there are products from completion report */}
+            {products.length > 0 && (
+              <div className={`rounded-xl md:rounded-2xl p-4 md:p-6 border ${
+                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+              }`}>
+                <h3 className={`text-base md:text-lg font-bold mb-3 md:mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>📦 Products Used</h3>
+                
                 <div className="space-y-2 md:space-y-3 overflow-x-auto">
                   {/* Mobile Card View */}
                   <div className="md:hidden space-y-2">
@@ -272,10 +550,232 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                     ))}
                   </div>
                 </div>
-              ) : (
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No products tracked for this job</p>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Personal Stock Usage Section */}
+            {!invoiceSaved && (
+              <div className={`rounded-xl md:rounded-2xl p-4 md:p-5 border ${
+                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+              }`}>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className={`text-sm md:text-base font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>🔧 Personal Stock Usage</h3>
+                  <button
+                    onClick={addPersonalStockItem}
+                    className={`text-xs font-bold px-2.5 py-1.5 rounded-lg transition ${
+                      isDark ? 'bg-cyan-600 text-white hover:bg-cyan-700' : 'bg-cyan-500 text-white hover:bg-cyan-600'
+                    }`}
+                  >
+                    + Add
+                  </button>
+                </div>
+                
+                {personalStockUsage.length > 0 ? (
+                  <div className="space-y-2">
+                    {personalStockUsage.map((item, index) => {
+                      const isExpanded = expandedStockItems.has(index)
+                      const hasProduct = item.productId && item.productName
+                      
+                      return (
+                        <div key={index} className={`rounded-lg border transition-all ${
+                          isDark ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
+                        }`}>
+                          {/* Collapsed View */}
+                          {!isExpanded && (
+                            <div 
+                              onClick={() => toggleStockItem(index)}
+                              className={`p-3 cursor-pointer hover:bg-opacity-80 transition`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${isDark ? 'bg-cyan-600 text-white' : 'bg-cyan-100 text-cyan-700'}`}>#{index + 1}</span>
+                                  <p className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.productName || 'Select product'}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {hasProduct && (
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                      {(Number(item.used) || 0) > 0 && (
+                                        <span className={`px-2 py-0.5 rounded font-bold ${isDark ? 'bg-emerald-600/30 text-emerald-300' : 'bg-emerald-100 text-emerald-700'}`}>
+                                          ✓ {item.used}
+                                        </span>
+                                      )}
+                                      {(Number(item.damaged) || 0) > 0 && (
+                                        <span className={`px-2 py-0.5 rounded font-bold ${isDark ? 'bg-red-600/30 text-red-300' : 'bg-red-100 text-red-700'}`}>
+                                          ✕ {item.damaged}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      removePersonalStockItem(index)
+                                    }}
+                                    className="text-red-500 hover:text-red-700 transition p-1"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Expanded View */}
+                          {isExpanded && (
+                            <div className="p-3 space-y-2.5">
+                              <div className="flex items-center justify-between">
+                                <p className={`text-xs font-bold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>#{index + 1}</p>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => removePersonalStockItem(index)}
+                                    className="text-red-500 hover:text-red-700 transition"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              {/* Product Dropdown */}
+                              <div>
+                                <label className={`text-xs font-semibold block mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Product *</label>
+                                <select
+                                  value={item.productId}
+                                  onChange={(e) => updatePersonalStockItem(index, 'productId', e.target.value)}
+                                  className={`w-full px-2.5 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
+                                    isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
+                                  } border`}
+                                >
+                                  <option value="">Select product...</option>
+                                  {(() => {
+                                    const selectedProductIds = personalStockUsage
+                                      .map((usageItem, idx) => idx !== index ? usageItem.productId : null)
+                                      .filter(Boolean)
+                                    
+                                    const availableStock = personalStock.filter(stock => {
+                                      return stock.currentUnits > 0 && (!selectedProductIds.includes(stock.productId) || stock.productId === item.productId)
+                                    })
+                                    
+                                    if (availableStock.length === 0) {
+                                      if (personalStock.length === 0) {
+                                        return <option value="" disabled>No personal stock. Use "Take Stock" first.</option>
+                                      } else {
+                                        return <option value="" disabled>All stock used. Take more stock.</option>
+                                      }
+                                    }
+                                    
+                                    const grouped = {}
+                                    availableStock.forEach(stock => {
+                                      const product = allProducts.find(p => 
+                                        p.id === stock.productId || 
+                                        p.name === stock.productName || 
+                                        p.productName === stock.productName
+                                      )
+                                      const category = product?.category || stock.category || 'Uncategorized'
+                                      if (!grouped[category]) grouped[category] = []
+                                      grouped[category].push({ 
+                                        ...stock, 
+                                        product: product || { 
+                                          id: stock.productId, 
+                                          name: stock.productName,
+                                          category: category
+                                        } 
+                                      })
+                                    })
+                                    
+                                    return Object.entries(grouped).map(([category, items]) => (
+                                      <optgroup key={category} label={category}>
+                                        {items.map(stock => (
+                                          <option key={stock.productId} value={stock.productId}>
+                                            {stock.product.name} ({stock.currentUnits} avail.)
+                                          </option>
+                                        ))}
+                                      </optgroup>
+                                    ))
+                                  })()}
+                                </select>
+                                {personalStock.length === 0 && (
+                                  <p className={`text-xs mt-1.5 flex items-center gap-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                                    <span>⚠️</span>
+                                    <span>No personal stock available. Go to "Take Stock" to get items from company inventory.</span>
+                                  </p>
+                                )}
+                                {personalStock.length > 0 && personalStock.every(s => s.currentUnits === 0) && (
+                                  <p className={`text-xs mt-1.5 flex items-center gap-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                                    <span>⚠️</span>
+                                    <span>All your stock has been used. Take more stock from inventory.</span>
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Current Units & Inputs */}
+                              {item.productId && (
+                                <>
+                                  <div className={`rounded-lg p-2 text-center ${isDark ? 'bg-cyan-900/20 border border-cyan-700/30' : 'bg-cyan-50 border border-cyan-200'}`}>
+                                    <p className={`text-xs font-semibold ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>Available: <span className="text-lg font-black">{item.currentUnits}</span></p>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <label className={`text-xs font-semibold block mb-1 ${isDark ? 'text-emerald-300' : 'text-emerald-600'}`}>✓ Used</label>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={item.currentUnits}
+                                        placeholder="0"
+                                        value={item.used}
+                                        onChange={(e) => updatePersonalStockItem(index, 'used', e.target.value)}
+                                        className={`w-full px-2.5 py-2 rounded-lg text-xs text-center font-bold focus:outline-none focus:ring-2 focus:ring-emerald-300 ${
+                                          isDark ? 'bg-gray-700 border-emerald-600 text-emerald-300' : 'bg-white border-emerald-200 text-emerald-700'
+                                        } border`}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className={`text-xs font-semibold block mb-1 ${isDark ? 'text-red-300' : 'text-red-600'}`}>✕ Damaged</label>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={item.currentUnits}
+                                        placeholder="0"
+                                        value={item.damaged}
+                                        onChange={(e) => updatePersonalStockItem(index, 'damaged', e.target.value)}
+                                        className={`w-full px-2.5 py-2 rounded-lg text-xs text-center font-bold focus:outline-none focus:ring-2 focus:ring-red-300 ${
+                                          isDark ? 'bg-gray-700 border-red-600 text-red-300' : 'bg-white border-red-200 text-red-700'
+                                        } border`}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Done Button */}
+                                  <button
+                                    onClick={() => toggleStockItem(index)}
+                                    className={`w-full py-2 rounded-lg text-xs font-bold transition ${
+                                      isDark ? 'bg-cyan-600 text-white hover:bg-cyan-700' : 'bg-cyan-500 text-white hover:bg-cyan-600'
+                                    }`}
+                                  >
+                                    ✓ Done
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className={`text-center py-6 rounded-lg border-2 border-dashed ${
+                    isDark ? 'border-gray-600' : 'border-gray-300'
+                  }`}>
+                    <p className="text-2xl mb-1">📦</p>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No items added</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Total Amount & Payment Type Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -427,6 +927,15 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   const billNo = savedInvoiceData?.billNo || `FAC-${Date.now()}`
+                  
+                  // Combine products from completion report and personal stock usage
+                  const allInvoiceProducts = [
+                    ...products,
+                    ...personalStockUsage
+                      .filter(item => item.productId && ((Number(item.used) || 0) > 0))
+                      .map(item => ({ name: item.productName, qty: Number(item.used) || 0 }))
+                  ]
+                  
                   generateInvoice({
                     invoiceNumber: billNo,
                     customerName: job.customerName || 'N/A',
@@ -440,7 +949,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                     discountValue: parseFloat(discountValue) || 0,
                     discountAmount,
                     grandTotal,
-                    products,
+                    products: allInvoiceProducts,
                   })
                   toast.success('📥 Invoice downloaded!')
                 }}

@@ -186,6 +186,7 @@ export default function TakeStock() {
             productId: row.productId,
             productName: product.name,
             productPrice: product.price || 0,
+            category: product.category || 'Uncategorized',
             takenQuantity: qty,
             usedQuantity: 0,
             returnedQuantity: 0,
