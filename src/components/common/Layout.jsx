@@ -36,6 +36,9 @@ export default function Layout({ children, navItems, title }) {
   const inInventory = location.pathname.startsWith('/admin/inventory')
   const switchTo = inInventory ? '/admin' : '/admin/inventory'
   const switchLabel = inInventory ? 'Admin Panel' : 'Inventory'
+  
+  // Hide header for specific pages
+  const hideHeader = location.pathname === '/admin/jobs' || location.pathname === '/admin/invoices' || location.pathname === '/admin/verify-stock' || location.pathname === '/admin/reports' || location.pathname === '/admin/employees'
 
   // Check if we're in a sub-section (not root dashboard)
   const isInSection = location.pathname !== '/admin' && location.pathname !== '/technician' && location.pathname !== '/inventory' && !location.pathname.startsWith('/admin/') && !location.pathname.startsWith('/inventory/')
@@ -122,8 +125,9 @@ export default function Layout({ children, navItems, title }) {
 
   return (
     <div className={`h-screen flex flex-col overflow-hidden ${isDark ? 'bg-dark-bg' : 'bg-light-bg'}`}>
-      {/* Top Nav */}
-      <header className={`shrink-0 sticky top-0 z-50 backdrop-blur-xl border-b ${isDark ? 'bg-dark-card/90 border-dark-border' : 'bg-white/90 border-light-border'}`}>
+      {/* Top Nav - Hidden for specific pages */}
+      {!hideHeader && (
+        <header className={`shrink-0 sticky top-0 z-50 backdrop-blur-xl border-b ${isDark ? 'bg-dark-card/90 border-dark-border' : 'bg-white/90 border-light-border'}`}>
         <div className="max-w-full mx-auto px-6 h-16 grid grid-cols-3 items-center">
           {/* Left: Logo + back button */}
           <div className="flex items-center gap-3">
@@ -229,6 +233,7 @@ export default function Layout({ children, navItems, title }) {
           </div>
         </div>
       </header>
+      )}
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         <main className="flex-1 overflow-y-auto scrollbar-hide p-6 md:p-8 pb-24">

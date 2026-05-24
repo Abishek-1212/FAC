@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { collection, onSnapshot, updateDoc, doc, setDoc } from 'firebase/firestore'
 import { db, auth } from '../../firebase'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import Modal from '../common/Modal'
 import toast from 'react-hot-toast'
@@ -17,6 +18,7 @@ const ROLE_LABELS = {
 }
 
 export default function Employees() {
+  const { isDark } = useTheme()
   const { user: currentUser } = useAuth()
   const [users, setUsers]         = useState([])
   const [modal, setModal]         = useState(false)
@@ -96,49 +98,86 @@ export default function Employees() {
   const filtered    = filter === 'all' ? technicians : technicians.filter(u => u.isActive === (filter === 'active'))
 
   return (
-    <div className="space-y-4 pb-20 md:pb-0">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button onClick={() => window.history.back()} className="p-2 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 shadow-sm transition">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          </button>
-          <h2 className="text-xl font-black text-gray-800">Technicians</h2>
-        </div>
+    <div className="pb-20 md:pb-0">
+      {/* Header with Back Button and Title */}
+      <div className={`flex items-center justify-center px-4 py-4 border rounded-full mx-4 mb-5 relative ${
+        isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
+      }`}>
+        <button
+          onClick={() => window.history.back()}
+          className={`absolute left-4 p-2 rounded-lg transition-all ${
+            isDark
+              ? 'hover:bg-white/10 text-white/70 hover:text-white'
+              : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 className={`text-xl font-bold ${
+          isDark ? 'text-white' : 'text-gray-900'
+        }`}>
+          EMPLOYEES
+        </h1>
+      </div>
+
+      <div className="space-y-4">
+      {/* Add Technician Button */}
+      <div className="flex justify-center">
         <button
           onClick={() => setModal(true)}
-          className="bg-aqua-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-aqua-600 transition"
+          className={`px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-shadow ${
+            isDark
+              ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-cyan-500/20 hover:shadow-cyan-500/40'
+              : 'bg-gradient-to-r from-aqua-500 to-aqua-600 text-white shadow-aqua-200 hover:shadow-aqua-300'
+          }`}
         >
           + Add Technician
         </button>
       </div>
 
-      <div className="flex gap-2 pb-1">
-        {[['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive']].map(([val, label]) => (
-          <button
-            key={val}
-            onClick={() => setFilter(val)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
-              filter === val ? 'bg-aqua-500 text-white' : 'bg-white text-gray-600 border border-gray-200'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="flex justify-center">
+        <div className="flex gap-2 pb-1 overflow-x-auto scrollbar-hide">
+          {[['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive']].map(([val, label]) => (
+            <button
+              key={val}
+              onClick={() => setFilter(val)}
+              className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${
+                filter === val
+                  ? isDark
+                    ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
+                    : 'bg-gradient-to-r from-aqua-500 to-aqua-600 text-white shadow-lg shadow-aqua-300/40'
+                  : isDark
+                  ? 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:border-white/20'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-3">
         {filtered.map(u => (
-          <div key={u.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div key={u.id} className={`rounded-2xl p-4 shadow-sm border ${
+            isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'
+          }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-aqua-100 flex items-center justify-center font-bold text-aqua-700 text-sm flex-shrink-0">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
+                  isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-aqua-100 text-aqua-700'
+                }`}>
                   {u.name?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div>
-                  <p className="font-bold text-gray-800 text-sm">{u.name}</p>
-                  <p className="text-xs text-gray-500">{u.email}</p>
-                  {u.phone && <p className="text-xs text-gray-400">+91 {u.phone}</p>}
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block bg-aqua-100 text-aqua-700">
+                  <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-800'}`}>{u.name}</p>
+                  <p className={`text-xs ${isDark ? 'text-white/60' : 'text-gray-500'}`}>{u.email}</p>
+                  {u.phone && <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>+91 {u.phone}</p>}
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${
+                    isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-aqua-100 text-aqua-700'
+                  }`}>
                     Technician
                   </span>
                 </div>
@@ -147,7 +186,9 @@ export default function Employees() {
                 <button
                   onClick={() => toggleActive(u)}
                   className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition ${
-                    u.isActive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'
+                    u.isActive
+                      ? isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-50 text-green-600'
+                      : isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-50 text-red-500'
                   }`}
                 >
                   {u.isActive ? 'Active' : 'Inactive'}
@@ -157,8 +198,9 @@ export default function Employees() {
           </div>
         ))}
         {filtered.length === 0 && (
-          <p className="text-center text-gray-400 text-sm py-8">No technicians found</p>
+          <p className={`text-center text-sm py-8 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>No technicians found</p>
         )}
+      </div>
       </div>
 
       <Modal open={modal} onClose={() => { setModal(false); setForm({ name: '', email: '', password: '', phone: '' }) }} title="Add Technician">

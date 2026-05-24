@@ -16,7 +16,7 @@ export default function Modal({ open, onClose, title, children, size = 'md' }) {
       >
         <motion.div className="absolute inset-0 bg-black/50" onClick={onClose} />
         <motion.div
-          className={`relative rounded-3xl shadow-2xl w-full ${sizes[size]} max-h-[90vh] overflow-y-auto ${isDark ? 'bg-dark-card' : 'bg-white'}`}
+          className={`relative rounded-3xl shadow-2xl w-full ${sizes[size]} ${isDark ? 'bg-dark-card' : 'bg-white'}`}
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}

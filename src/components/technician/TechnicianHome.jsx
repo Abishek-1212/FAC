@@ -249,39 +249,37 @@ export default function TechnicianHome() {
       )}
 
       {/* Status Filter Pills */}
-      {jobs.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {[
-            { key: 'active', label: 'Active', count: active.length },
-            { key: 'completed', label: 'Completed', count: completed.length },
-            { key: 'all', label: 'All', count: total.length },
-          ].map(({ key, label, count }) => (
-            <motion.button
-              key={key}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setStatusFilter(key)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                statusFilter === key
-                  ? isDark
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-blue-600 text-white'
-                  : isDark
-                  ? 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              {label}
-              <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
-                statusFilter === key
-                  ? 'bg-white/20 text-white'
-                  : isDark ? 'bg-white/10 text-white/40' : 'bg-gray-100 text-gray-500'
-              }`}>
-                {count}
-              </span>
-            </motion.button>
-          ))}
-        </div>
-      )}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {[
+          { key: 'active', label: 'Active', count: active.length },
+          { key: 'completed', label: 'Completed', count: completed.length },
+          { key: 'all', label: 'All', count: total.length },
+        ].map(({ key, label, count }) => (
+          <motion.button
+            key={key}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setStatusFilter(key)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              statusFilter === key
+                ? isDark
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-blue-600 text-white'
+                : isDark
+                ? 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            {label}
+            <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+              statusFilter === key
+                ? 'bg-white/20 text-white'
+                : isDark ? 'bg-white/10 text-white/40' : 'bg-gray-100 text-gray-500'
+            }`}>
+              {count}
+            </span>
+          </motion.button>
+        ))}
+      </div>
 
       {/* Jobs List */}
       {jobs.length > 0 ? (

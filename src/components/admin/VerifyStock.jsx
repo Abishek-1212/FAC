@@ -265,14 +265,32 @@ export default function VerifyStock() {
   const selectedTechData = technicians.find(t => t.id === selectedTech)
 
   return (
-    <div className="space-y-5 pb-20 md:pb-0">
-      {/* Header */}
-      <div>
-        <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Verify Stock Returns</h2>
-        <p className={`text-sm mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-          Verify technician stock returns and clear pending/damaged items
-        </p>
+    <div className="pb-20 md:pb-0">
+      {/* Header with Back Button and Title */}
+      <div className={`flex items-center justify-center px-4 py-4 border rounded-full mx-4 mb-5 relative ${
+        isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
+      }`}>
+        <button
+          onClick={() => window.history.back()}
+          className={`absolute left-4 p-2 rounded-lg transition-all ${
+            isDark
+              ? 'hover:bg-white/10 text-white/70 hover:text-white'
+              : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 className={`text-xl font-bold ${
+          isDark ? 'text-white' : 'text-gray-900'
+        }`}>
+          VERIFY STOCK
+        </h1>
       </div>
+
+      <div className="space-y-5">
+      {/* Header - removed old header section */}
 
       {/* Select Technician */}
       <motion.div
@@ -587,6 +605,7 @@ export default function VerifyStock() {
           </motion.div>
         </div>
       )}
+      </div>
     </div>
   )
 }

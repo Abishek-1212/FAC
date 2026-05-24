@@ -82,7 +82,9 @@ export default function CompletionReports() {
         return { start: today, end: tomorrow }
       case 'week':
         const weekStart = new Date(today)
-        weekStart.setDate(today.getDate() - today.getDay())
+        const dayOfWeek = today.getDay()
+        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+        weekStart.setDate(today.getDate() - daysFromMonday)
         const weekEnd = new Date(weekStart)
         weekEnd.setDate(weekEnd.getDate() + 7)
         return { start: weekStart, end: weekEnd }

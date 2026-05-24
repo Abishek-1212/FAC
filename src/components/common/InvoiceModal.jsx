@@ -18,6 +18,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
   const [loading, setLoading] = useState(false)
   const [invoiceSaved, setInvoiceSaved] = useState(false)
   const [savedInvoiceData, setSavedInvoiceData] = useState(null)
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
 
   useEffect(() => {
     if (!open || !job?.id) return
@@ -144,28 +145,14 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
         onInvoiceSaved()
       }
       
-      generateInvoice({
-        invoiceNumber: billNo,
-        customerName: job.customerName || 'N/A',
-        customerPhone: job.customerPhone || 'N/A',
-        customerAddress: job.customerAddress || 'N/A',
-        technicianName: job.technicianName || 'N/A',
-        serviceType: job.serviceType || 'N/A',
-        problemDescription: job.problemDescription || 'N/A',
-        totalAmount: parseFloat(totalAmount) || 0,
-        discountType,
-        discountValue: parseFloat(discountValue) || 0,
-        discountAmount,
-        grandTotal,
-        products,
-      })
-      
       toast.success('✅ Invoice saved successfully!')
       setSaving(false)
+      setShowSaveConfirmation(false)
       return billNo
     } catch (err) {
       toast.error(err.message)
       setSaving(false)
+      setShowSaveConfirmation(false)
       return null
     }
   }
@@ -192,8 +179,9 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
   }
 
   return (
+    <>
     <Modal open={open} onClose={onClose} title="" size="lg">
-      <div className={`space-y-4 md:space-y-6 ${
+      <div className={`space-y-4 md:space-y-6 scrollbar-hide overflow-y-auto max-h-[80vh] ${
         isDark ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'
       }`}>
         {loading ? (
@@ -338,7 +326,8 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                 <button
                   type="button"
                   onClick={() => setDiscountType('percentage')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-bold transition ${
+                  disabled={invoiceSaved}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-bold transition disabled:opacity-50 disabled:cursor-not-allowed ${
                     discountType === 'percentage'
                       ? isDark
                         ? 'bg-cyan-600 text-white'
@@ -353,7 +342,8 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                 <button
                   type="button"
                   onClick={() => setDiscountType('amount')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-bold transition ${
+                  disabled={invoiceSaved}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-bold transition disabled:opacity-50 disabled:cursor-not-allowed ${
                     discountType === 'amount'
                       ? isDark
                         ? 'bg-cyan-600 text-white'
@@ -431,66 +421,120 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
               >
                 ✕ Close
               </motion.button>
-              {!invoiceSaved ? (
+              
+              {/* Download Invoice Button - Always visible */}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  const billNo = savedInvoiceData?.billNo || `FAC-${Date.now()}`
+                  generateInvoice({
+                    invoiceNumber: billNo,
+                    customerName: job.customerName || 'N/A',
+                    customerPhone: job.customerPhone || 'N/A',
+                    customerAddress: job.customerAddress || 'N/A',
+                    technicianName: job.technicianName || 'N/A',
+                    serviceType: job.serviceType || 'N/A',
+                    problemDescription: job.problemDescription || 'N/A',
+                    totalAmount: parseFloat(totalAmount) || 0,
+                    discountType,
+                    discountValue: parseFloat(discountValue) || 0,
+                    discountAmount,
+                    grandTotal,
+                    products,
+                  })
+                  toast.success('📥 Invoice downloaded!')
+                }}
+                className={`w-full md:flex-1 rounded-lg md:rounded-xl py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-white transition ${
+                  isDark ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
+                }`}
+              >
+                📥 Download Invoice
+              </motion.button>
+              
+              {/* Save Invoice Button - Only visible if not saved */}
+              {!invoiceSaved && (
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={handleGenerateInvoice}
+                  onClick={() => setShowSaveConfirmation(true)}
                   disabled={saving || sharing}
                   className={`w-full md:flex-1 rounded-lg md:rounded-xl py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-white disabled:opacity-60 transition ${
                     isDark ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
                   }`}
                 >
-                  {saving ? '⏳ Saving...' : '💾 Save Invoice'}
+                  💾 Save Invoice
                 </motion.button>
-              ) : (
-                <>
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      generateInvoice({
-                        invoiceNumber: savedInvoiceData.billNo,
-                        customerName: job.customerName || 'N/A',
-                        customerPhone: job.customerPhone || 'N/A',
-                        customerAddress: job.customerAddress || 'N/A',
-                        technicianName: job.technicianName || 'N/A',
-                        serviceType: job.serviceType || 'N/A',
-                        problemDescription: job.problemDescription || 'N/A',
-                        totalAmount: savedInvoiceData.totalAmount,
-                        discountType: savedInvoiceData.discountType,
-                        discountValue: savedInvoiceData.discountValue,
-                        discountAmount: savedInvoiceData.discountAmount,
-                        grandTotal: savedInvoiceData.billAmount,
-                        products,
-                      })
-                      toast.success('📥 Invoice downloaded!')
-                    }}
-                    className={`w-full md:flex-1 rounded-lg md:rounded-xl py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-white transition ${
-                      isDark ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
-                    }`}
-                  >
-                    📥 Download
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      const phone = job.customerPhone.replace(/\D/g, '')
-                      const message = `Hi ${job.customerName}, your invoice for ${job.serviceType} service is ready. Invoice #${savedInvoiceData.billNo}`
-                      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-                      window.open(whatsappUrl, '_blank')
-                      toast.success('✅ Invoice shared!')
-                    }}
-                    className={`w-full md:flex-1 rounded-lg md:rounded-xl py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-white transition ${
-                      isDark ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700' : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
-                    }`}
-                  >
-                    📤 Share
-                  </motion.button>
-                </>
               )}
             </div>
           </>
         )}
       </div>
     </Modal>
+
+    {/* Save Confirmation Modal */}
+    {showSaveConfirmation && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => !saving && setShowSaveConfirmation(false)}
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        />
+        
+        {/* Confirmation Dialog */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className={`relative w-full max-w-md rounded-2xl p-6 shadow-2xl ${
+            isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white'
+          }`}
+        >
+          <div className="text-center space-y-4">
+            <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${
+              isDark ? 'bg-blue-500/20' : 'bg-blue-100'
+            }`}>
+              <svg className={`w-8 h-8 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            
+            <div>
+              <h3 className={`text-xl font-black mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Save Invoice?
+              </h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Once saved, you cannot edit this invoice. Make sure all details are correct.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowSaveConfirmation(false)}
+                disabled={saving}
+                className={`flex-1 py-3 rounded-xl text-sm font-bold transition ${
+                  isDark ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                } disabled:opacity-50`}
+              >
+                Cancel
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={handleGenerateInvoice}
+                disabled={saving}
+                className={`flex-1 py-3 rounded-xl text-sm font-bold text-white transition disabled:opacity-60 ${
+                  isDark ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
+                }`}
+              >
+                {saving ? '⏳ Saving...' : '✓ Confirm Save'}
+              </motion.button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    )}
+    </>
   )
 }

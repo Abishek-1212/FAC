@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { motion } from 'framer-motion'
+import { generateInvoice } from '../../utils/generateInvoice'
 
 const formatDate = (ts) => {
   if (!ts) return '—'
@@ -16,11 +17,37 @@ const formatDate = (ts) => {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+function AnimatedCounter({ value, duration = 400 }) {
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    let start = 0
+    const end = value
+    const increment = end / (duration / 16)
+    const timer = setInterval(() => {
+      start += increment
+      if (start >= end) {
+        setCount(end)
+        clearInterval(timer)
+      } else {
+        setCount(Math.floor(start))
+      }
+    }, 16)
+    return () => clearInterval(timer)
+  }, [value, duration])
+
+  return <>{count.toLocaleString('en-IN')}</>
+}
+
 export default function Invoices() {
   const { isDark } = useTheme()
   const [invoices, setInvoices] = useState([])
   const [viewInvoice, setViewInvoice] = useState(null)
   const [filter, setFilter] = useState('all')
+  const [dateFilter, setDateFilter] = useState('all')
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false)
   const [editPaymentInvoice, setEditPaymentInvoice] = useState(null)
   const [paymentModalOpen, setPaymentModalOpen] = useState(false)
   const invoiceRef = useRef(null)
@@ -74,7 +101,34 @@ export default function Invoices() {
     toast.success('📱 PDF downloaded! Attach it in WhatsApp.')
   }
 
-  const filteredInvoices = invoices.filter(inv => {
+  // Date filtered invoices (for summary cards)
+  const dateFilteredInvoices = invoices.filter(inv => {
+    if (dateFilter === 'all') return true
+    
+    const invDate = inv.generatedDate?.toDate ? inv.generatedDate.toDate() : new Date(inv.generatedDate?.seconds * 1000)
+    const now = new Date()
+    
+    if (dateFilter === 'today') {
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const todayEnd = new Date(todayStart)
+      todayEnd.setDate(todayEnd.getDate() + 1)
+      return invDate >= todayStart && invDate < todayEnd
+    } else if (dateFilter === 'month') {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+      return invDate >= monthStart && invDate < monthEnd
+    } else if (dateFilter === 'custom' && customStartDate && customEndDate) {
+      const startDate = new Date(customStartDate)
+      const endDate = new Date(customEndDate)
+      endDate.setDate(endDate.getDate() + 1) // Include end date
+      return invDate >= startDate && invDate < endDate
+    }
+    
+    return true
+  })
+
+  // Apply payment status filter on top of date filter
+  const filteredInvoices = dateFilteredInvoices.filter(inv => {
     if (filter === 'pending') return (inv.paymentPending || 0) > 0
     if (filter === 'paid') return (inv.paymentPending || 0) === 0
     return true
@@ -95,9 +149,10 @@ export default function Invoices() {
 
   const groupedInvoices = groupInvoicesByDate(filteredInvoices)
 
-  const totalRevenue = invoices.reduce((s, i) => s + (i.billAmount || 0), 0)
-  const totalReceived = invoices.reduce((s, i) => s + (i.amountReceived || 0), 0)
-  const totalPending = invoices.reduce((s, i) => s + (i.paymentPending || 0), 0)
+  // Calculate totals based on date filtered invoices
+  const totalRevenue = dateFilteredInvoices.reduce((s, i) => s + (i.billAmount || 0), 0)
+  const totalReceived = dateFilteredInvoices.reduce((s, i) => s + (i.amountReceived || 0), 0)
+  const totalPending = dateFilteredInvoices.reduce((s, i) => s + (i.paymentPending || 0), 0)
   const unread = invoices.filter(i => i.submittedByTechnician && !i.adminViewed).length
 
   const t = isDark ? 'text-white' : 'text-gray-900'
@@ -105,20 +160,102 @@ export default function Invoices() {
   const cardBase = `rounded-2xl border ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'}`
 
   return (
-    <div className="space-y-5 pb-20 md:pb-0">
-      {/* Header with back button */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => window.history.back()} className={`p-2.5 rounded-lg transition ${isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-white text-gray-700 hover:bg-gray-50 shadow-sm'}`}>
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+    <div className="pb-20 md:pb-0">
+      {/* Header with Back Button and Title */}
+      <div className={`flex items-center justify-center px-4 py-4 border rounded-full mx-4 mb-5 relative ${
+        isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
+      }`}>
+        <button
+          onClick={() => window.history.back()}
+          className={`absolute left-4 p-2 rounded-lg transition-all ${
+            isDark
+              ? 'hover:bg-white/10 text-white/70 hover:text-white'
+              : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
         </button>
-        <div className="flex-1">
-          <h2 className={`text-2xl font-black ${t}`}>Invoices</h2>
-          <p className={`text-sm mt-0.5 ${s}`}>Manage all invoices</p>
+        <h1 className={`text-xl font-bold ${
+          isDark ? 'text-white' : 'text-gray-900'
+        }`}>
+          INVOICES
+        </h1>
+      </div>
+
+      <div className="space-y-5">
+
+      {/* Date Filter */}
+      <div className="space-y-3">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+          {[
+            { key: 'all', label: 'All Time', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
+            { key: 'today', label: 'Today', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+            { key: 'month', label: 'This Month', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg> },
+            { key: 'custom', label: 'Custom Range', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l-4 4m0 0l-2-2m2 2V8" /></svg> },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                setDateFilter(tab.key)
+                if (tab.key === 'custom') {
+                  setShowCustomDatePicker(true)
+                } else {
+                  setShowCustomDatePicker(false)
+                }
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap ${dateFilter === tab.key ? 'bg-blue-500 text-white' : isDark ? 'bg-white/5 text-white/60 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
         </div>
-        {unread > 0 && (
-          <span className="bg-red-500 text-white text-xs font-black px-3 py-1.5 rounded-lg shadow-lg">
-            {unread} new
-          </span>
+
+        {/* Custom Date Range Picker */}
+        {showCustomDatePicker && dateFilter === 'custom' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className={`${cardBase} p-4 space-y-3`}
+          >
+            <p className={`text-sm font-bold ${t}`}>Select Date Range</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className={`text-xs font-semibold mb-1.5 block ${s}`}>Start Date</label>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium border ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                />
+              </div>
+              <div>
+                <label className={`text-xs font-semibold mb-1.5 block ${s}`}>End Date</label>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium border ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                />
+              </div>
+            </div>
+            {customStartDate && customEndDate && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setCustomStartDate('')
+                    setCustomEndDate('')
+                  }}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${isDark ? 'bg-white/5 text-white/60 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+          </motion.div>
         )}
       </div>
 
@@ -127,31 +264,31 @@ export default function Invoices() {
         {[
           { 
             label: 'Total Billed', 
-            value: `₹${totalRevenue.toLocaleString('en-IN')}`, 
+            value: totalRevenue, 
             bgColor: isDark ? 'bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-cyan-500/20' : 'bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-200',
             valueColor: isDark ? 'text-cyan-300' : 'text-cyan-700'
           },
           { 
             label: 'Received', 
-            value: `₹${totalReceived.toLocaleString('en-IN')}`, 
+            value: totalReceived, 
             bgColor: isDark ? 'bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20' : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200',
             valueColor: isDark ? 'text-green-300' : 'text-green-700'
           },
           { 
             label: 'Pending', 
-            value: `₹${totalPending.toLocaleString('en-IN')}`, 
+            value: totalPending, 
             bgColor: isDark ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10 border-red-500/20' : 'bg-gradient-to-br from-red-50 to-orange-50 border-red-200',
             valueColor: isDark ? 'text-red-300' : 'text-red-700'
           },
         ].map(card => (
           <div key={card.label} className={`rounded-xl p-3 border ${card.bgColor}`}>
             <p className={`text-xs font-bold mb-2 ${s}`}>{card.label}</p>
-            <p className={`text-lg font-black ${card.valueColor}`}>{card.value}</p>
+            <p className={`text-lg font-black ${card.valueColor}`}>₹<AnimatedCounter value={card.value} duration={400} /></p>
           </div>
         ))}
       </div>
 
-      {/* Filter Tabs */}
+      {/* Payment Status Filter */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide">
         {[
           { key: 'all', label: 'All' },
@@ -179,13 +316,20 @@ export default function Invoices() {
           {Object.entries(groupedInvoices).map(([date, dateInvoices], dateIndex) => (
             <div key={date} className="space-y-3">
               {/* Date Header - Sticky */}
-              <div className={`sticky top-0 z-10 backdrop-blur-sm py-3 px-4 rounded-xl border ${isDark ? 'bg-dark-card/90 border-white/10' : 'bg-white/90 border-gray-200'}`}>
+              <div className={`sticky top-0 z-10 backdrop-blur-md py-3.5 px-5 rounded-xl border shadow-sm ${isDark ? 'bg-slate-800/95 border-slate-700/50' : 'bg-slate-50/95 border-slate-200/80'}`}>
                 <div className="flex items-center justify-between">
-                  <h3 className={`text-sm font-black ${t}`}>
-                    📅 {date}
-                  </h3>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
-                    {dateInvoices.length} invoice{dateInvoices.length !== 1 ? 's' : ''}
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-1.5 rounded-lg ${isDark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+                      <svg className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <h3 className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                      {date}
+                    </h3>
+                  </div>
+                  <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${isDark ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'}`}>
+                    {dateInvoices.length} {dateInvoices.length !== 1 ? 'invoices' : 'invoice'}
                   </span>
                 </div>
               </div>
@@ -211,7 +355,6 @@ export default function Invoices() {
                     </span>
                   )}
                 </div>
-                <span className={`text-xs font-semibold ${s}`}>📅 {inv.invoiceDate}</span>
               </div>
 
               {/* Main Content */}
@@ -286,19 +429,21 @@ export default function Invoices() {
                 </div>
 
                 {/* Edit Payment Button */}
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setEditPaymentInvoice(inv)
-                    setPaymentModalOpen(true)
-                  }}
-                  className={`w-full py-3 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 ${isDark ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700' : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600'}`}>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  <span>Edit Payment</span>
-                </motion.button>
+                {(inv.paymentPending || 0) > 0 && (
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setEditPaymentInvoice(inv)
+                      setPaymentModalOpen(true)
+                    }}
+                    className={`w-full py-3 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 ${isDark ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700' : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600'}`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>Edit Payment</span>
+                  </motion.button>
+                )}
 
                 {/* Footer Info */}
                 <div className={`pt-3 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
@@ -313,20 +458,65 @@ export default function Invoices() {
         </div>
       )}
 
-      {/* View Invoice Modal */}
-      <Modal open={!!viewInvoice} onClose={() => setViewInvoice(null)} title="Invoice Preview" size="xl">
+      {/* Invoice Actions Modal - View Only for Admin */}
+      <Modal open={!!viewInvoice} onClose={() => setViewInvoice(null)} title="Invoice Actions" size="md">
         {viewInvoice && (
           <div className="space-y-4">
-            <div className="bg-gray-100 p-4 rounded-xl max-h-[65vh] overflow-y-auto">
-              <InvoicePDF ref={invoiceRef} inv={viewInvoice} />
+            <div className={`rounded-xl p-6 ${isDark ? 'bg-gradient-to-r from-purple-600 to-blue-600' : 'bg-gradient-to-r from-purple-500 to-blue-500'} text-white`}>
+              <h2 className="text-2xl font-black">📄 Invoice #{viewInvoice.billNo}</h2>
+              <p className="text-white/80 text-sm mt-2">{viewInvoice.customerName}</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={downloadPDF} className="bg-cyan-500 text-white rounded-xl py-3 text-sm font-bold hover:bg-cyan-600 transition flex items-center justify-center gap-2">
-                📥 Download PDF
-              </button>
-              <button onClick={shareWhatsApp} className="bg-green-500 text-white rounded-xl py-3 text-sm font-bold hover:bg-green-600 transition flex items-center justify-center gap-2">
-                📱 Share WhatsApp
-              </button>
+
+            <div className={`rounded-xl p-4 border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <p className={`text-xs font-semibold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Grand Total</p>
+              <p className={`text-2xl font-black ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>₹{(viewInvoice.billAmount || 0).toLocaleString('en-IN')}</p>
+            </div>
+
+            <div className="flex gap-3">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  generateInvoice({
+                    invoiceNumber: viewInvoice.billNo,
+                    customerName: viewInvoice.customerName || 'N/A',
+                    customerPhone: viewInvoice.customerPhone || 'N/A',
+                    customerAddress: viewInvoice.customerAddress || 'N/A',
+                    technicianName: viewInvoice.technicianName || 'N/A',
+                    serviceType: viewInvoice.serviceType || 'N/A',
+                    problemDescription: viewInvoice.problemDescription || 'N/A',
+                    totalAmount: viewInvoice.totalAmount || 0,
+                    discountType: viewInvoice.discountType || 'percentage',
+                    discountValue: viewInvoice.discountValue || 0,
+                    discountAmount: viewInvoice.discountAmount || 0,
+                    grandTotal: viewInvoice.billAmount || 0,
+                    products: (viewInvoice.components || []).map(c => ({
+                      name: c.name || 'N/A',
+                      qty: c.quantity || 0
+                    })),
+                  })
+                  toast.success('📥 Invoice downloaded!')
+                }}
+                className={`flex-1 rounded-xl py-3.5 text-sm font-bold text-white transition ${
+                  isDark ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
+                }`}
+              >
+                📥 Download
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  const phone = viewInvoice.customerPhone.replace(/\D/g, '')
+                  const message = `Hi ${viewInvoice.customerName}, your invoice for ${viewInvoice.serviceType} service is ready. Invoice #${viewInvoice.billNo}`
+                  const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+                  window.open(whatsappUrl, '_blank')
+                  toast.success('✅ Invoice shared!')
+                }}
+                className={`flex-1 rounded-xl py-3.5 text-sm font-bold text-white transition ${
+                  isDark ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700' : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
+                }`}
+              >
+                📤 Share
+              </motion.button>
             </div>
           </div>
         )}
@@ -345,6 +535,7 @@ export default function Invoices() {
           // Invoices will auto-update via onSnapshot listener
         }}
       />
+      </div>
     </div>
   )
 }

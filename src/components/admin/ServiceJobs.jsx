@@ -45,11 +45,7 @@ export default function ServiceJobs() {
   const [detailJob, setDetailJob] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
-  const [filter, setFilter] = useState('active')
-  const [periodFilter, setPeriodFilter] = useState('today')
   const [statusFilter, setStatusFilter] = useState('active')
-  const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' })
-  const [showDatePicker, setShowDatePicker] = useState(false)
   const [invoiceModal, setInvoiceModal] = useState(false)
   const [selectedJobForInvoice, setSelectedJobForInvoice] = useState(null)
 
@@ -112,107 +108,61 @@ export default function ServiceJobs() {
 
 
 
-  const getDateRange = () => {
-    if (periodFilter === 'custom' && customDateRange.start && customDateRange.end) {
-      return { 
-        start: new Date(customDateRange.start), 
-        end: new Date(new Date(customDateRange.end).getTime() + 86400000)
-      }
-    }
+  const filterJobsByToday = (jobsList) => {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
     
-    switch(periodFilter) {
-      case 'today':
-        return { start: today, end: tomorrow }
-      case 'week':
-        const weekStart = new Date(today)
-        weekStart.setDate(today.getDate() - today.getDay())
-        const weekEnd = new Date(weekStart)
-        weekEnd.setDate(weekEnd.getDate() + 7)
-        return { start: weekStart, end: weekEnd }
-      case 'month':
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-        return { start: monthStart, end: monthEnd }
-      default:
-        return { start: new Date(0), end: new Date(8640000000000000) }
-    }
-  }
-
-  const filterJobsByDateRange = (jobsList) => {
-    const { start, end } = getDateRange()
     return jobsList.filter(j => {
       const jobDate = j.createdAt?.toDate ? j.createdAt.toDate() : new Date(j.createdAt?.seconds * 1000 || 0)
-      return jobDate >= start && jobDate < end
+      return jobDate >= today && jobDate < tomorrow
     })
-  }
-
-  const getStatusOptions = () => {
-    return periodFilter === 'today' 
-      ? ['active', 'completed', 'total']
-      : ['completed', 'missed']
-  }
-
-  const resetStatusFilter = () => {
-    setStatusFilter(periodFilter === 'today' ? 'active' : 'completed')
   }
 
   const active = jobs.filter(j => ['pending', 'assigned', 'in_progress'].includes(j.status))
   const completed = jobs.filter(j => ['completed', 'verified'].includes(j.status))
   const total = jobs
-  const missed = jobs.filter(j => j.status === 'pending' || j.status === 'assigned')
 
-  const dateFilteredActive = filterJobsByDateRange(active)
-  const dateFilteredCompleted = filterJobsByDateRange(completed)
-  const dateFilteredMissed = filterJobsByDateRange(missed)
-  const dateFilteredTotal = filterJobsByDateRange(total)
+  const todayActive = filterJobsByToday(active)
+  const todayCompleted = filterJobsByToday(completed)
+  const todayTotal = filterJobsByToday(total)
 
-  let filtered = []
-  if (periodFilter === 'today') {
-    filtered = statusFilter === 'active' ? dateFilteredActive : statusFilter === 'completed' ? dateFilteredCompleted : dateFilteredTotal
-  } else {
-    filtered = statusFilter === 'completed' ? dateFilteredCompleted : dateFilteredMissed
-  }
-
-  const counts = {
-    active: dateFilteredActive.length,
-    completed: dateFilteredCompleted.length,
-    all: dateFilteredTotal.length,
-  }
+  const filtered = statusFilter === 'active' ? todayActive : statusFilter === 'completed' ? todayCompleted : todayTotal
 
   return (
-    <div className="space-y-5 pb-20 md:pb-0">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => window.history.back()}
-            className={`p-2 rounded-xl transition-all ${
-              isDark
-                ? 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
-                : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 shadow-sm'
-            }`}
-            title="Back to Home"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </motion.button>
-          <div>
-            <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Service Jobs</h2>
-            <p className={`text-sm mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{jobs.length} total jobs</p>
-          </div>
-        </div>
+    <div className="pb-20 md:pb-0">
+      {/* Header with Back Button and Title */}
+      <div className={`flex items-center justify-center px-4 py-4 border rounded-full mx-4 relative ${
+        isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
+      }`}>
+        <button
+          onClick={() => window.history.back()}
+          className={`absolute left-4 p-2 rounded-lg transition-all ${
+            isDark
+              ? 'hover:bg-white/10 text-white/70 hover:text-white'
+              : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 className={`text-xl font-bold ${
+          isDark ? 'text-white' : 'text-gray-900'
+        }`}>
+          SERVICE JOBS
+        </h1>
+      </div>
+
+      <div className="space-y-5 mt-5">
+      {/* New Job Button - Centered below header */}
+      <div className="flex justify-center mb-5">
         <motion.button
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => setModal(true)}
-          className={`px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg transition-shadow ${
+          className={`px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-shadow ${
             isDark
               ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-cyan-500/20 hover:shadow-cyan-500/40'
               : 'bg-gradient-to-r from-aqua-500 to-aqua-600 text-white shadow-aqua-200 hover:shadow-aqua-300'
@@ -222,93 +172,13 @@ export default function ServiceJobs() {
         </motion.button>
       </div>
 
-      {/* Period Filter Pills */}
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {[
-          { key: 'today', label: 'Today' },
-          { key: 'week', label: 'This Week' },
-          { key: 'month', label: 'This Month' },
-          { key: 'custom', label: 'Custom Range' },
-        ].map(({ key, label }) => (
-          <motion.button
-            key={key}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => {
-              setPeriodFilter(key)
-              if (key === 'custom') setShowDatePicker(true)
-              resetStatusFilter()
-            }}
-            className={`px-5 py-3 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
-              periodFilter === key
-                ? isDark
-                  ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
-                  : 'bg-gradient-to-r from-aqua-500 to-aqua-600 text-white shadow-lg shadow-aqua-300/40'
-                : isDark
-                ? 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:border-white/20'
-                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm'
-            }`}
-          >
-            {label}
-          </motion.button>
-        ))}
-      </div>
-
-      {/* Custom Date Range Picker */}
-      {showDatePicker && periodFilter === 'custom' && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`rounded-2xl p-4 border ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'}`}
-        >
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className={`text-xs font-bold mb-2 block ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Start Date</label>
-              <input
-                type="date"
-                value={customDateRange.start}
-                onChange={(e) => setCustomDateRange({ ...customDateRange, start: e.target.value })}
-                className={`w-full px-3 py-2 rounded-lg text-sm border transition-all ${
-                  isDark
-                    ? 'bg-white/5 border-white/10 text-white focus:border-cyan-500'
-                    : 'bg-white border-gray-200 text-gray-900 focus:border-aqua-500'
-                } focus:outline-none`}
-              />
-            </div>
-            <div>
-              <label className={`text-xs font-bold mb-2 block ${isDark ? 'text-white/60' : 'text-gray-600'}`}>End Date</label>
-              <input
-                type="date"
-                value={customDateRange.end}
-                onChange={(e) => setCustomDateRange({ ...customDateRange, end: e.target.value })}
-                className={`w-full px-3 py-2 rounded-lg text-sm border transition-all ${
-                  isDark
-                    ? 'bg-white/5 border-white/10 text-white focus:border-cyan-500'
-                    : 'bg-white border-gray-200 text-gray-900 focus:border-aqua-500'
-                } focus:outline-none`}
-              />
-            </div>
-          </div>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowDatePicker(false)}
-            className={`w-full py-2 rounded-lg text-sm font-bold transition-all ${
-              isDark
-                ? 'bg-cyan-500 text-white hover:bg-cyan-600'
-                : 'bg-aqua-500 text-white hover:bg-aqua-600'
-            }`}
-          >
-            Apply Range
-          </motion.button>
-        </motion.div>
-      )}
-
       {/* Status Filter Pills */}
       <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide">
-        {getStatusOptions().map((key) => {
+        {['active', 'completed', 'total'].map((key) => {
           const statusConfig = {
             active: { 
               label: 'Active Jobs', 
-              count: dateFilteredActive.length,
+              count: todayActive.length,
               icon: (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -321,7 +191,7 @@ export default function ServiceJobs() {
             },
             completed: { 
               label: 'Completed', 
-              count: dateFilteredCompleted.length,
+              count: todayCompleted.length,
               icon: (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -332,22 +202,9 @@ export default function ServiceJobs() {
               textLight: 'text-emerald-700',
               borderLight: 'border-emerald-200'
             },
-            missed: { 
-              label: 'Missed', 
-              count: dateFilteredMissed.length,
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ),
-              gradient: 'from-red-500 to-red-600',
-              bgLight: 'bg-red-50',
-              textLight: 'text-red-700',
-              borderLight: 'border-red-200'
-            },
             total: { 
               label: 'Total Jobs', 
-              count: dateFilteredTotal.length,
+              count: todayTotal.length,
               icon: (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -664,6 +521,7 @@ export default function ServiceJobs() {
           isDark={isDark}
         />
       )}
+      </div>
     </div>
   )
 }

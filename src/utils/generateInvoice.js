@@ -1,13 +1,13 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-// Utility: Format currency without the ₹ symbol as requested
+// Utility: Format currency with Rs. prefix (better PDF compatibility)
 const formatCurrency = (value) => {
   const amount = Number(value || 0).toLocaleString('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })
-  return `INR ${amount}`
+  return `Rs. ${amount}`
 }
 
 // Utility: Format date safely
@@ -65,22 +65,37 @@ export const generateInvoice = (invoiceData) => {
   doc.setTextColor(...primaryColor)
   doc.text('Friends Aqua Care', margin, currentY + 4)
 
-  // Business Contacts & Identifiers (Right Aligned)
+  // Business Contacts & Identifiers (Right side, aligned with Branch Office)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8.5)
   doc.setTextColor(...darkText)
   
-  const contactLines = [
-    `GSTIN: 33ACDPU6542L1Z9`,
-    `Email: facwatersystems@gmail.com`,
-    `Phone: +91 99765 55199`,
-    `       +91 90955 40660`
-  ]
+  const contactStartX = pageWidth - margin - 60 // Same alignment as Branch Office
   let contactY = currentY
-  contactLines.forEach(line => {
-    doc.text(line, pageWidth - margin, contactY, { align: 'right' })
-    contactY += 4
-  })
+  
+  // GSTIN
+  doc.text('GSTIN: 33ACDPU6542L1Z9', contactStartX, contactY)
+  contactY += 4
+  
+  // Email
+  doc.text('Email: facwatersystems@gmail.com', contactStartX, contactY)
+  contactY += 4
+  
+  // Phone numbers with proper alignment
+  doc.text('Phone: +91 99765 55199', contactStartX, contactY)
+  contactY += 4
+  // Second phone number aligned with first number (after "Phone: ")
+  const phoneValueX = contactStartX + doc.getTextWidth('Phone: ')
+  doc.text('+91 90955 40660', phoneValueX, contactY)
+  contactY += 6 // Extra spacing before date
+  
+  // Date with proper spacing to avoid overlap
+  const computedDate = formatDate(serviceDate)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.text(`Date: ${computedDate}`, contactStartX, contactY)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8.5)
 
   currentY += 10
   doc.setFont('helvetica', 'oblique')
@@ -91,6 +106,7 @@ export const generateInvoice = (invoiceData) => {
   currentY += 4.5
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
+  doc.setTextColor(...lightMuted)
   doc.text('Water Purifiers • Water Softeners • Solar Water Heaters • CCTV Cameras', margin, currentY)
 
   currentY += 8
@@ -105,7 +121,7 @@ export const generateInvoice = (invoiceData) => {
   doc.setFontSize(8.5)
   doc.setTextColor(...darkText)
   doc.text('Head Office:', margin, currentY)
-  doc.text('Branch Office:', margin + (contentWidth / 2), currentY)
+  doc.text('Branch Office:', pageWidth - margin - 60, currentY)
   
   currentY += 4
   doc.setFont('helvetica', 'normal')
@@ -117,7 +133,7 @@ export const generateInvoice = (invoiceData) => {
   
   for(let i = 0; i < 3; i++) {
     doc.text(hoAddress[i], margin, currentY + (i * 3.5))
-    doc.text(boAddress[i], margin + (contentWidth / 2), currentY + (i * 3.5))
+    doc.text(boAddress[i], pageWidth - margin - 60, currentY + (i * 3.5))
   }
   
   currentY += 15
@@ -129,34 +145,7 @@ export const generateInvoice = (invoiceData) => {
   currentY += 6
 
   // ========================================================
-  // INVOICE META BLOCK
-  // ========================================================
-  const computedDate = formatDate(serviceDate)
-  doc.setFillColor(248, 250, 252)
-  doc.rect(pageWidth - margin - 65, currentY, 65, 26, 'F')
-  doc.setLineWidth(0.2)
-  doc.setDrawColor(...tableBorder)
-  doc.rect(pageWidth - margin - 65, currentY, 65, 26, 'S')
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8.5)
-  doc.setTextColor(...darkText)
-  
-  const metaLabels = ['Invoice No:', 'Date:', 'Service ID:', 'Status:', 'Payment:']
-  const metaValues = [invoiceNumber, computedDate, serviceId, status, paymentMode]
-  
-  metaLabels.forEach((label, idx) => {
-    const rowY = currentY + 4.5 + (idx * 4.5)
-    doc.setFont('helvetica', 'bold')
-    doc.text(label, pageWidth - margin - 62, rowY)
-    doc.setFont('helvetica', 'normal')
-    doc.text(metaValues[idx], pageWidth - margin - 38, rowY)
-  })
-
-  currentY += 32
-
-  // ========================================================
-  // CUSTOMER & SERVICE INFORMATION INFORMATION (2-Column Grid)
+  // CUSTOMER & SERVICE INFORMATION (2-Column Grid)
   // ========================================================
   const cardWidth = (contentWidth - 6) / 2
   const cardHeight = 36
@@ -173,9 +162,9 @@ export const generateInvoice = (invoiceData) => {
   
   doc.setTextColor(...darkText)
   doc.setFontSize(8.5)
-  doc.text(`Customer ID: ${customerId}`, margin + 3, currentY + 9)
-  doc.text(`Name: ${customerName}`, margin + 3, currentY + 13.5)
-  doc.text(`Phone: ${customerPhone}`, margin + 3, currentY + 18)
+  doc.text(`Name: ${customerName}`, margin + 3, currentY + 9)
+  doc.text(`Phone: ${customerPhone}`, margin + 3, currentY + 13.5)
+  doc.text(`Payment: ${paymentMode}`, margin + 3, currentY + 18)
   
   const cleanAddress = (customerAddress || 'N/A').replace(/\n/g, ' ')
   const splitCustAddress = doc.splitTextToSize(`Address: ${cleanAddress}`, cardWidth - 6)
@@ -191,22 +180,13 @@ export const generateInvoice = (invoiceData) => {
   doc.text('SERVICE INFORMATION', rightColumnX + 3, currentY + 3.5)
 
   doc.setTextColor(...darkText)
-  doc.text(`Technician: ${technicianName || 'Unassigned'}`, rightColumnX + 3, currentY + 9)
-  doc.text(`Service Type: ${serviceType}`, rightColumnX + 3, currentY + 13.5)
+  doc.text(`Invoice No: ${invoiceNumber}`, rightColumnX + 3, currentY + 9)
+  doc.text(`Technician: ${technicianName || 'Unassigned'}`, rightColumnX + 3, currentY + 13.5)
+  doc.text(`Service Type: ${serviceType}`, rightColumnX + 3, currentY + 18)
   
   const cleanProblem = (problemDescription || '').replace(/\n/g, ' ')
   const splitProblem = doc.splitTextToSize(`Problem: ${cleanProblem}`, cardWidth - 6)
-  doc.text(splitProblem, rightColumnX + 3, currentY + 18)
-  
-  // Dynamic calculation for structural safety on dates
-  const parsedDate = serviceDate ? new Date(serviceDate) : new Date()
-  parsedDate.setDate(parsedDate.getDate() + 90)
-  const nextServiceDateStr = parsedDate.toLocaleDateString('en-IN')
-
-  doc.text(`Service Date: ${computedDate}`, rightColumnX + 3, currentY + 28)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(...primaryColor)
-  doc.text(`Next Service Due: ${nextServiceDateStr}`, rightColumnX + 3, currentY + 32.5)
+  doc.text(splitProblem, rightColumnX + 3, currentY + 22.5)
 
   currentY += cardHeight + 8
 
@@ -227,7 +207,7 @@ export const generateInvoice = (invoiceData) => {
 
   autoTable(doc, {
     startY: currentY,
-    head: [['S.No', 'Product / Particular', 'Quantity']],
+    head: [['S.No', 'Product', 'Quantity']],
     body: formattedTableData,
     theme: 'grid',
     headStyles: {
@@ -235,7 +215,7 @@ export const generateInvoice = (invoiceData) => {
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       fontSize: 9,
-      halign: 'left',
+      halign: 'center',
       valign: 'middle',
       cellPadding: 4,
       lineColor: primaryColor,
