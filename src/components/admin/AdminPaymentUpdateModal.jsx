@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { doc, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore'
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { motion } from 'framer-motion'
 import Modal from '../common/Modal'
@@ -53,22 +53,11 @@ export default function AdminPaymentUpdateModal({ open, onClose, invoice, isDark
         newPaymentStatus = newPaymentPending === 0 ? 'Fully Paid' : 'Partial Payment'
       }
 
-      // Create payment history entry
-      const paymentHistoryEntry = {
-        date: new Date(),
-        action: paymentAction === 'mark_paid' ? 'Marked as Fully Paid' : `Added Payment: ₹${additionalAmount}`,
-        amountReceived: newAmountReceived,
-        paymentPending: newPaymentPending,
-        note: 'Updated by admin',
-        updatedBy: 'admin'
-      }
-
       // Update invoice
       await updateDoc(doc(db, 'invoices', invoice.id), {
         amountReceived: newAmountReceived,
         paymentPending: newPaymentPending,
         paymentStatus: newPaymentStatus,
-        paymentHistory: arrayUnion(paymentHistoryEntry),
         lastUpdatedByAdmin: serverTimestamp()
       })
 
@@ -223,30 +212,6 @@ export default function AdminPaymentUpdateModal({ open, onClose, invoice, isDark
             </motion.div>
           )}
         </div>
-
-        {/* Payment History */}
-        {invoice.paymentHistory && invoice.paymentHistory.length > 0 && (
-          <div className={`rounded-xl p-4 border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-            <p className={`text-sm font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>Payment History</p>
-            <div className="space-y-2">
-              {invoice.paymentHistory.slice(-3).reverse().map((entry, index) => (
-                <div key={index} className={`p-2.5 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <p className={`text-xs font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{entry.action}</p>
-                      {entry.note && (
-                        <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{entry.note}</p>
-                      )}
-                    </div>
-                    <span className={`text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {entry.date?.toDate ? entry.date.toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : new Date(entry.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Action Buttons */}
         <div className="flex gap-3">

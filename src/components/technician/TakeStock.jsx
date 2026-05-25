@@ -20,6 +20,17 @@ export default function TakeStock() {
   const [technicianStock, setTechnicianStock] = useState([])
   const MAX_PER_PRODUCT = 20
 
+  // Prevent scroll on number inputs
+  useEffect(() => {
+    const handleWheel = (e) => {
+      if (document.activeElement.type === 'number') {
+        document.activeElement.blur()
+      }
+    }
+    document.addEventListener('wheel', handleWheel, { passive: true })
+    return () => document.removeEventListener('wheel', handleWheel)
+  }, [])
+
   useEffect(() => {
     // Load inventory
     const u1 = onSnapshot(collection(db, 'inventory'), snap => {

@@ -111,6 +111,17 @@ export default function ManageStock({ searchQuery = '' }) {
   const cardBase = `rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`
   const inputCls = `w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white placeholder-white/30' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`
 
+  // Prevent scroll on number inputs
+  useEffect(() => {
+    const handleWheel = (e) => {
+      if (document.activeElement.type === 'number') {
+        document.activeElement.blur()
+      }
+    }
+    document.addEventListener('wheel', handleWheel, { passive: true })
+    return () => document.removeEventListener('wheel', handleWheel)
+  }, [])
+
   // Filter products based on search query
   const filteredProducts = searchQuery
     ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))

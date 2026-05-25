@@ -19,6 +19,17 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
   const [saving, setSaving] = useState(false)
   const [sharing, setSharing] = useState(false)
   
+  // Prevent scroll on number inputs
+  useEffect(() => {
+    const handleWheel = (e) => {
+      if (document.activeElement.type === 'number') {
+        document.activeElement.blur()
+      }
+    }
+    document.addEventListener('wheel', handleWheel, { passive: true })
+    return () => document.removeEventListener('wheel', handleWheel)
+  }, [])
+  
   // Initialize state from localStorage or defaults
   const getInitialFormData = () => {
     if (!job?.id) return {

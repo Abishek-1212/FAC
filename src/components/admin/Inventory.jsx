@@ -323,6 +323,17 @@ export default function Inventory() {
   const cardBase = `rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`
   const inputCls = `w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white placeholder-white/30' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`
 
+  // Prevent scroll on number inputs
+  useEffect(() => {
+    const handleWheel = (e) => {
+      if (document.activeElement.type === 'number') {
+        document.activeElement.blur()
+      }
+    }
+    document.addEventListener('wheel', handleWheel, { passive: true })
+    return () => document.removeEventListener('wheel', handleWheel)
+  }, [])
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
 
@@ -330,7 +341,6 @@ export default function Inventory() {
       <div className="flex flex-col items-center gap-4">
         <div className="text-center">
           <h2 className={`text-2xl font-black ${t}`}>Inventory Management</h2>
-          <p className={`text-sm mt-0.5 ${s}`}>Manage stock levels and technician assignments</p>
         </div>
         <div className={`flex items-center gap-3 border rounded-full p-1 ${isDark ? 'border-white/20' : 'border-gray-300'}`}>
           <button
@@ -348,9 +358,17 @@ export default function Inventory() {
           <button
             onClick={handleSyncInventory}
             disabled={syncing}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500 border border-purple-500 text-white text-xs font-bold hover:bg-purple-600 transition disabled:opacity-60"
+            className="flex items-center justify-center px-4 py-2 rounded-full bg-purple-500 border border-purple-500 text-white text-xs font-bold hover:bg-purple-600 transition disabled:opacity-60"
           >
-            {syncing ? '🔄 Syncing...' : '🔄 Sync Inventory'}
+            {syncing ? (
+              <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            )}
           </button>
         </div>
       </div>

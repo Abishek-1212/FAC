@@ -3,6 +3,8 @@ import { collection, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useTheme } from '../../context/ThemeContext'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
+import { generateReport } from '../../utils/generateReport'
 
 function DonutChart({ segments, size = 140, thickness = 24, label, sub }) {
   const r = (size - thickness) / 2
@@ -59,6 +61,7 @@ export default function Reports() {
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false)
+  const [generatingReport, setGeneratingReport] = useState(false)
 
   useEffect(() => {
     const u1 = onSnapshot(collection(db, 'service_jobs'), s =>
@@ -139,6 +142,71 @@ export default function Reports() {
   const t = isDark ? 'text-white' : 'text-gray-900'
   const s = isDark ? 'text-white/40' : 'text-gray-400'
 
+  // Get date range label for report
+  const getDateRangeLabel = () => {
+    const { start, end } = getDateRange()
+    const formatDate = (date) => {
+      return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    }
+    
+    if (dateFilter === 'custom' && customStartDate && customEndDate) {
+      return `${formatDate(new Date(customStartDate))} - ${formatDate(new Date(customEndDate))}`
+    }
+    
+    switch(dateFilter) {
+      case 'today':
+        return formatDate(start)
+      case 'week':
+      case 'month':
+        const endDate = new Date(end.getTime() - 86400000) // Subtract 1 day from end
+        return `${formatDate(start)} - ${formatDate(endDate)}`
+      default:
+        // For 'all', show first job date to last job date
+        if (filteredJobs.length > 0) {
+          const dates = filteredJobs.map(j => {
+            const date = j.createdAt?.toDate ? j.createdAt.toDate() : new Date(j.createdAt?.seconds * 1000 || 0)
+            return date.getTime()
+          }).filter(t => t > 0)
+          
+          if (dates.length > 0) {
+            const minDate = new Date(Math.min(...dates))
+            const maxDate = new Date(Math.max(...dates))
+            return `${formatDate(minDate)} - ${formatDate(maxDate)}`
+          }
+        }
+        return 'All Time'
+    }
+  }
+
+  // Handle report download
+  const handleDownloadReport = () => {
+    setGeneratingReport(true)
+    try {
+      generateReport({
+        dateRange: getDateRangeLabel(),
+        totalJobs,
+        completedJobs,
+        pendingJobs,
+        assignedJobs,
+        inProgressJobs,
+        completionRate,
+        totalBilled,
+        totalReceived,
+        totalPending,
+        collectionRate,
+        newFitting,
+        serviceRepair,
+        invoices: filteredInvoices,
+      })
+      toast.success('📥 Report downloaded successfully!')
+    } catch (error) {
+      console.error('Error generating report:', error)
+      toast.error('Failed to generate report')
+    } finally {
+      setGeneratingReport(false)
+    }
+  }
+
   return (
     <div className="pb-20 md:pb-0">
       {/* Header with Back Button and Title */}
@@ -199,6 +267,36 @@ export default function Reports() {
             {label}
           </motion.button>
         ))}
+      </div>
+
+      {/* Download Report Button */}
+      <div className="flex justify-center">
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={handleDownloadReport}
+          disabled={generatingReport}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-all disabled:opacity-60 ${
+            isDark
+              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40'
+              : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-emerald-200 hover:shadow-emerald-300'
+          }`}
+        >
+          {generatingReport ? (
+            <>
+              <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Generating...</span>
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>Download Report</span>
+            </>
+          )}
+        </motion.button>
       </div>
 
       {/* Custom Date Range Picker */}

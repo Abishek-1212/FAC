@@ -97,6 +97,8 @@ export default function Employees() {
 
   const [selectedTech, setSelectedTech] = useState(null)
   const [techStats, setTechStats]       = useState(null)
+  const [damagedModal, setDamagedModal] = useState(false)
+  const [damagedDetails, setDamagedDetails] = useState([])
 
   const openTechStats = (tech) => {
     setSelectedTech(tech)
@@ -122,8 +124,10 @@ export default function Employees() {
     unsubs.push(onSnapshot(
       query(collection(db, 'stock_transactions'), where('technicianId', '==', tech.id)),
       snap => {
-        const txns = snap.docs.map(d => d.data()).filter(t => (t.damagedQuantity || 0) > 0)
-        // Aggregate by product name
+        const txns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => (t.damagedQuantity || 0) > 0)
+        // Store full details for modal
+        setDamagedDetails(txns)
+        // Aggregate by product name for count
         const map = {}
         txns.forEach(t => {
           const key = t.productName || t.productId
@@ -300,28 +304,38 @@ export default function Employees() {
                     </div>
                   </div>
 
-                  {/* Damaged Products */}
+                  {/* Damaged Products Button */}
                   <div>
                     <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-                      Damaged Products ({(techStats.damagedProducts || []).length})
+                      Damaged Products
                     </p>
                     {!techStats.damagedProducts || techStats.damagedProducts.length === 0 ? (
                       <p className={`text-sm text-center py-3 rounded-xl ${isDark ? 'bg-white/5 text-white/30' : 'bg-gray-50 text-gray-400'}`}>
                         No damaged products recorded yet
                       </p>
                     ) : (
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {techStats.damagedProducts.map((p, i) => (
-                          <div key={i} className={`flex items-center justify-between rounded-xl px-3 py-2.5 ${
-                            isDark ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-100'
-                          }`}>
-                            <p className={`text-sm font-bold ${isDark ? 'text-red-300' : 'text-red-700'}`}>{p.productName || 'Unknown'}</p>
-                            <span className={`text-xs font-black px-2 py-1 rounded-lg ${isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-600'}`}>
-                              x{p.quantity}
-                            </span>
+                      <button
+                        onClick={() => setDamagedModal(true)}
+                        className={`w-full rounded-xl px-4 py-3 text-left transition-all border-2 ${
+                          isDark 
+                            ? 'bg-red-500/10 border-red-500/30 hover:border-red-500/50 hover:bg-red-500/20' 
+                            : 'bg-red-50 border-red-200 hover:border-red-300 hover:bg-red-100'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={`text-sm font-bold ${isDark ? 'text-red-300' : 'text-red-700'}`}>
+                              View Damaged Products
+                            </p>
+                            <p className={`text-xs mt-1 ${isDark ? 'text-red-400/60' : 'text-red-600/60'}`}>
+                              {techStats.damagedProducts.length} product{techStats.damagedProducts.length > 1 ? 's' : ''} • Total: {techStats.damagedProducts.reduce((sum, p) => sum + p.quantity, 0)} items
+                            </p>
                           </div>
-                        ))}
-                      </div>
+                          <svg className={`w-5 h-5 ${isDark ? 'text-red-300' : 'text-red-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </button>
                     )}
                   </div>
 
@@ -361,6 +375,129 @@ export default function Employees() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Damaged Products Modal */}
+      <Modal 
+        open={damagedModal} 
+        onClose={() => setDamagedModal(false)} 
+        title={`Damaged Products - ${selectedTech?.name || 'Technician'}`}
+        size="lg"
+      >
+        <div className="space-y-4">
+          {/* Summary Card */}
+          <div className={`rounded-xl p-4 border-2 ${
+            isDark ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-red-400/60' : 'text-red-600/60'}`}>
+                  Total Damaged
+                </p>
+                <p className={`text-3xl font-black mt-1 ${isDark ? 'text-red-300' : 'text-red-700'}`}>
+                  {damagedDetails.reduce((sum, d) => sum + (d.damagedQuantity || 0), 0)}
+                </p>
+              </div>
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl ${
+                isDark ? 'bg-red-500/20' : 'bg-red-100'
+              }`}>
+                ✕
+              </div>
+            </div>
+          </div>
+
+          {/* Products grouped by date */}
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {(() => {
+              // Group by date
+              const grouped = {}
+              damagedDetails.forEach(item => {
+                // Use timestamp field (set when invoice is saved)
+                let dateObj = null
+                if (item.timestamp?.toDate) {
+                  dateObj = item.timestamp.toDate()
+                } else if (item.timestamp?.seconds) {
+                  dateObj = new Date(item.timestamp.seconds * 1000)
+                } else if (item.createdAt?.toDate) {
+                  dateObj = item.createdAt.toDate()
+                } else if (item.createdAt?.seconds) {
+                  dateObj = new Date(item.createdAt.seconds * 1000)
+                }
+
+                const date = dateObj ? 
+                  dateObj.toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  }) : 'Unknown Date'
+                  
+                if (!grouped[date]) grouped[date] = []
+                grouped[date].push(item)
+              })
+
+              return Object.entries(grouped).map(([date, items]) => (
+                <div key={date}>
+                  {/* Date Header */}
+                  <div className={`sticky top-0 px-3 py-2 rounded-lg mb-2 ${
+                    isDark ? 'bg-white/10 backdrop-blur-sm' : 'bg-gray-100'
+                  }`}>
+                    <p className={`text-xs font-bold uppercase tracking-wider ${
+                      isDark ? 'text-white/60' : 'text-gray-600'
+                    }`}>
+                      📅 {date}
+                    </p>
+                  </div>
+
+                  {/* Products for this date */}
+                  <div className="space-y-2 pl-2">
+                    {items.map((item, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className={`rounded-xl px-4 py-3 border ${
+                          isDark 
+                            ? 'bg-white/5 border-white/10' 
+                            : 'bg-white border-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              {item.productName || 'Unknown Product'}
+                            </p>
+                            {item.jobId && (
+                              <p className={`text-xs mt-1 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                                Job ID: {item.jobId.slice(0, 8)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={`text-xs font-black px-3 py-1.5 rounded-lg ${
+                              isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-600'
+                            }`}>
+                              ✕ {item.damagedQuantity}
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            })()}
+          </div>
+
+          {damagedDetails.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-4xl mb-2">📦</p>
+              <p className={`text-sm ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                No damaged products found
+              </p>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   )
