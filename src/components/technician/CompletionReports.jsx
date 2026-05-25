@@ -64,12 +64,49 @@ export default function CompletionReports() {
     return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
+  const parseLocalDate = (str) => {
+    const [y, m, d] = str.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  }
+
+  const formatOrdinal = (d) => {
+    const s = ['th','st','nd','rd'], v = d % 100
+    return d + (s[(v - 20) % 10] || s[v] || s[0])
+  }
+
+  const formatHeaderDate = (dateStr) => {
+    const d = parseLocalDate(dateStr)
+    return `${formatOrdinal(d.getDate())} ${d.toLocaleString('en-IN', { month: 'long' })} ${d.getFullYear()}`
+  }
+
+  const getHeaderLabel = () => {
+    const now = new Date()
+    if (periodFilter === 'today') {
+      return `REPORTS (${formatOrdinal(now.getDate())} ${now.toLocaleString('en-IN', { month: 'long' })} ${now.getFullYear()})`
+    }
+    if (periodFilter === 'week') {
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const daysFromMonday = today.getDay() === 0 ? 6 : today.getDay() - 1
+      const weekStart = new Date(today); weekStart.setDate(today.getDate() - daysFromMonday)
+      const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6)
+      const fmt = (d) => `${formatOrdinal(d.getDate())} ${d.toLocaleString('en-IN', { month: 'long' })} ${d.getFullYear()}`
+      return `REPORTS (${fmt(weekStart)} to ${fmt(weekEnd)})`
+    }
+    if (periodFilter === 'month') {
+      return `REPORTS (${now.toLocaleString('en-IN', { month: 'long' })} ${now.getFullYear()})`
+    }
+    if (periodFilter === 'custom' && customDateRange.start && customDateRange.end) {
+      return `REPORTS (${formatHeaderDate(customDateRange.start)} to ${formatHeaderDate(customDateRange.end)})`
+    }
+    return 'REPORTS'
+  }
+
   const getDateRange = () => {
     if (periodFilter === 'custom' && customDateRange.start && customDateRange.end) {
-      return { 
-        start: new Date(customDateRange.start), 
-        end: new Date(new Date(customDateRange.end).getTime() + 86400000)
-      }
+      const start = parseLocalDate(customDateRange.start)
+      const end = parseLocalDate(customDateRange.end)
+      end.setDate(end.getDate() + 1)
+      return { start, end }
     }
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -172,7 +209,8 @@ export default function CompletionReports() {
               <input
                 type="date"
                 value={customDateRange.start}
-                onChange={(e) => setCustomDateRange({ ...customDateRange, start: e.target.value })}
+                max={customDateRange.end || undefined}
+                onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
                 className={`w-full px-3 py-2 rounded-lg text-sm border transition-all ${
                   isDark
                     ? 'bg-white/5 border-white/10 text-white focus:border-blue-500'
@@ -185,7 +223,8 @@ export default function CompletionReports() {
               <input
                 type="date"
                 value={customDateRange.end}
-                onChange={(e) => setCustomDateRange({ ...customDateRange, end: e.target.value })}
+                min={customDateRange.start || undefined}
+                onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
                 className={`w-full px-3 py-2 rounded-lg text-sm border transition-all ${
                   isDark
                     ? 'bg-white/5 border-white/10 text-white focus:border-blue-500'
@@ -196,8 +235,9 @@ export default function CompletionReports() {
           </div>
           <motion.button
             whileTap={{ scale: 0.95 }}
-            onClick={() => setShowDatePicker(false)}
-            className={`w-full py-2 rounded-lg text-sm font-bold transition-all ${
+            onClick={() => { if (customDateRange.start && customDateRange.end) setShowDatePicker(false) }}
+            disabled={!customDateRange.start || !customDateRange.end}
+            className={`w-full py-2 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
               isDark
                 ? 'bg-blue-500 text-white hover:bg-blue-600'
                 : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -206,6 +246,31 @@ export default function CompletionReports() {
             Apply Range
           </motion.button>
         </motion.div>
+      )}
+
+      {/* Custom Range Applied Banner */}
+      {periodFilter === 'custom' && customDateRange.start && customDateRange.end && !showDatePicker && (
+        <div className={`flex items-center justify-between px-4 py-3 rounded-2xl border ${
+          isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
+        }`}>
+          <div>
+            <p className={`text-xs font-bold uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Reports</p>
+            <p className={`text-base font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {formatHeaderDate(customDateRange.start)} — {formatHeaderDate(customDateRange.end)}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setCustomDateRange({ start: '', end: '' })
+              setShowDatePicker(true)
+            }}
+            className={`text-xs font-bold px-3 py-1.5 rounded-xl transition ${
+              isDark ? 'bg-white/10 text-white/70 hover:bg-white/20' : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+            }`}
+          >
+            ✕ Clear
+          </button>
+        </div>
       )}
 
       {/* Reports List - Grouped by Date */}
@@ -590,6 +655,7 @@ export default function CompletionReports() {
                       name: c.name || 'N/A',
                       qty: c.quantity || 0
                     })),
+                    paymentMode: selectedInvoiceData.invoice.modeOfPayment || 'Cash',
                   })
                   toast.success('📥 Invoice downloaded!')
                 }}

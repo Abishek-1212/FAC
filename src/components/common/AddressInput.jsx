@@ -38,7 +38,7 @@ export default function AddressInput({ value, onChange, disabled = false }) {
               className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:bg-gray-50 ${
                 isDark 
                   ? 'bg-white/5 border-white/10 text-white placeholder-white/30' 
-                  : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                  : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 shadow-[0_1px_4px_rgba(0,0,0,0.07)]'
               }`}
             />
           </div>
@@ -59,7 +59,7 @@ export default function AddressInput({ value, onChange, disabled = false }) {
             className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:bg-gray-50 ${
               isDark 
                 ? 'bg-white/5 border-white/10 text-white placeholder-white/30' 
-                : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 shadow-[0_1px_4px_rgba(0,0,0,0.07)]'
             }`}
           />
         </div>

@@ -27,6 +27,10 @@ const STATUS_META_DARK = {
 
 const SERVICE_TYPES = ['New Fitting', 'Service / Repair']
 
+const inputCls = (isDark) => `w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
+  isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900 shadow-[0_1px_4px_rgba(0,0,0,0.07)]'
+}`
+
 const EMPTY_FORM = {
   customerName: '', customerPhone: '', 
   customerAddress: {
@@ -50,6 +54,7 @@ export default function ServiceJobs() {
   const [detailJob, setDetailJob] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [statusFilter, setStatusFilter] = useState('active')
   const [invoiceModal, setInvoiceModal] = useState(false)
   const [selectedJobForInvoice, setSelectedJobForInvoice] = useState(null)
@@ -66,15 +71,16 @@ export default function ServiceJobs() {
     return () => { u1(); u2() }
   }, [])
 
-  const handleCreate = async (e) => {
+  const handlePreview = (e) => {
     e.preventDefault()
-    
-    // Validate phone number
     if (form.customerPhone.length !== 10) {
       toast.error('❌ Please enter a valid 10-digit phone number')
       return
     }
-    
+    setShowConfirm(true)
+  }
+
+  const handleCreate = async () => {
     setSaving(true)
     try {
       const techName = technicians.find(t => t.id === form.technicianId)?.name || ''
@@ -110,6 +116,7 @@ export default function ServiceJobs() {
       
       toast.success(form.assignmentMode === 'broadcast' ? '✅ Job posted! Technicians notified.' : '✅ Job assigned!')
       setModal(false)
+      setShowConfirm(false)
       setForm(EMPTY_FORM)
     } catch (err) {
       toast.error(err.message)
@@ -334,8 +341,102 @@ export default function ServiceJobs() {
       </div>
 
       {/* Create Job Modal */}
-      <Modal open={modal} onClose={() => setModal(false)} title="Create Service Job" size="lg">
-        <form onSubmit={handleCreate} className="space-y-4 max-h-[70vh] overflow-y-auto scrollbar-hide">
+      <Modal open={modal} onClose={() => { setModal(false); setShowConfirm(false) }} title={showConfirm ? 'Confirm Job Details' : 'Create Service Job'} size="lg">
+        {showConfirm ? (
+          <div className="space-y-4">
+            {/* Preview Card */}
+            <div className={`rounded-2xl border p-4 space-y-3 ${
+              isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+            }`}>
+              <p className={`text-xs font-bold uppercase tracking-widest ${
+                isDark ? 'text-white/40' : 'text-gray-400'
+              }`}>Review before creating</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  ['👤 Customer', form.customerName],
+                  ['📞 Phone', form.customerPhone],
+                  ['🛠️ Service Type', form.serviceType],
+                  ['⚡ Priority', form.priority === 'urgent' ? '🔴 Urgent' : '🟢 Normal'],
+                  ['📢 Assignment', form.assignmentMode === 'broadcast' ? '📢 Broadcast' : `👤 ${technicians.find(t => t.id === form.technicianId)?.name || '—'}`],
+                ].map(([label, value]) => (
+                  <div key={label} className={`rounded-xl p-3 ${
+                    isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'
+                  }`}>
+                    <p className={`text-xs font-semibold ${
+                      isDark ? 'text-white/40' : 'text-gray-400'
+                    }`}>{label}</p>
+                    <p className={`font-bold text-sm mt-0.5 ${
+                      isDark ? 'text-white' : 'text-gray-900'
+                    }`}>{value}</p>
+                  </div>
+                ))}
+                <div className={`col-span-2 rounded-xl p-3 ${
+                  isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'
+                }`}>
+                  <p className={`text-xs font-semibold ${
+                    isDark ? 'text-white/40' : 'text-gray-400'
+                  }`}>📍 Address</p>
+                  <p className={`font-bold text-sm mt-0.5 ${
+                    isDark ? 'text-white' : 'text-gray-900'
+                  }`}>{formatAddressForDisplay(form.customerAddress)}</p>
+                </div>
+                <div className={`col-span-2 rounded-xl p-3 ${
+                  isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'
+                }`}>
+                  <p className={`text-xs font-semibold ${
+                    isDark ? 'text-white/40' : 'text-gray-400'
+                  }`}>📝 Problem</p>
+                  <p className={`font-bold text-sm mt-0.5 ${
+                    isDark ? 'text-white' : 'text-gray-900'
+                  }`}>{form.problemDescription}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setShowConfirm(false)}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all ${
+                  isDark
+                    ? 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Edit
+              </motion.button>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={handleCreate}
+                disabled={saving}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white shadow-lg disabled:opacity-60 disabled:cursor-not-allowed transition-all ${
+                  isDark
+                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/25 hover:shadow-emerald-500/40'
+                    : 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-200 hover:shadow-emerald-300'
+                }`}
+              >
+                {saving ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Creating Job...
+                  </>
+                ) : (
+                  'Confirm & Create'
+                )}
+              </motion.button>
+            </div>
+          </div>
+        ) : (
+        <form onSubmit={handlePreview} className="space-y-4 max-h-[70vh] overflow-y-auto scrollbar-hide">
           {/* Assignment Mode Section - FIRST */}
           <div>
             <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>How to Assign?</p>
@@ -374,7 +475,7 @@ export default function ServiceJobs() {
                 value={form.customerName}
                 onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))}
                 required
-                className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                className={inputCls(isDark)}
               />
             </div>
 
@@ -399,20 +500,13 @@ export default function ServiceJobs() {
                     : form.customerPhone.length > 0
                     ? isDark ? 'border-amber-500 focus:ring-amber-500' : 'border-amber-500 focus:ring-amber-500'
                     : isDark ? 'border-white/10 focus:ring-cyan-500' : 'border-gray-200 focus:ring-cyan-500'
-                } ${isDark ? 'bg-white/5 text-white' : 'bg-white text-gray-900'}`}
+                } ${isDark ? 'bg-white/5 text-white' : 'bg-white text-gray-900 shadow-[0_1px_4px_rgba(0,0,0,0.07)]'}`}
               />
               <div className="mt-1.5 flex items-center gap-2">
-                {form.customerPhone.length === 0 ? (
-                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>📱 Enter 10-digit phone number</p>
-                ) : form.customerPhone.length < 10 ? (
+                {form.customerPhone.length > 0 && form.customerPhone.length < 10 && (
                   <p className={`text-xs flex items-center gap-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
                     <span>⚠️</span>
                     <span>{10 - form.customerPhone.length} more digit{10 - form.customerPhone.length !== 1 ? 's' : ''} needed</span>
-                  </p>
-                ) : (
-                  <p className={`text-xs flex items-center gap-1 ${isDark ? 'text-green-400' : 'text-green-600'}`}>
-                    <span>✓</span>
-                    <span>Valid phone number</span>
                   </p>
                 )}
               </div>
@@ -462,7 +556,7 @@ export default function ServiceJobs() {
                   onChange={e => setForm(f => ({ ...f, problemDescription: e.target.value }))}
                   required
                   rows={3}
-                  className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                  className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900 shadow-[0_1px_4px_rgba(0,0,0,0.07)]'}`}
                 />
               </div>
             </div>
@@ -481,7 +575,7 @@ export default function ServiceJobs() {
                     value={form.technicianId}
                     onChange={e => setForm(f => ({ ...f, technicianId: e.target.value }))}
                     required={form.assignmentMode === 'direct'}
-                    className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                    className={inputCls(isDark)}
                   >
                     <option value="" className="text-gray-900">Select Technician</option>
                     {technicians.map(t => <option key={t.id} value={t.id} className="text-gray-900">{t.name}</option>)}
@@ -493,7 +587,7 @@ export default function ServiceJobs() {
                 <select
                   value={form.priority}
                   onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-                  className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                  className={inputCls(isDark)}
                 >
                   <option value="normal" className="text-gray-900">Normal</option>
                   <option value="urgent" className="text-gray-900">Urgent</option>
@@ -513,13 +607,13 @@ export default function ServiceJobs() {
             </button>
             <button
               type="submit"
-              disabled={saving}
-              className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white disabled:opacity-60 ${isDark ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 shadow-glow-cyan-sm' : 'bg-gradient-to-r from-cyan-500 to-cyan-600'}`}
+              className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white ${isDark ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 shadow-glow-cyan-sm' : 'bg-gradient-to-r from-cyan-500 to-cyan-600'}`}
             >
-              {saving ? 'Creating...' : 'Create Job'}
+              Review Job →
             </button>
           </div>
         </form>
+        )}
       </Modal>
 
       {/* Job Detail Modal */}

@@ -31,7 +31,7 @@ export const generateInvoice = (invoiceData) => {
     invoiceNumber = `FAC-${Date.now()}`,
     serviceId = `SRV-${Math.floor(100000 + Math.random() * 900000)}`,
     status = 'PAID',
-    paymentMode = 'UPI',
+    paymentMode = 'Cash',
     customerId = `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
     customerName,
     customerPhone,

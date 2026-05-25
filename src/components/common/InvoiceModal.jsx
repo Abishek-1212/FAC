@@ -339,7 +339,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
 
   const handleGenerateInvoice = async () => {
     // Validate amount received - must be provided
-    if (!amountReceived || amountReceived === '') {
+    if (amountReceived === '' || amountReceived === null || amountReceived === undefined) {
       toast.error('Amount Received is mandatory. Please enter the amount.')
       return
     }
@@ -807,19 +807,19 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                                             ⚠️ Total ({total}) exceeds available ({item.currentUnits})
                                           </div>
                                         )}
+                                        {/* Done Button */}
+                                        <button
+                                          onClick={() => toggleStockItem(index)}
+                                          disabled={isExceeded}
+                                          className={`w-full py-2 rounded-lg text-xs font-bold transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                                            isDark ? 'bg-cyan-600 text-white hover:bg-cyan-700' : 'bg-cyan-500 text-white hover:bg-cyan-600'
+                                          }`}
+                                        >
+                                          ✓ Done
+                                        </button>
                                       </>
                                     )
                                   })()}
-
-                                  {/* Done Button */}
-                                  <button
-                                    onClick={() => toggleStockItem(index)}
-                                    className={`w-full py-2 rounded-lg text-xs font-bold transition ${
-                                      isDark ? 'bg-cyan-600 text-white hover:bg-cyan-700' : 'bg-cyan-500 text-white hover:bg-cyan-600'
-                                    }`}
-                                  >
-                                    ✓ Done
-                                  </button>
                                 </>
                               )}
                             </div>
@@ -974,53 +974,30 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
 
             {/* Amount Received Section */}
             {!invoiceSaved && (
-              <div className={`rounded-xl md:rounded-2xl p-4 md:p-6 border-2 ${
-                !amountReceived || amountReceived === ''
-                  ? isDark ? 'bg-red-900/20 border-red-600' : 'bg-red-50 border-red-300'
-                  : isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+              <div className={`rounded-xl md:rounded-2xl p-4 md:p-6 border ${
+                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
               }`}>
-                <label className={`text-sm font-bold block mb-2 md:mb-3 flex items-center gap-2 ${
-                  !amountReceived || amountReceived === ''
-                    ? isDark ? 'text-red-300' : 'text-red-700'
-                    : isDark ? 'text-white' : 'text-gray-900'
-                }`}>
-                  💵 Amount Received from Customer (₹) *
-                  {(!amountReceived || amountReceived === '') && (
-                    <span className="text-xs px-2 py-0.5 rounded font-bold bg-red-500 text-white">REQUIRED</span>
-                  )}
+                <label className={`text-sm font-bold block mb-2 md:mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  💵 Amount Received from Customer (₹)
                 </label>
                 <input
                   type="number"
                   value={amountReceived}
                   onChange={(e) => setAmountReceived(e.target.value)}
-                  placeholder={`Enter amount (max ₹${grandTotal.toFixed(2)})`}
-                  className={`w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl text-base md:text-lg font-semibold focus:outline-none focus:ring-2 transition border ${
-                    !amountReceived || amountReceived === ''
-                      ? isDark ? 'bg-red-900/30 border-red-600 text-white focus:ring-red-500' : 'bg-red-50 border-red-300 text-gray-900 focus:ring-red-500'
-                      : amountReceived && parseFloat(amountReceived) > 0 && parseFloat(amountReceived) <= grandTotal
-                      ? isDark ? 'bg-gray-700 border-green-600 text-white focus:ring-green-500' : 'bg-white border-green-500 text-gray-900 focus:ring-green-500'
-                      : amountReceived && parseFloat(amountReceived) > grandTotal
-                      ? isDark ? 'bg-gray-700 border-red-600 text-white focus:ring-red-500' : 'bg-white border-red-500 text-gray-900 focus:ring-red-500'
-                      : isDark ? 'bg-gray-700 border-gray-600 text-white focus:ring-cyan-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:ring-cyan-500'
+                  placeholder="0"
+                  className={`w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl text-base md:text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-500 transition border ${
+                    isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
                   }`}
                 />
-                {(!amountReceived || amountReceived === '') && (
-                  <p className={`text-xs mt-2 font-semibold flex items-center gap-1 ${
-                    isDark ? 'text-red-300' : 'text-red-600'
-                  }`}>
-                    <span>🔴</span>
-                    <span>This field is mandatory. You must enter the amount received before saving.</span>
-                  </p>
-                )}
-                {amountReceived && parseFloat(amountReceived) > grandTotal && (
+                {amountReceived !== '' && parseFloat(amountReceived) > grandTotal && (
                   <p className="text-xs text-red-500 mt-2 font-semibold flex items-center gap-1">
                     <span>⚠️</span>
                     <span>Amount cannot exceed Grand Total (₹{grandTotal.toFixed(2)})</span>
                   </p>
                 )}
-                {amountReceived && parseFloat(amountReceived) > 0 && parseFloat(amountReceived) <= grandTotal && (
+                {amountReceived !== '' && parseFloat(amountReceived) >= 0 && parseFloat(amountReceived) <= grandTotal && (
                   <div className={`mt-2 p-2 rounded-lg ${isDark ? 'bg-blue-900/20 border border-blue-700/30' : 'bg-blue-50 border border-blue-200'}`}>
-                    {parseFloat(amountReceived) === grandTotal ? (
+                    {parseFloat(amountReceived) >= grandTotal ? (
                       <p className={`text-xs font-semibold flex items-center gap-1 ${isDark ? 'text-green-400' : 'text-green-600'}`}>
                         <span>✅</span>
                         <span>Full payment - Status will be marked as "Paid"</span>
@@ -1033,7 +1010,6 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                     )}
                   </div>
                 )}
-
               </div>
             )}
 
@@ -1078,10 +1054,11 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                     grandTotal,
                     amountReceived: savedInvoiceData?.amountReceived !== undefined ? savedInvoiceData.amountReceived : (amountReceived ? parseFloat(amountReceived) : grandTotal),
                     products: allInvoiceProducts,
+                    paymentMode: paymentType,
                   })
                   toast.success('📥 Invoice downloaded!')
                 }}
-                disabled={!amountReceived || amountReceived === ''}
+                disabled={amountReceived === '' || amountReceived === null || amountReceived === undefined}
                 className={`w-full md:flex-1 rounded-lg md:rounded-xl py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-white transition disabled:opacity-50 disabled:cursor-not-allowed ${
                   isDark ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
                 }`}
@@ -1094,7 +1071,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowSaveConfirmation(true)}
-                  disabled={saving || sharing || !amountReceived || amountReceived === ''}
+                  disabled={saving || sharing || amountReceived === '' || amountReceived === null || amountReceived === undefined}
                   className={`w-full md:flex-1 rounded-lg md:rounded-xl py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-white disabled:opacity-60 disabled:cursor-not-allowed transition ${
                     isDark ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
                   }`}

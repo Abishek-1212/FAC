@@ -56,7 +56,7 @@ export default function FollowUpService() {
       const followUpJobData = {
         customerName: selectedJob.customerName,
         customerPhone: selectedJob.customerPhone,
-        customerAddress: selectedJob.customerAddress,
+        customerAddress: formatAddress(selectedJob.customerAddress),
         problemDescription: 'Follow-up service after 3 months',
         serviceType: 'Service / Repair',
         technicianId: assignmentMode === 'direct' ? selectedTechnician : '',
@@ -77,7 +77,7 @@ export default function FollowUpService() {
           jobId: jobRef.id,
           customerName: selectedJob.customerName,
           customerPhone: selectedJob.customerPhone,
-          customerAddress: selectedJob.customerAddress,
+          customerAddress: formatAddress(selectedJob.customerAddress),
           serviceType: 'Service / Repair',
           priority: 'normal',
           createdAt: serverTimestamp(),
@@ -107,6 +107,13 @@ export default function FollowUpService() {
     } finally {
       setCreating(false)
     }
+  }
+
+  const formatAddress = (addr) => {
+    if (!addr) return '—'
+    if (typeof addr === 'string') return addr
+    return [addr.houseNo, addr.building, addr.street, addr.landmark, addr.city, addr.state, addr.pinCode]
+      .filter(Boolean).join(', ')
   }
 
   const formatDate = (ts) => {
@@ -251,7 +258,7 @@ export default function FollowUpService() {
                           {job.customerPhone}
                         </p>
                         <p className={`text-xs mt-1 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-                          📍 {job.customerAddress}
+                          📍 {formatAddress(job.customerAddress)}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-3">
