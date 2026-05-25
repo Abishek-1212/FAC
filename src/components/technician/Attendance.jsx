@@ -198,12 +198,29 @@ export default function Attendance() {
     <div className="space-y-5">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          📅 My Attendance
-        </h2>
-        <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
-          Mark your attendance and view history
-        </p>
+        <div className="flex items-center gap-3 mb-2">
+          <div className={`p-2.5 rounded-xl ${
+            isDark ? 'bg-blue-500/20' : 'bg-blue-100'
+          }`}>
+            <svg className={`w-6 h-6 ${
+              isDark ? 'text-blue-400' : 'text-blue-600'
+            }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className={`text-2xl font-black ${
+              isDark ? 'text-white' : 'text-gray-900'
+            }`}>
+              My Attendance
+            </h2>
+            <p className={`text-sm ${
+              isDark ? 'text-white/60' : 'text-gray-600'
+            }`}>
+              Mark your attendance and view history
+            </p>
+          </div>
+        </div>
       </motion.div>
 
       {/* Mark Attendance Card */}
@@ -221,29 +238,52 @@ export default function Attendance() {
           <button
             onClick={() => setShowMarkInConfirm(true)}
             disabled={!canMarkIn || loading}
-            className={`py-3 rounded-xl font-bold text-sm transition ${
+            className={`py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 ${
               canMarkIn && !loading
                 ? 'bg-green-500 text-white hover:bg-green-600'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {loading ? '⏳' : '✅'} Mark In
+            {loading ? (
+              <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" fill="none" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+              </svg>
+            )}
+            Mark In
           </button>
           <button
             onClick={() => setShowMarkOutConfirm(true)}
             disabled={!canMarkOut || loading}
-            className={`py-3 rounded-xl font-bold text-sm transition ${
+            className={`py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 ${
               canMarkOut && !loading
                 ? 'bg-red-500 text-white hover:bg-red-600'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {loading ? '⏳' : '🚪'} Mark Out
+            {loading ? (
+              <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" fill="none" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
+              </svg>
+            )}
+            Mark Out
           </button>
         </div>
         {todayRecord && !todayRecord.checkOut && (
-          <p className={`text-xs mt-3 text-center ${isDark ? 'text-green-400' : 'text-green-600'}`}>
-            ✅ Checked in at {formatTime(todayRecord.checkIn)}
+          <p className={`text-xs mt-3 text-center flex items-center justify-center gap-1 ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+            </svg>
+            Checked in at {formatTime(todayRecord.checkIn)}
           </p>
         )}
       </motion.div>
@@ -335,7 +375,7 @@ export default function Attendance() {
                   {formatDate(rec.date)}
                 </p>
                 <span
-                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                  className={`text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 ${
                     rec.checkOut
                       ? isDark
                         ? 'bg-green-500/20 text-green-300'
@@ -345,7 +385,22 @@ export default function Attendance() {
                       : 'bg-amber-100 text-amber-700'
                   }`}
                 >
-                  {rec.checkOut ? '✅ Complete' : '⏳ In Progress'}
+                  {rec.checkOut ? (
+                    <>
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                      </svg>
+                      Complete
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" fill="none" />
+                      </svg>
+                      In Progress
+                    </>
+                  )}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
@@ -370,7 +425,9 @@ export default function Attendance() {
               isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
             }`}
           >
-            <p className="text-4xl mb-3">📅</p>
+            <svg className={`w-12 h-12 mx-auto mb-3 ${isDark ? 'text-white/20' : 'text-gray-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
             <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
               No attendance records found
             </p>
@@ -389,7 +446,9 @@ export default function Attendance() {
             }`}
           >
             <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white text-center">
-              <div className="text-5xl mb-3">✅</div>
+              <svg className="w-12 h-12 mx-auto mb-3" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+              </svg>
               <h3 className="text-xl font-black">Mark Attendance</h3>
             </div>
 
@@ -397,10 +456,13 @@ export default function Attendance() {
               <div className={`rounded-xl p-4 border ${
                 isDark ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'
               }`}>
-                <p className={`text-sm font-bold mb-2 ${
+                <p className={`text-sm font-bold mb-2 flex items-center gap-2 ${
                   isDark ? 'text-blue-300' : 'text-blue-900'
                 }`}>
-                  📌 Important
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                  </svg>
+                  Important
                 </p>
                 <p className={`text-xs ${
                   isDark ? 'text-blue-300/80' : 'text-blue-700'
@@ -441,7 +503,22 @@ export default function Attendance() {
                   disabled={loading}
                   className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl py-3 text-sm font-bold hover:from-green-600 hover:to-green-700 transition disabled:opacity-50"
                 >
-                  {loading ? '⏳ Marking...' : '✅ Confirm Mark In'}
+                  {loading ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" fill="none" />
+                      </svg>
+                      Marking...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                      </svg>
+                      Confirm Mark In
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -460,7 +537,9 @@ export default function Attendance() {
             }`}
           >
             <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-white text-center">
-              <div className="text-5xl mb-3">🚪</div>
+              <svg className="w-12 h-12 mx-auto mb-3" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
+              </svg>
               <h3 className="text-xl font-black">Mark Out</h3>
             </div>
 
@@ -468,10 +547,13 @@ export default function Attendance() {
               <div className={`rounded-xl p-4 border ${
                 isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'
               }`}>
-                <p className={`text-sm font-bold mb-2 ${
+                <p className={`text-sm font-bold mb-2 flex items-center gap-2 ${
                   isDark ? 'text-amber-300' : 'text-amber-900'
                 }`}>
-                  ⚠️ Confirm Mark Out
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+                  </svg>
+                  Confirm Mark Out
                 </p>
                 <p className={`text-xs ${
                   isDark ? 'text-amber-300/80' : 'text-amber-700'
@@ -528,7 +610,22 @@ export default function Attendance() {
                   disabled={loading}
                   className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl py-3 text-sm font-bold hover:from-red-600 hover:to-red-700 transition disabled:opacity-50"
                 >
-                  {loading ? '⏳ Marking...' : '🚪 Confirm Mark Out'}
+                  {loading ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" fill="none" />
+                      </svg>
+                      Marking...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
+                      </svg>
+                      Confirm Mark Out
+                    </>
+                  )}
                 </button>
               </div>
             </div>

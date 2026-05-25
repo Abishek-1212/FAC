@@ -122,16 +122,44 @@ export default function ManageStock({ searchQuery = '' }) {
     return () => document.removeEventListener('wheel', handleWheel)
   }, [])
 
-  // Filter products based on search query
+  // Filter products based on search query (search by product name, category, and description)
   const filteredProducts = searchQuery
-    ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? products.filter(p => {
+        const query = searchQuery.toLowerCase()
+        return (
+          p.name.toLowerCase().includes(query) ||
+          (p.category && p.category.toLowerCase().includes(query)) ||
+          (p.description && p.description.toLowerCase().includes(query))
+        )
+      })
     : products
 
+  // Group by category
   const grouped = {}
   filteredProducts.forEach(p => {
     const cat = p.category || 'Uncategorized'
     if (!grouped[cat]) grouped[cat] = []
     grouped[cat].push(p)
+  })
+
+  // Sort each category's products: low stock first (ascending), then by quantity ascending
+  Object.keys(grouped).forEach(cat => {
+    grouped[cat].sort((a, b) => {
+      const invA = invProducts.find(inv => inv.productName === a.name || inv.name === a.name)
+      const invB = invProducts.find(inv => inv.productName === b.name || inv.name === b.name)
+      const qtyA = invA?.quantity || 0
+      const qtyB = invB?.quantity || 0
+      const thresholdA = a.threshold || 0
+      const thresholdB = b.threshold || 0
+      
+      // First, sort by low stock status (low stock first)
+      const isLowA = qtyA <= thresholdA && thresholdA > 0
+      const isLowB = qtyB <= thresholdB && thresholdB > 0
+      if (isLowA !== isLowB) return isLowA ? -1 : 1
+      
+      // Then sort by quantity ascending (lowest first)
+      return qtyA - qtyB
+    })
   })
 
   return (
@@ -173,6 +201,8 @@ export default function ManageStock({ searchQuery = '' }) {
                   {categoryProducts.map((product, i) => {
                     const invItem = invProducts.find(inv => inv.productName === product.name || inv.name === product.name)
                     const stockQty = invItem?.quantity || 0
+                    const threshold = product.threshold || 0
+                    const isLowStock = threshold > 0 && stockQty <= threshold
 
                     return (
                       <motion.div
@@ -190,11 +220,15 @@ export default function ManageStock({ searchQuery = '' }) {
                           )}
                         </div>
 
-                        {/* Available Stock */}
+                        {/* Available Stock - Red if low, Blue if normal */}
                         <div className="col-span-2 flex justify-center">
                           <span
                             onClick={() => invItem && startEditStock(invItem, product)}
-                            className={`text-sm font-black px-3 py-1.5 rounded-lg cursor-pointer transition ${stockQty === 0 ? isDark ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' : 'bg-red-100 text-red-700 hover:bg-red-200' : isDark ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                            className={`text-sm font-black px-3 py-1.5 rounded-lg cursor-pointer transition ${
+                              isLowStock
+                                ? isDark ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                : isDark ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            }`}
                           >
                             {stockQty}
                           </span>

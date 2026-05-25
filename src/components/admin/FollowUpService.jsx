@@ -141,43 +141,48 @@ export default function FollowUpService() {
       </div>
 
       <div className="space-y-5 mt-5">
-        {/* Info Banner */}
-        <div className={`rounded-2xl p-4 border ${
-          isDark ? 'bg-purple-500/10 border-purple-500/30' : 'bg-purple-50 border-purple-200'
-        }`}>
-          <p className={`text-sm font-bold mb-2 ${isDark ? 'text-purple-300' : 'text-purple-700'}`}>
-            📅 Schedule Follow-up Services
-          </p>
-          <p className={`text-xs ${isDark ? 'text-purple-300/80' : 'text-purple-600'}`}>
-            Select a completed job to schedule a follow-up service. The customer details will be pre-filled and you can broadcast to all technicians or assign directly.
-          </p>
-        </div>
-
         {/* Assignment Mode Selection */}
         <div className={`rounded-2xl p-5 border ${
           isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
         }`}>
-          <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-            How to Assign?
-          </p>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             {[
-              { key: 'broadcast', label: 'Broadcast to All', icon: '📢', desc: 'Technicians can accept' },
-              { key: 'direct', label: 'Direct Assignment', icon: '👤', desc: 'Assign to specific tech' }
+              { 
+                key: 'broadcast', 
+                label: 'Broadcast to All', 
+                desc: 'Technicians can accept',
+                svg: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.961 1.961 0 01-2.773 1.753M5.007 7.307a1 1 0 00-.145-.742m11.667 0a1 1 0 00-.145.742M15.485 17.834a1.961 1.961 0 01-2.773-1.753V5.882m2.773-2.129A9.971 9.971 0 0112 2c-5.523 0-10 4.477-10 10s4.477 10 10 10 10-4.477 10-10c0-1.821-.487-3.53-1.34-5.011" />
+                  </svg>
+                )
+              },
+              { 
+                key: 'direct', 
+                label: 'Direct Assignment', 
+                desc: 'Assign to specific tech',
+                svg: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                )
+              }
             ].map(mode => (
               <button
                 key={mode.key}
                 type="button"
                 onClick={() => setAssignmentMode(mode.key)}
-                className={`flex-1 py-3 px-3 rounded-xl text-sm font-semibold border-2 transition ${
+                className={`flex-1 py-4 px-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
                   assignmentMode === mode.key
                     ? isDark ? 'border-purple-500 bg-purple-500/20 text-purple-400' : 'border-purple-500 bg-purple-50 text-purple-700'
                     : isDark ? 'border-white/10 bg-white/5 text-white/60 hover:border-white/20' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
                 }`}
               >
-                <div className="text-lg mb-1">{mode.icon}</div>
-                <div className="font-bold">{mode.label}</div>
-                <div className="text-xs opacity-70">{mode.desc}</div>
+                {mode.svg}
+                <div className="text-center">
+                  <div className="font-bold text-sm">{mode.label}</div>
+                  <div className="text-xs opacity-70">{mode.desc}</div>
+                </div>
               </button>
             ))}
           </div>

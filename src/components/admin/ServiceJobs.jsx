@@ -56,7 +56,7 @@ export default function ServiceJobs() {
       setJobs(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)))
     )
     const u2 = onSnapshot(query(collection(db, 'users'), where('role', '==', 'technician')), snap =>
-      setTechnicians(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      setTechnicians(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => t.isActive))
     )
     return () => { u1(); u2() }
   }, [])

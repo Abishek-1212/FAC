@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, query, where, updateDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, updateDoc, doc, serverTimestamp, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
@@ -41,8 +41,52 @@ export default function TechnicianHome() {
   const [invoiceModal, setInvoiceModal] = useState(false)
   const [selectedJobForInvoice, setSelectedJobForInvoice] = useState(null)
   const [stockMenuOpen, setStockMenuOpen] = useState(false)
+  const [attendanceMarked, setAttendanceMarked] = useState(false)
+  const [loadingAttendance, setLoadingAttendance] = useState(true)
 
   const STATUS_META = isDark ? STATUS_META_DARK : STATUS_META_LIGHT
+
+  // Check if attendance is marked today
+  useEffect(() => {
+    if (!user) return
+    
+    const checkAttendance = async () => {
+      try {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const todayTime = today.getTime()
+        
+        const q = query(
+          collection(db, 'attendance'),
+          where('technicianId', '==', user.uid)
+        )
+        const snap = await getDocs(q)
+        const records = snap.docs.map(d => d.data())
+        
+        const toTimestamp = (dateField) => {
+          if (!dateField) return 0
+          if (typeof dateField.toDate === 'function') return dateField.toDate().getTime()
+          if (dateField.seconds) return dateField.seconds * 1000
+          if (dateField instanceof Date) return dateField.getTime()
+          return new Date(dateField).getTime()
+        }
+        
+        const todayRecord = records.find(r => {
+          const recDate = new Date(toTimestamp(r.date))
+          recDate.setHours(0, 0, 0, 0)
+          return recDate.getTime() === todayTime
+        })
+        
+        setAttendanceMarked(!!todayRecord)
+      } catch (err) {
+        console.error('Error checking attendance:', err)
+      } finally {
+        setLoadingAttendance(false)
+      }
+    }
+    
+    checkAttendance()
+  }, [user])
 
   useEffect(() => {
     if (!user) return
@@ -166,8 +210,8 @@ export default function TechnicianHome() {
         ))}
       </div>
 
-      {/* Available Jobs Section */}
-      {availableJobs.length > 0 && (
+      {/* Available Jobs Section - Only show if attendance is marked */}
+      {attendanceMarked && availableJobs.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -245,8 +289,42 @@ export default function TechnicianHome() {
       )}
 
       {/* Divider */}
-      {availableJobs.length > 0 && (
+      {attendanceMarked && availableJobs.length > 0 && (
         <div className={`h-px ${isDark ? 'bg-white/10' : 'bg-gray-200'}`} />
+      )}
+
+      {/* Attendance Warning */}
+      {!loadingAttendance && !attendanceMarked && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`rounded-2xl p-4 border ${isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'}`}
+        >
+          <div className="flex items-start gap-3">
+            <svg className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDark ? 'text-amber-300' : 'text-amber-600'}`} fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div className="flex-1">
+              <p className={`text-sm font-bold mb-1 ${isDark ? 'text-amber-300' : 'text-amber-900'}`}>
+                Mark Your Attendance First
+              </p>
+              <p className={`text-xs mb-3 ${isDark ? 'text-amber-300/70' : 'text-amber-700'}`}>
+                Please mark your attendance before accessing jobs. This helps track your work hours.
+              </p>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/technician/attendance')}
+                className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${
+                  isDark
+                    ? 'bg-amber-500 text-white hover:bg-amber-600'
+                    : 'bg-amber-600 text-white hover:bg-amber-700'
+                }`}
+              >
+                Mark Attendance Now
+              </motion.button>
+            </div>
+          </div>
+        </motion.div>
       )}
 
       {/* Status Filter Pills */}
@@ -259,9 +337,14 @@ export default function TechnicianHome() {
           <motion.button
             key={key}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setStatusFilter(key)}
+            onClick={() => attendanceMarked && setStatusFilter(key)}
+            disabled={!attendanceMarked}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              statusFilter === key
+              !attendanceMarked
+                ? isDark
+                  ? 'bg-white/5 text-white/30 border border-white/10 cursor-not-allowed'
+                  : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                : statusFilter === key
                 ? isDark
                   ? 'bg-blue-500 text-white'
                   : 'bg-blue-600 text-white'
@@ -272,7 +355,9 @@ export default function TechnicianHome() {
           >
             {label}
             <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
-              statusFilter === key
+              !attendanceMarked
+                ? isDark ? 'bg-white/5 text-white/30' : 'bg-gray-200 text-gray-400'
+                : statusFilter === key
                 ? 'bg-white/20 text-white'
                 : isDark ? 'bg-white/10 text-white/40' : 'bg-gray-100 text-gray-500'
             }`}>
@@ -282,8 +367,37 @@ export default function TechnicianHome() {
         ))}
       </div>
 
-      {/* Jobs List */}
-      {jobs.length > 0 ? (
+      {/* Jobs List - Only show if attendance is marked */}
+      {!loadingAttendance && !attendanceMarked ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={`rounded-2xl p-12 text-center border border-dashed ${
+            isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
+          }`}
+        >
+          <svg className={`w-16 h-16 mx-auto mb-4 ${isDark ? 'text-white/20' : 'text-gray-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className={`text-lg font-bold mb-2 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+            Attendance Required
+          </p>
+          <p className={`text-sm mb-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+            Mark your attendance to view and manage jobs
+          </p>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => navigate('/technician/attendance')}
+            className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${
+              isDark
+                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            Go to Attendance
+          </motion.button>
+        </motion.div>
+      ) : jobs.length > 0 ? (
         <AnimatePresence mode="popLayout">
           <div className="grid gap-3">
             {filtered.map((job, i) => {
@@ -393,9 +507,9 @@ export default function TechnicianHome() {
                   isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
                 }`}
               >
-                <p className="text-4xl mb-3">
-                  {statusFilter === 'active' ? '🎉' : statusFilter === 'completed' ? '✅' : '📋'}
-                </p>
+                <svg className={`w-16 h-16 mx-auto mb-3 ${isDark ? 'text-white/20' : 'text-gray-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
                 <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
                   {statusFilter === 'active' ? 'No active jobs' : statusFilter === 'completed' ? 'No completed jobs' : 'No jobs'}
                 </p>
@@ -411,7 +525,9 @@ export default function TechnicianHome() {
             isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
           }`}
         >
-          <p className="text-4xl mb-3">📋</p>
+          <svg className={`w-16 h-16 mx-auto mb-3 ${isDark ? 'text-white/20' : 'text-gray-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
             No assigned jobs yet. Check available jobs above!
           </p>

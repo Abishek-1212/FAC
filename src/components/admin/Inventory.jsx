@@ -24,7 +24,7 @@ export default function Inventory() {
   const [editingProduct, setEditingProduct] = useState(null)
   const [editPrice, setEditPrice] = useState('')
   const [showProductModal, setShowProductModal] = useState(false)
-  const [productForm, setProductForm] = useState({ name: '', sku: '', category: '', price: '', description: '' })
+  const [productForm, setProductForm] = useState({ name: '', sku: '', category: '', price: '', description: '', threshold: '' })
   const [editingProductFull, setEditingProductFull] = useState(null)
   const [categories, setCategories] = useState([])
   const [showCategoryModal, setShowCategoryModal] = useState(false)
@@ -90,7 +90,7 @@ export default function Inventory() {
   }
 
   const openAddProduct = () => {
-    setProductForm({ name: '', sku: '', category: '', price: '', description: '' })
+    setProductForm({ name: '', sku: '', category: '', price: '', description: '', threshold: '' })
     setEditingProductFull(null)
     setShowProductModal(true)
   }
@@ -101,7 +101,8 @@ export default function Inventory() {
       sku: product.sku || '',
       category: product.category || '',
       price: String(product.price || ''),
-      description: product.description || ''
+      description: product.description || '',
+      threshold: String(product.threshold || '')
     })
     setEditingProductFull(product.id)
     setShowProductModal(true)
@@ -111,7 +112,7 @@ export default function Inventory() {
     e.preventDefault()
     setSaving(true)
     try {
-      const data = { ...productForm, price: Number(productForm.price) }
+      const data = { ...productForm, price: Number(productForm.price), threshold: productForm.threshold ? Number(productForm.threshold) : 0 }
       if (editingProductFull) {
         const oldProduct = products.find(p => p.id === editingProductFull)
         await updateDoc(doc(db, 'products', editingProductFull), data)
@@ -528,7 +529,7 @@ export default function Inventory() {
 
       {/* Add/Edit Product Modal */}
       <Modal open={showProductModal} onClose={() => setShowProductModal(false)} title={editingProductFull ? 'Edit Product' : 'Add Product'}>
-        <form onSubmit={handleSaveProduct} className="space-y-3 max-h-[55vh] overflow-y-auto pr-2">
+        <form onSubmit={handleSaveProduct} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Product Name *</label>
@@ -555,9 +556,14 @@ export default function Inventory() {
             <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Description</label>
             <textarea value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Enter product description..." className={inputCls} />
           </div>
-          <div className="flex gap-2 pt-3 border-t border-gray-100 sticky bottom-0 bg-white">
-            {editingProductFull && (<button type="button" onClick={() => handleDeleteProduct(editingProductFull)} className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${isDark ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300' : 'bg-red-50 hover:bg-red-100 text-red-700'}`}>🗑️ Delete</button>)}
-            <button type="submit" disabled={saving} className="flex-1 bg-cyan-500 text-white rounded-lg py-2 text-sm font-semibold hover:bg-cyan-600 transition disabled:opacity-60">{saving ? 'Saving...' : editingProductFull ? 'Update' : 'Add Product'}</button>
+          <div>
+            <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Low Stock Threshold *</label>
+            <input type="number" min="0" value={productForm.threshold} onChange={e => setProductForm(f => ({ ...f, threshold: e.target.value }))} placeholder="Alert when stock falls below this" required className={inputCls} />
+            <p className={`text-xs mt-1 ${s}`}>When stock ≤ threshold, item shows in red</p>
+          </div>
+          <div className="flex gap-2 pt-3 border-t border-gray-100">
+            {editingProductFull && (<button type="button" onClick={() => handleDeleteProduct(editingProductFull)} className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition ${isDark ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300' : 'bg-red-50 hover:bg-red-100 text-red-700'}`}>🗑️ Delete</button>)}
+            <button type="submit" disabled={saving} className="flex-1 bg-cyan-500 text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-cyan-600 transition disabled:opacity-60">{saving ? 'Saving...' : editingProductFull ? 'Update' : 'Add Product'}</button>
           </div>
         </form>
       </Modal>

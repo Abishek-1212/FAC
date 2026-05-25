@@ -146,11 +146,20 @@ export default function Reports() {
   const getDateRangeLabel = () => {
     const { start, end } = getDateRange()
     const formatDate = (date) => {
-      return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+      const day = date.getDate()
+      const month = date.toLocaleDateString('en-IN', { month: 'long' })
+      const year = date.getFullYear()
+      const suffix = day % 10 === 1 && day !== 11 ? 'st' : day % 10 === 2 && day !== 12 ? 'nd' : day % 10 === 3 && day !== 13 ? 'rd' : 'th'
+      return `${day}${suffix} ${month} ${year}`
     }
     
     if (dateFilter === 'custom' && customStartDate && customEndDate) {
-      return `${formatDate(new Date(customStartDate))} - ${formatDate(new Date(customEndDate))}`
+      const startDate = new Date(customStartDate)
+      const endDate = new Date(customEndDate)
+      if (startDate.toDateString() === endDate.toDateString()) {
+        return formatDate(startDate)
+      }
+      return `${formatDate(startDate)} – ${formatDate(endDate)}`
     }
     
     switch(dateFilter) {
@@ -158,10 +167,9 @@ export default function Reports() {
         return formatDate(start)
       case 'week':
       case 'month':
-        const endDate = new Date(end.getTime() - 86400000) // Subtract 1 day from end
-        return `${formatDate(start)} - ${formatDate(endDate)}`
+        const endDate = new Date(end.getTime() - 86400000)
+        return `${formatDate(start)} – ${formatDate(endDate)}`
       default:
-        // For 'all', show first job date to last job date
         if (filteredJobs.length > 0) {
           const dates = filteredJobs.map(j => {
             const date = j.createdAt?.toDate ? j.createdAt.toDate() : new Date(j.createdAt?.seconds * 1000 || 0)
@@ -171,7 +179,7 @@ export default function Reports() {
           if (dates.length > 0) {
             const minDate = new Date(Math.min(...dates))
             const maxDate = new Date(Math.max(...dates))
-            return `${formatDate(minDate)} - ${formatDate(maxDate)}`
+            return `${formatDate(minDate)} – ${formatDate(maxDate)}`
           }
         }
         return 'All Time'
@@ -268,6 +276,32 @@ export default function Reports() {
           </motion.button>
         ))}
       </div>
+
+      {/* Date Range Header */}
+      {dateFilter !== 'all' && customStartDate && customEndDate && (
+        <div className={`rounded-2xl p-4 border flex items-center justify-between ${
+          isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
+        }`}>
+          <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {getDateRangeLabel()}
+          </p>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              setCustomStartDate('')
+              setCustomEndDate('')
+              setShowCustomDatePicker(true)
+            }}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              isDark
+                ? 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+            }`}
+          >
+            Clear
+          </motion.button>
+        </div>
+      )}
 
       {/* Download Report Button */}
       <div className="flex justify-center">

@@ -7,6 +7,7 @@ import { db } from '../../firebase'
 import toast from 'react-hot-toast'
 import PropTypes from 'prop-types'
 import { motion, AnimatePresence } from 'framer-motion'
+import DeactivatedPage from '../technician/DeactivatedPage'
 
 export default function TechnicianLayout({ children }) {
   const { profile, logout } = useAuth()
@@ -32,6 +33,13 @@ export default function TechnicianLayout({ children }) {
     '/technician/return-stock',
     '/technician/attendance'
   ].includes(location.pathname)
+
+  // Check if technician is deactivated
+  const isDeactivated = profile?.isActive === false
+
+  if (isDeactivated) {
+    return <DeactivatedPage />
+  }
 
   const openProfile = () => {
     setFormData({
