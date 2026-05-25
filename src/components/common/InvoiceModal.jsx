@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Modal from './Modal'
 import toast from 'react-hot-toast'
 import { generateInvoice } from '../../utils/generateInvoice'
+import { formatAddressForDisplay } from '../../utils/addressFormatter'
 
 export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSaved }) {
   const [completionReport, setCompletionReport] = useState(null)
@@ -337,10 +338,16 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
   }
 
   const handleGenerateInvoice = async () => {
-    // Validate amount received
-    const receivedAmount = parseFloat(amountReceived) || 0
-    if (receivedAmount === 0) {
-      toast.error('Please enter the amount received from customer')
+    // Validate amount received - must be provided
+    if (!amountReceived || amountReceived === '') {
+      toast.error('Amount Received is mandatory. Please enter the amount.')
+      return
+    }
+    
+    const receivedAmount = parseFloat(amountReceived)
+    
+    if (isNaN(receivedAmount) || receivedAmount < 0) {
+      toast.error('Please enter a valid amount')
       return
     }
     
@@ -374,8 +381,9 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
 
       const billNo = `FAC-${Date.now()}`
       const billAmount = grandTotal
-      const pendingAmount = grandTotal - receivedAmount
-      const paymentStatus = receivedAmount >= grandTotal ? 'Paid' : 'Pending'
+      const finalAmountReceived = parseFloat(amountReceived)
+      const pendingAmount = grandTotal - finalAmountReceived
+      const paymentStatus = finalAmountReceived >= grandTotal ? 'Paid' : 'Pending'
       
       // Combine products from completion report and personal stock usage (only used items for invoice)
       const allUsedProducts = [
@@ -398,7 +406,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
         discountValue: parseFloat(discountValue) || 0,
         discountAmount,
         billAmount,
-        amountReceived: receivedAmount,
+        amountReceived: finalAmountReceived,
         paymentPending: pendingAmount,
         paymentStatus: paymentStatus,
         modeOfPayment: paymentType,
@@ -520,7 +528,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                   </div>
                   <div className="md:col-span-2">
                     <p className="text-white/60 text-xs">📍 Address</p>
-                    <p className="font-semibold mt-1 break-words text-xs md:text-sm">{job.customerAddress}</p>
+                    <p className="font-semibold mt-1 break-words text-xs md:text-sm whitespace-pre-line">{formatAddressForDisplay(job.customerAddress)}</p>
                   </div>
                 </div>
               </div>
@@ -752,36 +760,56 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                                     <p className={`text-xs font-semibold ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>Available: <span className="text-lg font-black">{item.currentUnits}</span></p>
                                   </div>
 
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                      <label className={`text-xs font-semibold block mb-1 ${isDark ? 'text-emerald-300' : 'text-emerald-600'}`}>✓ Used</label>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        max={item.currentUnits}
-                                        placeholder="0"
-                                        value={item.used}
-                                        onChange={(e) => updatePersonalStockItem(index, 'used', e.target.value)}
-                                        className={`w-full px-2.5 py-2 rounded-lg text-xs text-center font-bold focus:outline-none focus:ring-2 focus:ring-emerald-300 ${
-                                          isDark ? 'bg-gray-700 border-emerald-600 text-emerald-300' : 'bg-white border-emerald-200 text-emerald-700'
-                                        } border`}
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className={`text-xs font-semibold block mb-1 ${isDark ? 'text-red-300' : 'text-red-600'}`}>✕ Damaged</label>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        max={item.currentUnits}
-                                        placeholder="0"
-                                        value={item.damaged}
-                                        onChange={(e) => updatePersonalStockItem(index, 'damaged', e.target.value)}
-                                        className={`w-full px-2.5 py-2 rounded-lg text-xs text-center font-bold focus:outline-none focus:ring-2 focus:ring-red-300 ${
-                                          isDark ? 'bg-gray-700 border-red-600 text-red-300' : 'bg-white border-red-200 text-red-700'
-                                        } border`}
-                                      />
-                                    </div>
-                                  </div>
+                                  {(() => {
+                                    const used = Number(item.used) || 0
+                                    const damaged = Number(item.damaged) || 0
+                                    const total = used + damaged
+                                    const isExceeded = total > item.currentUnits
+                                    
+                                    return (
+                                      <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div>
+                                            <label className={`text-xs font-semibold block mb-1 ${isDark ? 'text-emerald-300' : 'text-emerald-600'}`}>✓ Used</label>
+                                            <input
+                                              type="number"
+                                              min={0}
+                                              max={item.currentUnits}
+                                              placeholder="0"
+                                              value={item.used}
+                                              onChange={(e) => updatePersonalStockItem(index, 'used', e.target.value)}
+                                              className={`w-full px-2.5 py-2 rounded-lg text-xs text-center font-bold focus:outline-none focus:ring-2 transition border ${
+                                                isExceeded
+                                                  ? isDark ? 'bg-red-900/30 border-red-600 text-red-300 focus:ring-red-500' : 'bg-red-50 border-red-500 text-red-700 focus:ring-red-500'
+                                                  : isDark ? 'bg-gray-700 border-emerald-600 text-emerald-300 focus:ring-emerald-300' : 'bg-white border-emerald-200 text-emerald-700 focus:ring-emerald-300'
+                                              }`}
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className={`text-xs font-semibold block mb-1 ${isDark ? 'text-red-300' : 'text-red-600'}`}>✕ Damaged</label>
+                                            <input
+                                              type="number"
+                                              min={0}
+                                              max={item.currentUnits}
+                                              placeholder="0"
+                                              value={item.damaged}
+                                              onChange={(e) => updatePersonalStockItem(index, 'damaged', e.target.value)}
+                                              className={`w-full px-2.5 py-2 rounded-lg text-xs text-center font-bold focus:outline-none focus:ring-2 transition border ${
+                                                isExceeded
+                                                  ? isDark ? 'bg-red-900/30 border-red-600 text-red-300 focus:ring-red-500' : 'bg-red-50 border-red-500 text-red-700 focus:ring-red-500'
+                                                  : isDark ? 'bg-gray-700 border-red-600 text-red-300 focus:ring-red-300' : 'bg-white border-red-200 text-red-700 focus:ring-red-300'
+                                              }`}
+                                            />
+                                          </div>
+                                        </div>
+                                        {isExceeded && (
+                                          <div className={`p-2 rounded-lg text-xs font-semibold ${isDark ? 'bg-red-900/30 border border-red-700/50 text-red-300' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+                                            ⚠️ Total ({total}) exceeds available ({item.currentUnits})
+                                          </div>
+                                        )}
+                                      </>
+                                    )
+                                  })()}
 
                                   {/* Done Button */}
                                   <button
@@ -946,48 +974,66 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
 
             {/* Amount Received Section */}
             {!invoiceSaved && (
-              <div className={`rounded-xl md:rounded-2xl p-4 md:p-6 border ${
-                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+              <div className={`rounded-xl md:rounded-2xl p-4 md:p-6 border-2 ${
+                !amountReceived || amountReceived === ''
+                  ? isDark ? 'bg-red-900/20 border-red-600' : 'bg-red-50 border-red-300'
+                  : isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
               }`}>
-                <label className={`text-sm font-bold block mb-2 md:mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <label className={`text-sm font-bold block mb-2 md:mb-3 flex items-center gap-2 ${
+                  !amountReceived || amountReceived === ''
+                    ? isDark ? 'text-red-300' : 'text-red-700'
+                    : isDark ? 'text-white' : 'text-gray-900'
+                }`}>
                   💵 Amount Received from Customer (₹) *
+                  {(!amountReceived || amountReceived === '') && (
+                    <span className="text-xs px-2 py-0.5 rounded font-bold bg-red-500 text-white">REQUIRED</span>
+                  )}
                 </label>
                 <input
                   type="number"
                   value={amountReceived}
                   onChange={(e) => setAmountReceived(e.target.value)}
                   placeholder={`Enter amount (max ₹${grandTotal.toFixed(2)})`}
-                  className={`w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl text-base md:text-lg font-semibold focus:outline-none focus:ring-2 transition ${
-                    isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
-                  } border ${
-                    amountReceived && parseFloat(amountReceived) > 0 && parseFloat(amountReceived) <= grandTotal
-                      ? 'focus:ring-green-500 border-green-500'
+                  className={`w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl text-base md:text-lg font-semibold focus:outline-none focus:ring-2 transition border ${
+                    !amountReceived || amountReceived === ''
+                      ? isDark ? 'bg-red-900/30 border-red-600 text-white focus:ring-red-500' : 'bg-red-50 border-red-300 text-gray-900 focus:ring-red-500'
+                      : amountReceived && parseFloat(amountReceived) > 0 && parseFloat(amountReceived) <= grandTotal
+                      ? isDark ? 'bg-gray-700 border-green-600 text-white focus:ring-green-500' : 'bg-white border-green-500 text-gray-900 focus:ring-green-500'
                       : amountReceived && parseFloat(amountReceived) > grandTotal
-                      ? 'focus:ring-red-500 border-red-500'
-                      : 'focus:ring-cyan-500'
+                      ? isDark ? 'bg-gray-700 border-red-600 text-white focus:ring-red-500' : 'bg-white border-red-500 text-gray-900 focus:ring-red-500'
+                      : isDark ? 'bg-gray-700 border-gray-600 text-white focus:ring-cyan-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:ring-cyan-500'
                   }`}
                 />
+                {(!amountReceived || amountReceived === '') && (
+                  <p className={`text-xs mt-2 font-semibold flex items-center gap-1 ${
+                    isDark ? 'text-red-300' : 'text-red-600'
+                  }`}>
+                    <span>🔴</span>
+                    <span>This field is mandatory. You must enter the amount received before saving.</span>
+                  </p>
+                )}
                 {amountReceived && parseFloat(amountReceived) > grandTotal && (
-                  <p className="text-xs text-red-500 mt-2 font-semibold">
-                    ⚠️ Amount cannot exceed Grand Total (₹{grandTotal.toFixed(2)})
+                  <p className="text-xs text-red-500 mt-2 font-semibold flex items-center gap-1">
+                    <span>⚠️</span>
+                    <span>Amount cannot exceed Grand Total (₹{grandTotal.toFixed(2)})</span>
                   </p>
                 )}
                 {amountReceived && parseFloat(amountReceived) > 0 && parseFloat(amountReceived) <= grandTotal && (
                   <div className={`mt-2 p-2 rounded-lg ${isDark ? 'bg-blue-900/20 border border-blue-700/30' : 'bg-blue-50 border border-blue-200'}`}>
                     {parseFloat(amountReceived) === grandTotal ? (
-                      <p className={`text-xs font-semibold ${isDark ? 'text-green-400' : 'text-green-600'}`}>
-                        ✅ Full payment - Status will be marked as "Paid"
+                      <p className={`text-xs font-semibold flex items-center gap-1 ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                        <span>✅</span>
+                        <span>Full payment - Status will be marked as "Paid"</span>
                       </p>
                     ) : (
-                      <p className={`text-xs font-semibold ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
-                        ⚠️ Partial payment - Pending: ₹{(grandTotal - parseFloat(amountReceived)).toFixed(2)} - Status will be marked as "Pending"
+                      <p className={`text-xs font-semibold flex items-center gap-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                        <span>⚠️</span>
+                        <span>Partial payment - Pending: ₹{(grandTotal - parseFloat(amountReceived)).toFixed(2)} - Status will be marked as "Pending"</span>
                       </p>
                     )}
                   </div>
                 )}
-                <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  📌 Enter the amount you received from the customer (can be partial or full payment)
-                </p>
+
               </div>
             )}
 
@@ -1003,7 +1049,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                 ✕ Close
               </motion.button>
               
-              {/* Download Invoice Button - Always visible */}
+              {/* Download Invoice Button - Disabled if amount not received */}
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
@@ -1030,25 +1076,26 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                     discountValue: parseFloat(discountValue) || 0,
                     discountAmount,
                     grandTotal,
-                    amountReceived: savedInvoiceData?.amountReceived || parseFloat(amountReceived) || 0,
+                    amountReceived: savedInvoiceData?.amountReceived !== undefined ? savedInvoiceData.amountReceived : (amountReceived ? parseFloat(amountReceived) : grandTotal),
                     products: allInvoiceProducts,
                   })
                   toast.success('📥 Invoice downloaded!')
                 }}
-                className={`w-full md:flex-1 rounded-lg md:rounded-xl py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-white transition ${
+                disabled={!amountReceived || amountReceived === ''}
+                className={`w-full md:flex-1 rounded-lg md:rounded-xl py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-white transition disabled:opacity-50 disabled:cursor-not-allowed ${
                   isDark ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
                 }`}
               >
                 📥 Download Invoice
               </motion.button>
               
-              {/* Save Invoice Button - Only visible if not saved */}
+              {/* Save Invoice Button - Only visible if not saved, disabled if amount not received */}
               {!invoiceSaved && (
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowSaveConfirmation(true)}
-                  disabled={saving || sharing}
-                  className={`w-full md:flex-1 rounded-lg md:rounded-xl py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-white disabled:opacity-60 transition ${
+                  disabled={saving || sharing || !amountReceived || amountReceived === ''}
+                  className={`w-full md:flex-1 rounded-lg md:rounded-xl py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-white disabled:opacity-60 disabled:cursor-not-allowed transition ${
                     isDark ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
                   }`}
                 >

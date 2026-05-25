@@ -30,6 +30,34 @@ function formatDate(ts) {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function formatAddress(address) {
+  if (typeof address === 'string') return address
+  if (!address) return ''
+  return [
+    address.houseNo,
+    address.building,
+    address.street,
+    address.area,
+    address.city,
+    address.pinCode,
+    address.landmark
+  ].filter(Boolean)
+}
+
+function AddressDisplay({ address, isDark }) {
+  const parts = formatAddress(address)
+  if (typeof address === 'string') {
+    return <p className="truncate font-medium">{address}</p>
+  }
+  return (
+    <div className="space-y-0.5">
+      {parts.map((part, idx) => (
+        <p key={idx} className="text-xs font-medium truncate">{part}</p>
+      ))}
+    </div>
+  )
+}
+
 export default function TechnicianHome() {
   const { user, profile, logout } = useAuth()
   const { isDark } = useTheme()
@@ -258,7 +286,7 @@ export default function TechnicianHome() {
                         📞 {job.customerPhone}
                       </p>
                       <p className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                        📍 {job.customerAddress}
+                        📍 {formatAddress(job.customerAddress).join(', ')}
                       </p>
                     </div>
                     {job.priority === 'urgent' && (
@@ -445,7 +473,9 @@ export default function TechnicianHome() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
-                      <p className="truncate flex-1 font-medium">{job.customerAddress}</p>
+                      <div className="flex-1 min-w-0">
+                        <AddressDisplay address={job.customerAddress} isDark={isDark} />
+                      </div>
                     </div>
                   </div>
 

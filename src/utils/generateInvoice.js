@@ -149,11 +149,33 @@ export const generateInvoice = (invoiceData) => {
   // CUSTOMER & SERVICE INFORMATION (2-Column Grid)
   // ========================================================
   const cardWidth = (contentWidth - 6) / 2
-  const cardHeight = 36
+  
+  // Format address with commas
+  const cleanAddress = typeof customerAddress === 'string' 
+    ? customerAddress
+    : typeof customerAddress === 'object' && customerAddress
+    ? [
+        customerAddress.houseNo,
+        customerAddress.building,
+        customerAddress.street,
+        customerAddress.area,
+        customerAddress.city,
+        customerAddress.pinCode,
+        customerAddress.landmark
+      ].filter(Boolean).map((val, idx, arr) => idx === arr.length - 1 ? val : val + ',')
+       .join('\n')
+    : (customerAddress || 'N/A').toString()
+  
+  // Calculate dynamic height based on address lines
+  const splitCustAddress = doc.splitTextToSize(`Address: ${cleanAddress}`, cardWidth - 6)
+  const addressLinesCount = splitCustAddress.length
+  const baseHeight = 22
+  const addressHeight = addressLinesCount * 3.5
+  const dynamicCardHeight = Math.max(36, baseHeight + addressHeight + 4)
   
   // Left Column: Customer Card
   doc.setFillColor(255, 255, 255)
-  doc.rect(margin, currentY, cardWidth, cardHeight, 'S')
+  doc.rect(margin, currentY, cardWidth, dynamicCardHeight, 'S')
   doc.setFillColor(...primaryColor)
   doc.rect(margin, currentY, cardWidth, 5, 'F')
   doc.setFont('helvetica', 'bold')
@@ -166,14 +188,11 @@ export const generateInvoice = (invoiceData) => {
   doc.text(`Name: ${customerName}`, margin + 3, currentY + 9)
   doc.text(`Phone: ${customerPhone}`, margin + 3, currentY + 13.5)
   doc.text(`Payment: ${paymentMode}`, margin + 3, currentY + 18)
-  
-  const cleanAddress = (customerAddress || 'N/A').replace(/\n/g, ' ')
-  const splitCustAddress = doc.splitTextToSize(`Address: ${cleanAddress}`, cardWidth - 6)
   doc.text(splitCustAddress, margin + 3, currentY + 22.5)
 
-  // Right Column: Service Card
+  // Right Column: Service Card (same height as customer card)
   const rightColumnX = margin + cardWidth + 6
-  doc.rect(rightColumnX, currentY, cardWidth, cardHeight, 'S')
+  doc.rect(rightColumnX, currentY, cardWidth, dynamicCardHeight, 'S')
   doc.setFillColor(...primaryColor)
   doc.rect(rightColumnX, currentY, cardWidth, 5, 'F')
   doc.setFont('helvetica', 'bold')
@@ -189,7 +208,7 @@ export const generateInvoice = (invoiceData) => {
   const splitProblem = doc.splitTextToSize(`Problem: ${cleanProblem}`, cardWidth - 6)
   doc.text(splitProblem, rightColumnX + 3, currentY + 22.5)
 
-  currentY += cardHeight + 8
+  currentY += dynamicCardHeight + 8
 
   // ========================================================
   // LINE ITEMS TABLE (Products with S.No and Quantity only)

@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, query, where } from 'firebase/firestore'
 import { db } from '../../firebase'
 import Modal from '../common/Modal'
+import AddressInput from '../common/AddressInput'
 import InvoiceModal from '../common/InvoiceModal'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme } from '../../context/ThemeContext'
+import { formatAddressForDisplay } from '../../utils/addressFormatter'
 
 const STATUS_META_LIGHT = {
   pending:     { color: 'bg-amber-100 text-amber-700 border-amber-200',   dot: 'bg-amber-400',  label: 'Pending', icon: '⏳' },
@@ -26,7 +28,10 @@ const STATUS_META_DARK = {
 const SERVICE_TYPES = ['New Fitting', 'Service / Repair']
 
 const EMPTY_FORM = {
-  customerName: '', customerPhone: '', customerAddress: '',
+  customerName: '', customerPhone: '', 
+  customerAddress: {
+    houseNo: '', building: '', street: '', city: '', state: 'Tamil Nadu', pinCode: '', landmark: ''
+  },
   problemDescription: '', serviceType: 'Service / Repair',
   technicianId: '', priority: 'normal', assignmentMode: 'broadcast',
 }
@@ -63,6 +68,13 @@ export default function ServiceJobs() {
 
   const handleCreate = async (e) => {
     e.preventDefault()
+    
+    // Validate phone number
+    if (form.customerPhone.length !== 10) {
+      toast.error('❌ Please enter a valid 10-digit phone number')
+      return
+    }
+    
     setSaving(true)
     try {
       const techName = technicians.find(t => t.id === form.technicianId)?.name || ''
@@ -354,22 +366,66 @@ export default function ServiceJobs() {
           <div>
             <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Customer Information</p>
             <div className="space-y-3">
-              {[
-                ['customerName', 'Full Name', 'text'],
-                ['customerPhone', 'Phone Number', 'tel'],
-                ['customerAddress', 'Address', 'text'],
-              ].map(([key, label, type]) => (
-                <div key={key}>
-                  <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>{label}</label>
-                  <input
-                    type={type}
-                    value={form[key]}
-                    onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-                    required
-                    className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
-                  />
-                </div>
-              ))}
+              {/* Customer Name */}
+            <div>
+              <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Full Name</label>
+              <input
+                type="text"
+                value={form.customerName}
+                onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))}
+                required
+                className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+              />
+            </div>
+
+            {/* Customer Phone with Validation */}
+            <div>
+              <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Phone Number *</label>
+              <input
+                type="tel"
+                value={form.customerPhone}
+                onChange={e => {
+                  const value = e.target.value.replace(/\D/g, '')
+                  if (value.length <= 10) {
+                    setForm(f => ({ ...f, customerPhone: value }))
+                  }
+                }}
+                placeholder="10-digit phone number"
+                maxLength="10"
+                required
+                className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${
+                  form.customerPhone.length === 10
+                    ? isDark ? 'border-green-500 focus:ring-green-500' : 'border-green-500 focus:ring-green-500'
+                    : form.customerPhone.length > 0
+                    ? isDark ? 'border-amber-500 focus:ring-amber-500' : 'border-amber-500 focus:ring-amber-500'
+                    : isDark ? 'border-white/10 focus:ring-cyan-500' : 'border-gray-200 focus:ring-cyan-500'
+                } ${isDark ? 'bg-white/5 text-white' : 'bg-white text-gray-900'}`}
+              />
+              <div className="mt-1.5 flex items-center gap-2">
+                {form.customerPhone.length === 0 ? (
+                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>📱 Enter 10-digit phone number</p>
+                ) : form.customerPhone.length < 10 ? (
+                  <p className={`text-xs flex items-center gap-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                    <span>⚠️</span>
+                    <span>{10 - form.customerPhone.length} more digit{10 - form.customerPhone.length !== 1 ? 's' : ''} needed</span>
+                  </p>
+                ) : (
+                  <p className={`text-xs flex items-center gap-1 ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                    <span>✓</span>
+                    <span>Valid phone number</span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Customer Address */}
+            <div>
+              <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Address Details</p>
+              <AddressInput
+                value={form.customerAddress}
+                onChange={addr => setForm(f => ({ ...f, customerAddress: addr }))}
+              />
+            </div>
             </div>
           </div>
 
@@ -498,7 +554,7 @@ export default function ServiceJobs() {
                 ))}
                 <div className={`col-span-2 rounded-xl p-3 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
                   <p className={`text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-400'}`}>📍 Address</p>
-                  <p className={`font-bold text-sm mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{detailJob.customerAddress}</p>
+                  <p className={`font-bold text-sm mt-0.5 whitespace-pre-line ${isDark ? 'text-white' : 'text-gray-900'}`}>{formatAddressForDisplay(detailJob.customerAddress)}</p>
                 </div>
                 <div className={`col-span-2 rounded-xl p-3 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
                   <p className={`text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-400'}`}>📝 Problem</p>

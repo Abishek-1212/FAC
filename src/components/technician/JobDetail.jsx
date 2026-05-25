@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
 import Modal from '../common/Modal'
 import InvoiceModal from '../common/InvoiceModal'
+import { formatAddressForDisplay } from '../../utils/addressFormatter'
 
 export default function JobDetail() {
   const { jobId } = useParams()
@@ -312,7 +313,7 @@ export default function JobDetail() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span className="font-medium flex-1">{job.customerAddress}</span>
+                <span className="font-medium flex-1 whitespace-pre-line">{formatAddressForDisplay(job.customerAddress)}</span>
               </div>
             </div>
           </div>

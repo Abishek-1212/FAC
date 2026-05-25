@@ -7,6 +7,8 @@ import { useTheme } from '../../context/ThemeContext'
 import Modal from '../common/Modal'
 import InvoiceModal from '../common/InvoiceModal'
 import { generateInvoice } from '../../utils/generateInvoice'
+import { formatAddressForDisplay } from '../../utils/addressFormatter'
+import toast from 'react-hot-toast'
 
 export default function CompletionReports() {
   const { user } = useAuth()
@@ -404,6 +406,7 @@ export default function CompletionReports() {
               <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Customer</p>
               <p className={`text-lg font-bold mt-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedReport.customerName}</p>
               <p className={`text-sm mt-1 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>📞 {selectedReport.customerPhone}</p>
+              <p className={`text-sm mt-2 whitespace-pre-line ${isDark ? 'text-white/60' : 'text-gray-600'}`}>📍 {formatAddressForDisplay(selectedReport.customerAddress)}</p>
             </div>
 
             {/* Service Details */}

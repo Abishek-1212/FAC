@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../context/ThemeContext'
+import { formatAddressForDisplay } from '../../utils/addressFormatter'
 
 const STATUS_META_DARK = {
   pending:     { color: 'bg-amber-500/20 text-amber-400',   dot: 'bg-amber-400' },
@@ -240,7 +241,7 @@ export default function RecentServiceJobs({ jobs = [] }) {
 
                     <div className={`col-span-2 rounded-xl p-3 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
                       <p className={`text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-400'}`}>📍 Address</p>
-                      <p className={`font-bold text-sm mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedJob.customerAddress}</p>
+                      <p className={`font-bold text-sm mt-0.5 whitespace-pre-line ${isDark ? 'text-white' : 'text-gray-900'}`}>{formatAddressForDisplay(selectedJob.customerAddress)}</p>
                     </div>
 
                     <div className={`col-span-2 rounded-xl p-3 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
