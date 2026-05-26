@@ -42,41 +42,40 @@ export default function AdminHome() {
   const [stats, setStats] = useState({ jobs: 0, pending: 0, products: 0, technicians: 0, revenue: 0, missing: 0, unreadInvoices: 0 })
 
   useEffect(() => {
-    const unsubs = []
+    const batch = {}
+    let flushTimer = null
+    const flush = (patch) => {
+      Object.assign(batch, patch)
+      clearTimeout(flushTimer)
+      flushTimer = setTimeout(() => setStats(s => ({ ...s, ...batch })), 50)
+    }
 
-    // Technicians
-    unsubs.push(onSnapshot(
-      query(collection(db, 'users'), where('role', '==', 'technician')),
-      snap => setStats(s => ({ ...s, technicians: snap.size }))
-    ))
+    const unsubs = [
+      onSnapshot(
+        query(collection(db, 'users'), where('role', '==', 'technician')),
+        snap => flush({ technicians: snap.size })
+      ),
+      onSnapshot(collection(db, 'service_jobs'), snap => {
+        const jobs = snap.docs.map(d => d.data())
+        flush({ jobs: snap.size, pending: jobs.filter(j => ['pending', 'assigned'].includes(j.status)).length })
+      }),
+      onSnapshot(collection(db, 'products'), snap => flush({ products: snap.size })),
+      onSnapshot(collection(db, 'invoices'), snap => {
+        const revenue = snap.docs.reduce((sum, d) => sum + (d.data().amountReceived || 0), 0)
+        const unreadInvoices = snap.docs.filter(d => d.data().submittedByTechnician && !d.data().adminViewed).length
+        flush({ revenue, unreadInvoices })
+      }),
+      onSnapshot(collection(db, 'job_stock_assignment'), snap => {
+        const missing = snap.docs.reduce((sum, d) => {
+          const x = d.data()
+          const m = (x.assignedQuantity || 0) - (x.usedQuantity || 0) - (x.returnedQuantity || 0)
+          return sum + (m > 0 ? m : 0)
+        }, 0)
+        flush({ missing })
+      }),
+    ]
 
-    // Service jobs
-    unsubs.push(onSnapshot(collection(db, 'service_jobs'), snap => {
-      const jobs = snap.docs.map(d => d.data())
-      setStats(s => ({ ...s, jobs: snap.size, pending: jobs.filter(j => ['pending', 'assigned'].includes(j.status)).length }))
-    }))
-
-    // Products
-    unsubs.push(onSnapshot(collection(db, 'products'), snap => setStats(s => ({ ...s, products: snap.size }))))
-
-    // Invoices
-    unsubs.push(onSnapshot(collection(db, 'invoices'), snap => {
-      const revenue = snap.docs.reduce((sum, d) => sum + (d.data().amountReceived || 0), 0)
-      const unreadInvoices = snap.docs.filter(d => d.data().submittedByTechnician && !d.data().adminViewed).length
-      setStats(s => ({ ...s, revenue, unreadInvoices }))
-    }))
-
-    // Missing stock
-    unsubs.push(onSnapshot(collection(db, 'job_stock_assignment'), snap => {
-      const missing = snap.docs.reduce((sum, d) => {
-        const x = d.data()
-        const m = (x.assignedQuantity || 0) - (x.usedQuantity || 0) - (x.returnedQuantity || 0)
-        return sum + (m > 0 ? m : 0)
-      }, 0)
-      setStats(s => ({ ...s, missing }))
-    }))
-
-    return () => unsubs.forEach(u => u())
+    return () => { clearTimeout(flushTimer); unsubs.forEach(u => u()) }
   }, [])
 
   const useCounter = (target) => {

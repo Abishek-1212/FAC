@@ -1,4 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import Lottie from 'lottie-react'
+import loadingAnimation from './Assets/blueLoading.json'
 import { useAuth } from './context/AuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -12,10 +14,7 @@ import PropTypes from 'prop-types'
 function LoadingScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-aqua-50">
-      <div className="text-center">
-        <div className="w-12 h-12 border-4 border-aqua-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-aqua-700 font-medium">Loading...</p>
-      </div>
+      <Lottie animationData={loadingAnimation} loop style={{ width: 250, height: 250 }} />
     </div>
   )
 }

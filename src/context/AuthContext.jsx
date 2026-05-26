@@ -165,6 +165,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     await stopOnlineTracking(user?.uid)
+    localStorage.removeItem('theme')
     await signOut(auth)
   }
 

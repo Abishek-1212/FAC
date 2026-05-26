@@ -45,7 +45,7 @@ export default function Layout({ children, navItems, title }) {
   const hideHeader = location.pathname === '/admin/jobs' || location.pathname === '/admin/invoices' || location.pathname === '/admin/verify-stock' || location.pathname === '/admin/reports' || location.pathname === '/admin/employees' || location.pathname === '/admin/follow-up' || location.pathname === '/admin/attendance'
 
   // Check if we're in a sub-section (not root dashboard)
-  const isInSection = location.pathname !== '/admin' && location.pathname !== '/technician' && location.pathname !== '/inventory' && !location.pathname.startsWith('/admin/') && !location.pathname.startsWith('/inventory/')
+  const isInSection = location.pathname !== '/admin' && location.pathname !== '/technician' && location.pathname !== '/inventory' && location.pathname !== '/customer' && !location.pathname.startsWith('/admin/') && !location.pathname.startsWith('/inventory/')
 
   useEffect(() => {
     const h = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setProfileOpen(false) }
@@ -191,7 +191,7 @@ export default function Layout({ children, navItems, title }) {
               >
                 <div className="text-right hidden sm:block">
                   <p className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{profile?.name}</p>
-                  <p className={`text-xs font-semibold capitalize ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>{profile?.role}</p>
+                  <p className={`text-xs font-semibold capitalize ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>{profile?.role === 'customer' ? 'Viewer' : profile?.role}</p>
                 </div>
                 <div className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-black ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}>
                   {profile?.photoURL
@@ -222,7 +222,7 @@ export default function Layout({ children, navItems, title }) {
                         </div>
                         <div>
                           <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{profile?.name}</p>
-                          <p className={`text-xs font-semibold capitalize ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>{profile?.role}</p>
+                          <p className={`text-xs font-semibold capitalize ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>{profile?.role === 'customer' ? 'Viewer' : profile?.role}</p>
                         </div>
                       </div>
                     </div>
