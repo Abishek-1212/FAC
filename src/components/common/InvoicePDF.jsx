@@ -1,4 +1,5 @@
 import { forwardRef } from 'react'
+import headerLogo from '../../assets/Header_LOGO.png'
 
 // Shared A4 invoice template — used by both technician and admin
 // The "Assigned/Used/Returned" box is NOT included here
@@ -10,13 +11,16 @@ const InvoicePDF = forwardRef(function InvoicePDF({ inv }, ref) {
       style={{ fontFamily: 'Arial, sans-serif', width: '210mm', minHeight: '297mm', padding: '20mm' }}
     >
       {/* Header */}
-      <div className="text-center mb-6 border-b-2 border-gray-800 pb-4">
-        <h1 className="text-3xl font-black text-gray-900 mb-1">FRIENDS AQUA CARE</h1>
-        <p className="text-sm text-gray-700 font-semibold">Water Purifier Sales & Service</p>
-        <div className="mt-3 text-xs text-gray-600 space-y-0.5">
-          <p>📍 Office Address: Coimbatore, Tamil Nadu</p>
-          <p>📞 Phone Number: +91 9876543210</p>
-          <p>📧 Email: friendsaquacare@gmail.com</p>
+      <div className="flex items-center mb-6 border-b-2 border-gray-800 pb-4">
+        <img src={headerLogo} alt="Friends Aqua Care" style={{ height: '80px', width: 'auto' }} className="mr-4" />
+        <div>
+          <h1 className="text-3xl font-black text-gray-900 mb-1">FRIENDS AQUA CARE</h1>
+          <p className="text-sm text-gray-700 font-semibold">Water Purifier Sales & Service</p>
+          <div className="mt-1 text-xs text-gray-600 space-y-0.5">
+            <p>📍 Office Address: Coimbatore, Tamil Nadu</p>
+            <p>📞 Phone Number: +91 9876543210</p>
+            <p>📧 Email: friendsaquacare@gmail.com</p>
+          </div>
         </div>
       </div>
 

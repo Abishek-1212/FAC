@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import logo from '../../assets/logo.png'
+const CLOUDINARY_CLOUD = 'denkbc0ls'
+const CLOUDINARY_PRESET = 'Friends Aqua Care'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
@@ -25,6 +27,8 @@ export default function Layout({ children, navItems, title }) {
   const [editMode, setEditMode] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', phone: '' })
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
   const [pwStep, setPwStep] = useState('idle')
   const [pwEmail, setPwEmail] = useState('')
   const [otp, setOtp] = useState('')
@@ -119,8 +123,30 @@ export default function Layout({ children, navItems, title }) {
 
   const openEditProfile = () => {
     setProfileOpen(false)
+    setProfileViewModal(false)
     setEditForm({ name: profile?.name || '', phone: profile?.phone || '' })
     setEditMode(true)
+  }
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const data = new FormData()
+      data.append('file', file)
+      data.append('upload_preset', CLOUDINARY_PRESET)
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method: 'POST', body: data })
+      const json = await res.json()
+      if (!json.secure_url) throw new Error('Upload failed')
+      await updateDoc(doc(db, 'users', user.uid), { photoURL: json.secure_url })
+      await fetchProfile(user.uid)
+      toast.success('Profile photo updated')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -167,8 +193,11 @@ export default function Layout({ children, navItems, title }) {
                   <p className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{profile?.name}</p>
                   <p className={`text-xs font-semibold capitalize ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>{profile?.role}</p>
                 </div>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-black ring-2 ring-cyan-400 shadow-glow-cyan-sm ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}>
-                  {profile?.name?.[0]?.toUpperCase() || 'A'}
+                <div className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-black ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}>
+                  {profile?.photoURL
+                    ? <img src={profile.photoURL} alt="avatar" className="w-full h-full object-cover" />
+                    : profile?.name?.[0]?.toUpperCase() || 'A'
+                  }
                 </div>
               </button>
 
@@ -185,8 +214,11 @@ export default function Layout({ children, navItems, title }) {
                     {/* Profile Header */}
                     <div className={`p-4 border-b ${isDark ? 'border-dark-border' : 'border-light-border'}`}>
                       <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-lg shadow-glow-cyan ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}>
-                          {profile?.name?.[0]?.toUpperCase() || 'A'}
+                        <div className={`w-12 h-12 rounded-full overflow-hidden flex items-center justify-center text-white font-black text-lg shadow-glow-cyan ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}>
+                          {profile?.photoURL
+                            ? <img src={profile.photoURL} alt="avatar" className="w-full h-full object-cover" />
+                            : profile?.name?.[0]?.toUpperCase() || 'A'
+                          }
                         </div>
                         <div>
                           <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{profile?.name}</p>
@@ -290,9 +322,26 @@ export default function Layout({ children, navItems, title }) {
       {/* View Profile Modal */}
       <Modal open={profileViewModal} onClose={() => setProfileViewModal(false)} title="Profile Details">
         <div className="space-y-4">
-          <div className="flex justify-center mb-4">
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center text-white font-black text-3xl shadow-glow-cyan ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}>
-              {profile?.name?.[0]?.toUpperCase() || 'A'}
+          {/* Avatar with upload */}
+          <div className="flex justify-center mb-2">
+            <div className="relative">
+              <div className={`w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-white font-black text-3xl shadow-glow-cyan ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}>
+                {profile?.photoURL
+                  ? <img src={profile.photoURL} alt="avatar" className="w-full h-full object-cover" />
+                  : profile?.name?.[0]?.toUpperCase() || 'A'
+                }
+              </div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-cyan-500 hover:bg-cyan-600 border-2 border-white flex items-center justify-center shadow-md transition"
+              >
+                {uploading
+                  ? <svg className="w-4 h-4 text-white animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                  : <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                }
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
             </div>
           </div>
           <div className="space-y-3">
@@ -309,7 +358,7 @@ export default function Layout({ children, navItems, title }) {
             ))}
           </div>
           <button
-            onClick={() => { setProfileViewModal(false); setEditMode(true) }}
+            onClick={openEditProfile}
             className={`w-full rounded-xl py-2.5 text-sm font-bold text-white ${isDark ? 'bg-gradient-to-r from-cyan-500 to-cyan-600' : 'bg-gradient-to-r from-light-primary to-cyan-500'}`}
           >
             Edit Profile
@@ -320,34 +369,69 @@ export default function Layout({ children, navItems, title }) {
       {/* Settings Modal */}
       <Modal open={settingsModal} onClose={() => setSettingsModal(false)} title="Settings">
         <div className="space-y-4">
+          <div>
+            <p className={`text-xs font-semibold mb-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Theme</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => isDark && toggleTheme()}
+                className={`flex-1 rounded-xl py-3 px-4 text-sm font-bold transition-all border-2 flex flex-col items-center gap-2 ${
+                  !isDark
+                    ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-amber-500 shadow-lg'
+                    : isDark ? 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10' : 'bg-gray-100 text-gray-400 border-gray-200'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                </svg>
+                Light
+              </button>
+              <button
+                onClick={() => !isDark && toggleTheme()}
+                className={`flex-1 rounded-xl py-3 px-4 text-sm font-bold transition-all border-2 flex flex-col items-center gap-2 ${
+                  isDark
+                    ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-indigo-500 shadow-lg'
+                    : 'bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-200'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                </svg>
+                Dark
+              </button>
+            </div>
+          </div>
           <div className={`rounded-xl px-4 py-3 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
             <p className={`text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-500'}`}>App Version</p>
             <p className={`text-sm font-bold mt-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>v1.0.0</p>
           </div>
-          <div className={`rounded-xl px-4 py-3 flex items-center justify-between ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
-            <div>
-              <p className={`text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Theme</p>
-              <p className={`text-sm font-bold mt-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{isDark ? 'Dark Mode' : 'Light Mode'}</p>
-            </div>
-            <button
-              onClick={() => { toggleTheme(); setSettingsModal(false) }}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${isDark ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30' : 'bg-cyan-50 text-cyan-600 hover:bg-cyan-100'}`}
-            >
-              Toggle
-            </button>
-          </div>
-          <button
-            onClick={() => { setSettingsModal(false); openChangePassword() }}
-            className={`w-full rounded-xl py-2.5 text-sm font-bold text-white ${isDark ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 'bg-gradient-to-r from-blue-500 to-blue-600'}`}
-          >
-            Change Password
-          </button>
         </div>
       </Modal>
 
       {/* Edit Profile Modal */}
       <Modal open={editMode} onClose={() => setEditMode(false)} title="Edit Profile">
         <form onSubmit={handleSaveEdit} className="space-y-4">
+          {/* Avatar with upload */}
+          <div className="flex justify-center mb-2">
+            <div className="relative">
+              <div className={`w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-white font-black text-3xl shadow-glow-cyan ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}>
+                {profile?.photoURL
+                  ? <img src={profile.photoURL} alt="avatar" className="w-full h-full object-cover" />
+                  : profile?.name?.[0]?.toUpperCase() || 'A'
+                }
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-cyan-500 hover:bg-cyan-600 border-2 border-white flex items-center justify-center shadow-md transition"
+              >
+                {uploading
+                  ? <svg className="w-4 h-4 text-white animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                  : <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                }
+              </button>
+            </div>
+          </div>
           <div>
             <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Full Name</label>
             <input

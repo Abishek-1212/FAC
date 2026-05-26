@@ -462,19 +462,55 @@ export default function Invoices() {
       <Modal open={!!viewInvoice} onClose={() => setViewInvoice(null)} title="Invoice Actions" size="md">
         {viewInvoice && (
           <div className="space-y-4">
-            <div className={`rounded-xl p-6 ${isDark ? 'bg-gradient-to-r from-purple-600 to-blue-600' : 'bg-gradient-to-r from-purple-500 to-blue-500'} text-white`}>
-              <h2 className="text-2xl font-black">📄 Invoice #{viewInvoice.billNo}</h2>
-              <p className="text-white/80 text-sm mt-2">{viewInvoice.customerName}</p>
+
+            {/* Header Banner */}
+            <div className={`relative overflow-hidden rounded-2xl p-5 ${
+              isDark ? 'bg-gradient-to-br from-slate-800 to-slate-700 border border-white/10' : 'bg-gradient-to-br from-slate-900 to-slate-700'
+            }`}>
+              {/* Decorative circle */}
+              <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/5" />
+              <div className="absolute -right-2 -bottom-8 w-20 h-20 rounded-full bg-white/5" />
+
+              <div className="relative flex items-start gap-4">
+                <div className="p-2.5 rounded-xl bg-white/10 flex-shrink-0">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-0.5">Invoice</p>
+                  <h2 className="text-white text-xl font-black truncate">#{viewInvoice.billNo}</h2>
+                  <p className="text-white/70 text-sm font-medium mt-0.5 truncate">{viewInvoice.customerName}</p>
+                </div>
+                <span className={`flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
+                  (viewInvoice.paymentPending || 0) > 0
+                    ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                    : 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30'
+                }`}>
+                  {(viewInvoice.paymentPending || 0) > 0 ? 'PARTIAL' : 'PAID'}
+                </span>
+              </div>
             </div>
 
-            <div className={`rounded-xl p-4 border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-              <p className={`text-xs font-semibold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Grand Total</p>
-              <p className={`text-2xl font-black ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>₹{(viewInvoice.billAmount || 0).toLocaleString('en-IN')}</p>
+            {/* Grand Total Card */}
+            <div className={`rounded-2xl p-4 border flex items-center justify-between ${
+              isDark ? 'bg-gray-800/60 border-white/10' : 'bg-gray-50 border-gray-200'
+            }`}>
+              <div>
+                <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${
+                  isDark ? 'text-gray-400' : 'text-gray-500'
+                }`}>Grand Total</p>
+                <p className={`text-3xl font-black ${
+                  isDark ? 'text-white' : 'text-gray-900'
+                }`}>₹{(viewInvoice.billAmount || 0).toLocaleString('en-IN')}</p>
+              </div>
+
             </div>
 
-            <div className="flex gap-3">
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-3">
               <motion.button
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => {
                   generateInvoice({
                     invoiceNumber: viewInvoice.billNo,
@@ -494,30 +530,41 @@ export default function Invoices() {
                       qty: c.quantity || 0
                     })),
                   })
-                  toast.success('📥 Invoice downloaded!')
+                  toast.success('Invoice downloaded!')
                 }}
-                className={`flex-1 rounded-xl py-3.5 text-sm font-bold text-white transition ${
-                  isDark ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
+                className={`flex items-center justify-center gap-2.5 rounded-xl py-3.5 text-sm font-bold text-white transition-all ${
+                  isDark
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-lg shadow-blue-500/20'
+                    : 'bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 shadow-lg shadow-blue-500/25'
                 }`}
               >
-                📥 Download
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download
               </motion.button>
+
               <motion.button
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => {
                   const phone = viewInvoice.customerPhone.replace(/\D/g, '')
                   const message = `Hi ${viewInvoice.customerName}, your invoice for ${viewInvoice.serviceType} service is ready. Invoice #${viewInvoice.billNo}`
-                  const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-                  window.open(whatsappUrl, '_blank')
-                  toast.success('✅ Invoice shared!')
+                  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
+                  toast.success('Invoice shared!')
                 }}
-                className={`flex-1 rounded-xl py-3.5 text-sm font-bold text-white transition ${
-                  isDark ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700' : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
+                className={`flex items-center justify-center gap-2.5 rounded-xl py-3.5 text-sm font-bold text-white transition-all ${
+                  isDark
+                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 shadow-lg shadow-green-500/20'
+                    : 'bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 shadow-lg shadow-green-500/25'
                 }`}
               >
-                📤 Share
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                Share
               </motion.button>
             </div>
+
           </div>
         )}
       </Modal>

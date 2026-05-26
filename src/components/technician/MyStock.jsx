@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, query, where, updateDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, updateDoc, doc, addDoc, serverTimestamp, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
@@ -18,6 +18,9 @@ export default function MyStock() {
   const [selectedStock, setSelectedStock] = useState(null)
   const [damageQty, setDamageQty] = useState('')
   const [saving, setSaving] = useState(false)
+  const [drillModal, setDrillModal] = useState(null) // { type, productId, productName, remaining }
+  const [drillData, setDrillData] = useState([])
+  const [drillLoading, setDrillLoading] = useState(false)
 
   // Load products from inventory for real-time updates
   useEffect(() => {
@@ -91,8 +94,66 @@ export default function MyStock() {
 
   const directTotalTaken = directStock.reduce((sum, s) => sum + s.takenQuantity, 0)
   const directTotalUsed = directStock.reduce((sum, s) => sum + s.usedQuantity, 0)
-  const directTotalReturned = directStock.reduce((sum, s) => sum + s.returnedQuantity, 0)
-  const directRemaining = directStock.reduce((sum, s) => sum + (s.takenQuantity - s.usedQuantity - s.returnedQuantity - (s.damagedQuantity || 0)), 0)
+  const openDrill = async (type, stock) => {
+    setDrillModal({ type, productId: stock.productId, productName: stock.productName, remaining: stock.takenQuantity - stock.usedQuantity - (stock.returnedQuantity || 0) - (stock.damagedQuantity || 0) })
+    setDrillData([])
+    setDrillLoading(true)
+    try {
+      if (type === 'Taken') {
+        const snap = await getDocs(query(collection(db, 'stock_transactions'), where('type', '==', 'technician_take'), where('technicianId', '==', user.uid), where('productId', '==', stock.productId)))
+        const rows = snap.docs.map(d => ({ qty: d.data().quantity, ts: d.data().timestamp }))
+        rows.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0))
+        setDrillData(rows)
+      } else if (type === 'Used') {
+        const snap = await getDocs(query(collection(db, 'stock_transactions'), where('type', '==', 'job_usage'), where('productId', '==', stock.productId)))
+        let rows = snap.docs
+          .filter(d => !d.data().technicianId || d.data().technicianId === user.uid)
+          .map(d => ({ qty: d.data().usedQuantity || d.data().quantity || 0, ts: d.data().timestamp, label: d.data().customerName || d.data().jobId || '' }))
+        if (rows.length === 0) {
+          const snap2 = await getDocs(query(collection(db, 'stock_transactions'), where('type', '==', 'job_usage'), where('productName', '==', stock.productName)))
+          rows = snap2.docs
+            .filter(d => !d.data().technicianId || d.data().technicianId === user.uid)
+            .map(d => ({ qty: d.data().usedQuantity || d.data().quantity || 0, ts: d.data().timestamp, label: d.data().customerName || d.data().jobId || '' }))
+        }
+        // If still no records but usedQuantity > 0, show legacy entry
+        if (rows.length === 0 && (stock.usedQuantity || 0) > 0) {
+          rows = [{ qty: stock.usedQuantity, ts: stock.lastUpdated || stock.takenAt, legacy: true }]
+        }
+        rows.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0))
+        setDrillData(rows)
+      } else if (type === 'Damaged') {
+        const snap = await getDocs(query(collection(db, 'stock_transactions'), where('type', '==', 'damaged'), where('productId', '==', stock.productId)))
+        let rows = snap.docs
+          .filter(d => !d.data().technicianId || d.data().technicianId === user.uid)
+          .map(d => ({ qty: d.data().quantity, ts: d.data().timestamp, charge: d.data().damageCharge }))
+        if (rows.length === 0) {
+          const snap2 = await getDocs(query(collection(db, 'stock_transactions'), where('type', '==', 'damaged'), where('productName', '==', stock.productName)))
+          rows = snap2.docs
+            .filter(d => !d.data().technicianId || d.data().technicianId === user.uid)
+            .map(d => ({ qty: d.data().quantity, ts: d.data().timestamp, charge: d.data().damageCharge }))
+        }
+        // If still no records but damagedQuantity > 0, show legacy entry
+        if (rows.length === 0 && (stock.damagedQuantity || 0) > 0) {
+          rows = [{ qty: stock.damagedQuantity, ts: stock.lastUpdated || stock.takenAt, charge: stock.damageCharges || 0, legacy: true }]
+        }
+        rows.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0))
+        setDrillData(rows)
+      }
+    } catch (e) {
+      toast.error('Failed to load details')
+    } finally {
+      setDrillLoading(false)
+    }
+  }
+
+  const fmtDate = (ts) => {
+    if (!ts) return '—'
+    const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000)
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
+  const directTotalDamaged = directStock.reduce((sum, s) => sum + (s.damagedQuantity || 0), 0)
+  const directRemaining = directStock.reduce((sum, s) => sum + (s.takenQuantity - s.usedQuantity - (s.returnedQuantity || 0) - (s.damagedQuantity || 0)), 0)
   
   const jobAssignments = []
   const jobTotalAssigned = 0
@@ -103,45 +164,24 @@ export default function MyStock() {
       {/* Header */}
       <div>
         <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>My Stock</h2>
-        <p className={`text-sm mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-          Products currently assigned to you
-        </p>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 gap-3">
+      <div className="flex justify-center">
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/technician/take-stock')}
-          className={`rounded-2xl p-5 text-left shadow-sm border transition group ${
+          className={`px-5 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 ${
             isDark
-              ? 'bg-gradient-to-br from-cyan-500/10 to-cyan-600/10 border-cyan-500/30 hover:border-cyan-500/50'
-              : 'bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200 hover:border-cyan-400 hover:shadow-md'
+              ? 'bg-blue-600 text-white border border-blue-500 hover:bg-blue-700 shadow-lg shadow-blue-500/40'
+              : 'bg-blue-600 text-white border border-blue-700 hover:bg-blue-700 shadow-lg shadow-blue-400/50'
           }`}
         >
-          <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition ${
-              isDark
-                ? 'bg-cyan-500/20 group-hover:bg-cyan-500/30'
-                : 'bg-cyan-200 group-hover:bg-cyan-300'
-            }`}>
-              <svg className={`w-6 h-6 ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <p className={`font-black text-base mb-1 ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>
-                Take Stock
-              </p>
-              <p className={`text-xs ${isDark ? 'text-cyan-300/70' : 'text-cyan-600'}`}>
-                Request products from company inventory
-              </p>
-            </div>
-            <svg className={`w-5 h-5 transition ${isDark ? 'text-cyan-300' : 'text-cyan-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
+          Take Stock
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
         </motion.button>
       </div>
 
@@ -157,31 +197,34 @@ export default function MyStock() {
         </div>
         <div className="grid grid-cols-4 gap-2">
           {[
-            { label: 'Taken', value: directTotalTaken, icon: 'M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4', color: 'blue' },
-            { label: 'Used', value: directTotalUsed, icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', color: 'green' },
-            { label: 'Returned', value: directTotalReturned, icon: 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6', color: 'purple' },
-            { label: 'Remaining', value: directRemaining, icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', color: 'amber' },
+            { label: 'Taken', value: directTotalTaken, color: 'blue' },
+            { label: 'Used', value: directTotalUsed, color: 'green' },
+            { label: 'Damaged', value: directTotalDamaged, color: 'red' },
+            { label: 'Remaining', value: directRemaining, color: 'amber' },
           ].map((stat, i) => (
             <div
               key={i}
               className={`rounded-xl p-3 shadow-sm border ${
-                isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'
+                stat.color === 'blue' ? isDark ? 'bg-blue-500/20 border-blue-500/30' : 'bg-blue-100 border-blue-200' :
+                stat.color === 'green' ? isDark ? 'bg-green-500/20 border-green-500/30' : 'bg-green-100 border-green-200' :
+                stat.color === 'red' ? isDark ? 'bg-red-500/20 border-red-500/30' : 'bg-red-100 border-red-200' :
+                isDark ? 'bg-amber-500/20 border-amber-500/30' : 'bg-amber-100 border-amber-200'
               }`}
             >
-              <div className="flex items-center justify-between mb-2">
-                <svg className={`w-4 h-4 ${
-                  stat.color === 'blue' ? isDark ? 'text-blue-400' : 'text-blue-600' :
-                  stat.color === 'green' ? isDark ? 'text-green-400' : 'text-green-600' :
-                  stat.color === 'purple' ? isDark ? 'text-purple-400' : 'text-purple-600' :
-                  isDark ? 'text-amber-400' : 'text-amber-600'
-                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={stat.icon} />
-                </svg>
-              </div>
-              <p className={`text-2xl font-black mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <p className={`text-2xl font-black mb-1 ${
+                stat.color === 'blue' ? isDark ? 'text-blue-300' : 'text-blue-700' :
+                stat.color === 'green' ? isDark ? 'text-green-300' : 'text-green-700' :
+                stat.color === 'red' ? isDark ? 'text-red-300' : 'text-red-700' :
+                isDark ? 'text-amber-300' : 'text-amber-700'
+              }`}>
                 {stat.value}
               </p>
-              <p className={`text-xs font-medium ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+              <p className={`text-xs font-medium ${
+                stat.color === 'blue' ? isDark ? 'text-blue-400' : 'text-blue-600' :
+                stat.color === 'green' ? isDark ? 'text-green-400' : 'text-green-600' :
+                stat.color === 'red' ? isDark ? 'text-red-400' : 'text-red-600' :
+                isDark ? 'text-amber-400' : 'text-amber-600'
+              }`}>
                 {stat.label}
               </p>
             </div>
@@ -201,8 +244,12 @@ export default function MyStock() {
             </p>
           </div>
           <div className="grid gap-3">
-            {directStock.map(a => {
-              const remaining = a.takenQuantity - a.usedQuantity - a.returnedQuantity
+            {[...directStock].sort((a, b) => {
+              const remA = a.takenQuantity - a.usedQuantity - (a.returnedQuantity || 0) - (a.damagedQuantity || 0)
+              const remB = b.takenQuantity - b.usedQuantity - (b.returnedQuantity || 0) - (b.damagedQuantity || 0)
+              return remB - remA
+            }).map(a => {
+              const remaining = a.takenQuantity - a.usedQuantity - (a.returnedQuantity || 0) - (a.damagedQuantity || 0)
               // Get real-time product data
               const product = products.find(p => p.id === a.productId)
               const productName = product?.name || a.productName
@@ -213,65 +260,109 @@ export default function MyStock() {
                 <div
                   key={a.id}
                   className={`rounded-2xl p-4 shadow-sm border ${
-                    isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'
+                    remaining === 0
+                      ? isDark ? 'bg-gray-800/40 border-white/5' : 'bg-gray-100 border-gray-200'
+                      : isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      isDark ? 'bg-blue-500/20' : 'bg-blue-100'
+                      remaining === 0
+                        ? isDark ? 'bg-gray-500/20' : 'bg-gray-200'
+                        : isDark ? 'bg-blue-500/20' : 'bg-blue-100'
                     }`}>
-                      <svg className={`w-4 h-4 ${isDark ? 'text-blue-300' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`w-4 h-4 ${
+                        remaining === 0
+                          ? isDark ? 'text-gray-500' : 'text-gray-400'
+                          : isDark ? 'text-blue-300' : 'text-blue-600'
+                      }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <p className={`font-bold text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <p className={`font-bold text-base ${
+                        remaining === 0
+                          ? isDark ? 'text-gray-500' : 'text-gray-400'
+                          : isDark ? 'text-white' : 'text-gray-900'
+                      }`}>
                         {productName}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`text-xs font-medium ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                        <span className={`text-xs font-medium ${
+                          remaining === 0
+                            ? isDark ? 'text-gray-600' : 'text-gray-400'
+                            : isDark ? 'text-white/50' : 'text-gray-500'
+                        }`}>
                           {productCategory}
                         </span>
-                        {productPrice > 0 && (
-                          <>
-                            <span className={`text-xs ${isDark ? 'text-white/30' : 'text-gray-300'}`}>•</span>
-                            <span className={`text-xs font-semibold ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>
-                              ₹{productPrice.toLocaleString('en-IN')}/unit
-                            </span>
-                          </>
-                        )}
                       </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-4 gap-2 text-center">
-                    <div className={`rounded-xl p-3 ${isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
-                      <p className={`text-xl font-black mb-1 ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
+                    <button onClick={() => openDrill('Taken', a)} className={`rounded-xl p-2 cursor-pointer active:scale-95 transition-transform ${
+                      remaining === 0
+                        ? isDark ? 'bg-gray-500/10 hover:bg-gray-500/20' : 'bg-gray-100 hover:bg-gray-200'
+                        : isDark ? 'bg-blue-500/10 hover:bg-blue-500/20' : 'bg-blue-50 hover:bg-blue-100'
+                    }`}>
+                      <p className={`text-xl font-black mb-1 ${
+                        remaining === 0
+                          ? isDark ? 'text-gray-500' : 'text-gray-400'
+                          : isDark ? 'text-blue-300' : 'text-blue-600'
+                      }`}>
                         {a.takenQuantity}
                       </p>
-                      <p className={`text-xs font-medium ${isDark ? 'text-blue-300/70' : 'text-blue-600/70'}`}>
+                      <p className={`text-xs font-medium ${
+                        remaining === 0
+                          ? isDark ? 'text-gray-600' : 'text-gray-400'
+                          : isDark ? 'text-blue-300/70' : 'text-blue-600/70'
+                      }`}>
                         Taken
                       </p>
-                    </div>
-                    <div className={`rounded-xl p-3 ${isDark ? 'bg-green-500/10' : 'bg-green-50'}`}>
-                      <p className={`text-xl font-black mb-1 ${isDark ? 'text-green-300' : 'text-green-600'}`}>
+                    </button>
+                    <button onClick={() => openDrill('Used', a)} className={`rounded-xl p-2 cursor-pointer active:scale-95 transition-transform ${
+                      remaining === 0
+                        ? isDark ? 'bg-gray-500/10 hover:bg-gray-500/20' : 'bg-gray-100 hover:bg-gray-200'
+                        : isDark ? 'bg-green-500/10 hover:bg-green-500/20' : 'bg-green-50 hover:bg-green-100'
+                    }`}>
+                      <p className={`text-xl font-black mb-1 ${
+                        remaining === 0
+                          ? isDark ? 'text-gray-500' : 'text-gray-400'
+                          : isDark ? 'text-green-300' : 'text-green-600'
+                      }`}>
                         {a.usedQuantity}
                       </p>
-                      <p className={`text-xs font-medium ${isDark ? 'text-green-300/70' : 'text-green-600/70'}`}>
+                      <p className={`text-xs font-medium ${
+                        remaining === 0
+                          ? isDark ? 'text-gray-600' : 'text-gray-400'
+                          : isDark ? 'text-green-300/70' : 'text-green-600/70'
+                      }`}>
                         Used
                       </p>
-                    </div>
-                    <div className={`rounded-xl p-3 ${isDark ? 'bg-purple-500/10' : 'bg-purple-50'}`}>
-                      <p className={`text-xl font-black mb-1 ${isDark ? 'text-purple-300' : 'text-purple-600'}`}>
-                        {a.returnedQuantity}
+                    </button>
+                    <button onClick={() => openDrill('Damaged', a)} className={`rounded-xl p-2 cursor-pointer active:scale-95 transition-transform ${
+                      remaining === 0
+                        ? isDark ? 'bg-gray-500/10 hover:bg-gray-500/20' : 'bg-gray-100 hover:bg-gray-200'
+                        : isDark ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-red-50 hover:bg-red-100'
+                    }`}>
+                      <p className={`text-xl font-black mb-1 ${
+                        remaining === 0
+                          ? isDark ? 'text-gray-500' : 'text-gray-400'
+                          : isDark ? 'text-red-300' : 'text-red-600'
+                      }`}>
+                        {a.damagedQuantity || 0}
                       </p>
-                      <p className={`text-xs font-medium ${isDark ? 'text-purple-300/70' : 'text-purple-600/70'}`}>
-                        Returned
+                      <p className={`text-xs font-medium ${
+                        remaining === 0
+                          ? isDark ? 'text-gray-600' : 'text-gray-400'
+                          : isDark ? 'text-red-300/70' : 'text-red-600/70'
+                      }`}>
+                        Damaged
                       </p>
-                    </div>
-                    <div className={`rounded-xl p-3 ${
+                    </button>
+                    <button onClick={() => openDrill('Remaining', a)} className={`rounded-xl p-2 cursor-pointer active:scale-95 transition-transform ${
                       remaining > 0
-                        ? isDark ? 'bg-amber-500/10' : 'bg-amber-50'
-                        : isDark ? 'bg-gray-500/10' : 'bg-gray-50'
+                        ? isDark ? 'bg-amber-500/10 hover:bg-amber-500/20' : 'bg-amber-50 hover:bg-amber-100'
+                        : isDark ? 'bg-gray-500/10 hover:bg-gray-500/20' : 'bg-gray-50 hover:bg-gray-100'
                     }`}>
                       <p className={`text-xl font-black mb-1 ${
                         remaining > 0
@@ -287,7 +378,7 @@ export default function MyStock() {
                       }`}>
                         Remaining
                       </p>
-                    </div>
+                    </button>
                   </div>
                 </div>
               )
@@ -376,6 +467,89 @@ export default function MyStock() {
           </div>
         </div>
       )}
+
+      {/* Drill-down Modal */}
+      <AnimatePresence>
+        {drillModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setDrillModal(null)}>
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              onClick={e => e.stopPropagation()}
+              className={`relative w-full max-w-sm rounded-2xl shadow-xl border overflow-hidden ${
+                isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'
+              }`}
+            >
+              {/* Modal Header */}
+              <div className={`flex items-center justify-between px-4 py-3 border-b ${
+                isDark ? 'border-white/10' : 'border-gray-100'
+              }`}>
+                <div>
+                  <p className={`font-black text-base ${
+                    drillModal.type === 'Taken' ? isDark ? 'text-blue-300' : 'text-blue-600' :
+                    drillModal.type === 'Used' ? isDark ? 'text-green-300' : 'text-green-600' :
+                    drillModal.type === 'Damaged' ? isDark ? 'text-red-300' : 'text-red-600' :
+                    isDark ? 'text-amber-300' : 'text-amber-600'
+                  }`}>{drillModal.type} History</p>
+                  <p className={`text-xs mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{drillModal.productName}</p>
+                </div>
+                <button onClick={() => setDrillModal(null)} className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                  isDark ? 'bg-white/10 text-white/60 hover:bg-white/20' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                }`}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="max-h-72 overflow-y-auto px-4 py-3 space-y-2">
+                {drillModal.type === 'Remaining' ? (
+                  <div className="text-center py-6">
+                    <p className={`text-4xl font-black mb-1 ${isDark ? 'text-amber-300' : 'text-amber-600'}`}>{drillModal.remaining}</p>
+                    <p className={`text-sm ${isDark ? 'text-white/40' : 'text-gray-400'}`}>units currently with you</p>
+                  </div>
+                ) : drillLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin opacity-40" />
+                  </div>
+                ) : drillData.length === 0 ? (
+                  <p className={`text-center py-8 text-sm ${isDark ? 'text-white/30' : 'text-gray-400'}`}>No records found</p>
+                ) : (
+                  drillData.map((row, i) => (
+                    <div key={i} className={`rounded-xl px-3 py-3 ${
+                      isDark ? 'bg-white/5' : 'bg-gray-50'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-lg ${
+                          drillModal.type === 'Taken' ? isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700' :
+                          drillModal.type === 'Used' ? isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700' :
+                          isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700'
+                        }`}>
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {fmtDate(row.ts)}
+                        </div>
+                        <span className={`text-xl font-black ${
+                          drillModal.type === 'Taken' ? isDark ? 'text-blue-300' : 'text-blue-600' :
+                          drillModal.type === 'Used' ? isDark ? 'text-green-300' : 'text-green-600' :
+                          isDark ? 'text-red-300' : 'text-red-600'
+                        }`}>{row.qty} <span className="text-xs font-medium opacity-60">units</span></span>
+                      </div>
+                      {row.label && <p className={`text-xs mt-1.5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>Job: {row.label}</p>}
+                      {row.legacy && <p className={`text-xs mt-1.5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>Recorded before history tracking</p>}
+                      {row.charge > 0 && <p className={`text-xs mt-1 font-semibold ${isDark ? 'text-red-300/70' : 'text-red-500'}`}>Charge: ₹{row.charge}</p>}
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Empty State */}
       {jobAssignments.length === 0 && directStock.length === 0 && (

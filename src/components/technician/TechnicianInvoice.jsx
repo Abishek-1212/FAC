@@ -154,6 +154,17 @@ export default function TechnicianInvoice() {
           await updateDoc(doc(db, 'technician_stock', stockItem.id), {
             usedQuantity: (stockItem.usedQuantity || 0) + Number(comp.quantity)
           })
+          await addDoc(collection(db, 'stock_transactions'), {
+            type: 'job_usage',
+            jobId: selectedJob.id,
+            productId: stockItem.productId,
+            productName: stockItem.productName,
+            usedQuantity: Number(comp.quantity),
+            damagedQuantity: 0,
+            technicianId: user.uid,
+            technicianName: profile?.name || '',
+            timestamp: serverTimestamp(),
+          })
         }
       }
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { collection, onSnapshot, query, where, updateDoc, doc, serverTimestamp, addDoc, deleteDoc, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useTheme } from '../../context/ThemeContext'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 
 export default function VerifyStock() {
@@ -15,6 +15,9 @@ export default function VerifyStock() {
   const [showReturnModal, setShowReturnModal] = useState(false)
   const [selectedStock, setSelectedStock] = useState(null)
   const [returnQuantity, setReturnQuantity] = useState('')
+  const [drillModal, setDrillModal] = useState(null)
+  const [drillData, setDrillData] = useState([])
+  const [drillLoading, setDrillLoading] = useState(false)
 
   useEffect(() => {
     const unsubs = []
@@ -262,6 +265,57 @@ export default function VerifyStock() {
     }
   }
 
+  const fmtDate = (ts) => {
+    if (!ts) return '—'
+    const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000)
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
+  const openDrill = async (type, stock) => {
+    setDrillModal({ type, productName: stock.productName, productId: stock.productId, technicianId: stock.technicianId })
+    setDrillData([])
+    setDrillLoading(true)
+    try {
+      if (type === 'Taken') {
+        const snap = await getDocs(query(collection(db, 'stock_transactions'), where('type', '==', 'technician_take'), where('technicianId', '==', stock.technicianId), where('productId', '==', stock.productId)))
+        const rows = snap.docs.map(d => ({ qty: d.data().quantity, ts: d.data().timestamp }))
+        rows.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0))
+        setDrillData(rows)
+      } else if (type === 'Used') {
+        const snap = await getDocs(query(collection(db, 'stock_transactions'), where('type', '==', 'job_usage'), where('productId', '==', stock.productId)))
+        let rows = snap.docs
+          .filter(d => !d.data().technicianId || d.data().technicianId === stock.technicianId)
+          .map(d => ({ qty: d.data().usedQuantity || d.data().quantity || 0, ts: d.data().timestamp, label: d.data().jobId || '' }))
+        if (rows.length === 0 && (stock.usedQuantity || 0) > 0) {
+          rows = [{ qty: stock.usedQuantity, ts: stock.lastUpdated || stock.takenAt, legacy: true }]
+        }
+        rows.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0))
+        setDrillData(rows)
+      } else if (type === 'Returned') {
+        const snap = await getDocs(query(collection(db, 'stock_transactions'), where('productId', '==', stock.productId), where('technicianId', '==', stock.technicianId)))
+        const rows = snap.docs
+          .filter(d => ['technician_return', 'return_verified'].includes(d.data().type))
+          .map(d => ({ qty: d.data().quantity, ts: d.data().timestamp, label: d.data().type === 'return_verified' ? 'Verified' : 'Returned' }))
+        rows.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0))
+        setDrillData(rows)
+      } else if (type === 'Damaged') {
+        const snap = await getDocs(query(collection(db, 'stock_transactions'), where('type', '==', 'damaged'), where('productId', '==', stock.productId)))
+        let rows = snap.docs
+          .filter(d => !d.data().technicianId || d.data().technicianId === stock.technicianId)
+          .map(d => ({ qty: d.data().quantity, ts: d.data().timestamp, charge: d.data().damageCharge }))
+        if (rows.length === 0 && (stock.damagedQuantity || 0) > 0) {
+          rows = [{ qty: stock.damagedQuantity, ts: stock.lastUpdated || stock.takenAt, legacy: true }]
+        }
+        rows.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0))
+        setDrillData(rows)
+      }
+    } catch (e) {
+      toast.error('Failed to load details')
+    } finally {
+      setDrillLoading(false)
+    }
+  }
+
   const selectedTechData = technicians.find(t => t.id === selectedTech)
 
   return (
@@ -333,16 +387,10 @@ export default function VerifyStock() {
           }`}
         >
           <div className={`px-5 py-4 border-b ${
-            isDark
-              ? 'bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border-white/10'
-              : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-gray-100'
+            isDark ? 'border-white/10' : 'border-gray-100'
           }`}>
-            <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              📦 {selectedTechData?.name}'s Stock
-            </h3>
-            <p className={`text-xs mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-              Items currently in possession
-            </p>
+            <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Stock Overview</p>
+            <h3 className={`text-lg font-black mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedTechData?.name}</h3>
           </div>
 
           {techStock.length === 0 ? (
@@ -353,12 +401,19 @@ export default function VerifyStock() {
             </div>
           ) : (
             <div className="p-5 space-y-3">
-              {techStock.map((stock, idx) => {
+              {techStock
+                .sort((a, b) => {
+                  const pendA = (a.takenQuantity||0)-(a.usedQuantity||0)-(a.returnedQuantity||0)-(a.damagedQuantity||0)
+                  const pendB = (b.takenQuantity||0)-(b.usedQuantity||0)-(b.returnedQuantity||0)-(b.damagedQuantity||0)
+                  return pendB - pendA
+                })
+                .map((stock, idx) => {
                 const taken = stock.takenQuantity || 0
                 const used = stock.usedQuantity || 0
                 const returned = stock.returnedQuantity || 0
                 const damaged = stock.damagedQuantity || 0
                 const pending = taken - used - returned - damaged
+                const isZero = pending === 0
                 const product = products.find(p => p.id === stock.productId)
 
                 return (
@@ -368,9 +423,9 @@ export default function VerifyStock() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: idx * 0.05 }}
                     className={`rounded-xl p-4 border ${
-                      isDark
-                        ? 'bg-white/5 border-white/10'
-                        : 'bg-gray-50 border-gray-200'
+                      isZero
+                        ? isDark ? 'bg-gray-800/40 border-white/5 opacity-60' : 'bg-gray-100 border-gray-200 opacity-70'
+                        : isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
                     }`}
                   >
                     {/* Product Header */}
@@ -389,7 +444,7 @@ export default function VerifyStock() {
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
                           isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700'
                         }`}>
-                          {pending} pending
+                          {pending}
                         </span>
                       )}
                     </div>
@@ -397,32 +452,39 @@ export default function VerifyStock() {
                     {/* Stats Grid */}
                     <div className="grid grid-cols-4 gap-2 mb-3">
                       {[
-                        { label: 'Taken', value: taken, color: isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700' },
-                        { label: 'Used', value: used, color: isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-50 text-green-700' },
-                        { label: 'Returned', value: returned, color: isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-50 text-purple-700' },
-                        { label: 'Damaged', value: damaged, color: isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-50 text-red-700' },
+                        { label: 'Taken', value: taken, color: isZero ? isDark ? 'bg-gray-500/10 text-gray-500' : 'bg-gray-100 text-gray-400' : isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700', hover: isZero ? '' : isDark ? 'hover:bg-blue-500/30' : 'hover:bg-blue-100' },
+                        { label: 'Used', value: used, color: isZero ? isDark ? 'bg-gray-500/10 text-gray-500' : 'bg-gray-100 text-gray-400' : isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-50 text-green-700', hover: isZero ? '' : isDark ? 'hover:bg-green-500/30' : 'hover:bg-green-100' },
+                        { label: 'Returned', value: returned, color: isZero ? isDark ? 'bg-gray-500/10 text-gray-500' : 'bg-gray-100 text-gray-400' : isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-50 text-purple-700', hover: isZero ? '' : isDark ? 'hover:bg-purple-500/30' : 'hover:bg-purple-100' },
+                        { label: 'Damaged', value: damaged, color: isZero ? isDark ? 'bg-gray-500/10 text-gray-500' : 'bg-gray-100 text-gray-400' : isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-50 text-red-700', hover: isZero ? '' : isDark ? 'hover:bg-red-500/30' : 'hover:bg-red-100' },
                       ].map(stat => (
-                        <div key={stat.label} className={`text-center p-2 rounded-lg ${stat.color}`}>
+                        <button key={stat.label} onClick={() => openDrill(stat.label, stock)} className={`text-center p-2 rounded-lg active:scale-95 transition-transform ${stat.color} ${stat.hover}`}>
                           <p className="text-base font-black">{stat.value}</p>
                           <p className="text-[9px] font-semibold opacity-70">{stat.label}</p>
-                        </div>
+                        </button>
                       ))}
                     </div>
 
                     {/* Action Buttons */}
                     <div className="flex gap-2">
                       {pending > 0 && (
-                        <button
+                        <motion.button
+                          whileTap={{ scale: 0.97 }}
                           onClick={() => openReturnModal(stock)}
                           disabled={verifying}
-                          className={`flex-1 rounded-lg py-2 text-xs font-bold transition ${
+                          className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition shadow-sm ${
                             isDark
-                              ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
-                              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                              ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 shadow-none'
+                              : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 shadow-emerald-100'
                           } disabled:opacity-50`}
                         >
-                          ✅ Verify Return ({pending})
-                        </button>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Verify Return
+                          <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                            isDark ? 'bg-emerald-500/30 text-emerald-200' : 'bg-emerald-200 text-emerald-800'
+                          }`}>{pending}</span>
+                        </motion.button>
                       )}
                     </div>
                   </motion.div>
@@ -433,28 +495,7 @@ export default function VerifyStock() {
         </motion.div>
       )}
 
-      {/* Info Card */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className={`rounded-2xl p-4 border ${
-          isDark
-            ? 'bg-blue-500/10 border-blue-500/30'
-            : 'bg-blue-50 border-blue-200'
-        }`}
-      >
-        <p className={`text-sm font-bold mb-2 ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
-          ℹ️ How it works
-        </p>
-        <ul className={`text-xs space-y-1 ${isDark ? 'text-blue-300/80' : 'text-blue-600'}`}>
-          <li>• <span className="font-bold">Verify Return:</span> Confirms technician returned all pending items</li>
-          <li>• <span className="font-bold">Clear Pending:</span> Removes pending items (e.g., after receiving payment)</li>
-          <li>• <span className="font-bold">Clear Damaged:</span> Removes damaged items from tracking (after resolution)</li>
-        </ul>
-      </motion.div>
-
-      {/* Return Verification Modal */}
+{/* Return Verification Modal */}
       {showReturnModal && selectedStock && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <motion.div
@@ -567,6 +608,81 @@ export default function VerifyStock() {
         </div>
       )}
       </div>
+
+      {/* Drill-down Modal */}
+      <AnimatePresence>
+        {drillModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setDrillModal(null)}>
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              onClick={e => e.stopPropagation()}
+              className={`relative w-full max-w-sm rounded-2xl shadow-xl border overflow-hidden ${
+                isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'
+              }`}
+            >
+              <div className={`flex items-center justify-between px-4 py-3 border-b ${
+                isDark ? 'border-white/10' : 'border-gray-100'
+              }`}>
+                <div>
+                  <p className={`font-black text-base ${
+                    drillModal.type === 'Taken' ? isDark ? 'text-blue-300' : 'text-blue-600' :
+                    drillModal.type === 'Used' ? isDark ? 'text-green-300' : 'text-green-600' :
+                    drillModal.type === 'Returned' ? isDark ? 'text-purple-300' : 'text-purple-600' :
+                    isDark ? 'text-red-300' : 'text-red-600'
+                  }`}>{drillModal.type} History</p>
+                  <p className={`text-xs mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{drillModal.productName}</p>
+                </div>
+                <button onClick={() => setDrillModal(null)} className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                  isDark ? 'bg-white/10 text-white/60 hover:bg-white/20' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                }`}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="max-h-72 overflow-y-auto px-4 py-3 space-y-2">
+                {drillLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin opacity-40" />
+                  </div>
+                ) : drillData.length === 0 ? (
+                  <p className={`text-center py-8 text-sm ${isDark ? 'text-white/30' : 'text-gray-400'}`}>No records found</p>
+                ) : (
+                  drillData.map((row, i) => (
+                    <div key={i} className={`rounded-xl px-3 py-3 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+                      <div className="flex items-center justify-between">
+                        <div className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-lg ${
+                          drillModal.type === 'Taken' ? isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700' :
+                          drillModal.type === 'Used' ? isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700' :
+                          drillModal.type === 'Returned' ? isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700' :
+                          isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700'
+                        }`}>
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {fmtDate(row.ts)}
+                        </div>
+                        <span className={`text-xl font-black ${
+                          drillModal.type === 'Taken' ? isDark ? 'text-blue-300' : 'text-blue-600' :
+                          drillModal.type === 'Used' ? isDark ? 'text-green-300' : 'text-green-600' :
+                          drillModal.type === 'Returned' ? isDark ? 'text-purple-300' : 'text-purple-600' :
+                          isDark ? 'text-red-300' : 'text-red-600'
+                        }`}>{row.qty} <span className="text-xs font-medium opacity-60">units</span></span>
+                      </div>
+                      {row.label && <p className={`text-xs mt-1.5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>{row.label}</p>}
+                      {row.legacy && <p className={`text-xs mt-1.5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>Recorded before history tracking</p>}
+                      {row.charge > 0 && <p className={`text-xs mt-1 font-semibold ${isDark ? 'text-red-300/70' : 'text-red-500'}`}>Charge: ₹{row.charge}</p>}
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

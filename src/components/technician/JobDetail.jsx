@@ -148,6 +148,20 @@ export default function JobDetail() {
             damagedQuantity: currentDamaged + damaged,
             lastUpdated: serverTimestamp(),
           })
+
+          if (used > 0) {
+            await addDoc(collection(db, 'stock_transactions'), {
+              type: 'job_usage',
+              jobId,
+              productId: a.productId,
+              productName: a.productName,
+              usedQuantity: used,
+              damagedQuantity: damaged,
+              technicianId: job.technicianId,
+              technicianName: job.technicianName,
+              timestamp: serverTimestamp(),
+            })
+          }
         }
 
         // Auto-deduct from inventory

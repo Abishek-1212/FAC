@@ -18,6 +18,9 @@ export default function TakeStock() {
   const [saving, setSaving] = useState(false)
   const [editingItemId, setEditingItemId] = useState(null)
   const [technicianStock, setTechnicianStock] = useState([])
+  const [stockFilter, setStockFilter] = useState('today')
+  const [customRange, setCustomRange] = useState({ start: '', end: '' })
+  const [showCustomPicker, setShowCustomPicker] = useState(false)
   const MAX_PER_PRODUCT = 20
 
   // Prevent scroll on number inputs
@@ -57,6 +60,26 @@ export default function TakeStock() {
     }
     return () => { u1(); u2() }
   }, [user])
+
+  const getFilteredStock = () => {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    return technicianStock.filter(s => {
+      const dateField = s.lastTakenAt || s.takenAt
+      if (!dateField) return stockFilter === 'today' ? false : true
+      const d = dateField.toDate ? dateField.toDate() : new Date(dateField.seconds * 1000)
+      if (stockFilter === 'today') return d >= today
+      if (stockFilter === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+      if (stockFilter === 'custom' && customRange.start && customRange.end) {
+        const start = new Date(customRange.start + 'T00:00:00')
+        const end = new Date(customRange.end + 'T23:59:59')
+        return d >= start && d <= end
+      }
+      return true
+    })
+  }
+
+  const filteredStock = getFilteredStock()
 
   const addProduct = () => {
     if (!currentProduct || !currentQuantity) {
@@ -552,28 +575,6 @@ export default function TakeStock() {
         </div>
       </motion.div>
 
-      {/* Info Card */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className={`rounded-2xl p-4 border ${
-          isDark
-            ? 'bg-blue-500/10 border-blue-500/30'
-            : 'bg-blue-50 border-blue-200'
-        }`}
-      >
-        <p className={`text-sm font-bold mb-2 ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
-          ℹ️ Important Information
-        </p>
-        <ul className={`text-xs space-y-1 ${isDark ? 'text-blue-300/80' : 'text-blue-600'}`}>
-          <li>• Maximum limit: <span className="font-bold">20 units per product</span></li>
-          <li>• Take products from company inventory for your jobs</li>
-          <li>• Track what you use and mark damaged items</li>
-          <li>• Admin will be notified if stock is running low</li>
-        </ul>
-      </motion.div>
-
       {/* Stock Taken History */}
       {technicianStock.length > 0 && (
         <motion.div
@@ -585,134 +586,131 @@ export default function TakeStock() {
           }`}
         >
           <div className={`px-5 py-4 border-b ${
-            isDark
-              ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-white/10'
-              : 'bg-gradient-to-r from-green-50 to-emerald-50 border-gray-100'
+            isDark ? 'border-white/10' : 'border-gray-100'
           }`}>
-            <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              📦 Stock You've Taken
-            </h3>
-            <p className={`text-xs mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-              Products currently in your possession
-            </p>
+            <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-400'}`}>History</p>
+            <h3 className={`text-lg font-black mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>Stock You've Taken</h3>
           </div>
 
-          <div className="p-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {technicianStock.map((stock, idx) => {
-                const remaining = stock.takenQuantity - stock.usedQuantity - stock.returnedQuantity - (stock.damagedQuantity || 0)
-                // Get real-time product data
-                const product = products.find(p => p.id === stock.productId)
-                const productName = product?.name || stock.productName
-                const productPrice = product?.price || stock.productPrice || 0
-                const productCategory = product?.category || 'Uncategorized'
-                
-                return (
-                  <motion.div
-                    key={stock.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: idx * 0.05 }}
-                    className={`rounded-xl p-4 border ${
-                      isDark
-                        ? 'bg-white/5 border-white/10'
-                        : 'bg-gray-50 border-gray-200'
+          {/* Filter Pills */}
+          <div className="px-5 pt-4 flex gap-2 flex-wrap">
+            {[['today', 'Today'], ['month', 'This Month'], ['custom', 'Custom']].map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => { setStockFilter(key); if (key === 'custom') setShowCustomPicker(true) }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                  stockFilter === key
+                    ? isDark ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white'
+                    : isDark ? 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10' : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Custom Date Picker */}
+          {stockFilter === 'custom' && showCustomPicker && (
+            <div className={`mx-5 mt-3 p-3 rounded-xl border ${
+              isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+            }`}>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                  <label className={`text-xs font-bold block mb-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>From</label>
+                  <input type="date" value={customRange.start} max={customRange.end || undefined}
+                    onChange={e => setCustomRange(p => ({ ...p, start: e.target.value }))}
+                    className={`w-full px-2 py-1.5 rounded-lg text-xs border focus:outline-none ${
+                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
                     }`}
-                  >
-                    {/* Product Name & Status */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1 min-w-0">
-                        <h4 className={`font-bold text-sm truncate ${
-                          isDark ? 'text-white' : 'text-gray-900'
-                        }`}>
-                          {productName}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-xs font-medium ${
-                            isDark ? 'text-white/50' : 'text-gray-500'
-                          }`}>
-                            {productCategory}
-                          </span>
-                          {productPrice > 0 && (
-                            <>
-                              <span className={`text-xs ${isDark ? 'text-white/30' : 'text-gray-300'}`}>•</span>
-                              <span className={`text-xs font-semibold ${
-                                isDark ? 'text-cyan-400' : 'text-cyan-600'
-                              }`}>
-                                ₹{productPrice.toLocaleString('en-IN')}/unit
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap ml-2 ${
-                        remaining > 0
-                          ? isDark
-                            ? 'bg-amber-500/20 text-amber-300'
-                            : 'bg-amber-100 text-amber-700'
-                          : isDark
-                          ? 'bg-green-500/20 text-green-300'
-                          : 'bg-green-100 text-green-700'
-                      }`}>
-                        {remaining > 0 ? `${remaining} left` : 'All used'}
-                      </span>
-                    </div>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {[
-                        { 
-                          label: 'Taken', 
-                          value: stock.takenQuantity, 
-                          color: isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'
-                        },
-                        { 
-                          label: 'Used', 
-                          value: stock.usedQuantity, 
-                          color: isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-50 text-green-700'
-                        },
-                        { 
-                          label: 'Returned', 
-                          value: stock.returnedQuantity, 
-                          color: isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-50 text-purple-700'
-                        },
-                        { 
-                          label: 'Damaged', 
-                          value: stock.damagedQuantity || 0, 
-                          color: isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-50 text-red-700'
-                        },
-                      ].map(stat => (
-                        <div
-                          key={stat.label}
-                          className={`text-center p-2 rounded-lg ${stat.color}`}
-                        >
-                          <p className="text-base font-black">{stat.value}</p>
-                          <p className="text-[9px] font-semibold opacity-70">{stat.label}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Timestamp */}
-                    {stock.takenAt && (
-                      <div className={`mt-3 pt-3 border-t text-xs ${
-                        isDark ? 'border-white/10 text-white/40' : 'border-gray-200 text-gray-500'
-                      }`}>
-                        <p className="font-semibold">
-                          📅 Taken: {stock.takenAt.toDate ? 
-                            new Date(stock.takenAt.toDate()).toLocaleDateString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            }) : 'N/A'}
-                        </p>
-                      </div>
-                    )}
-                  </motion.div>
-                )
-              })}
+                  />
+                </div>
+                <div>
+                  <label className={`text-xs font-bold block mb-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>To</label>
+                  <input type="date" value={customRange.end} min={customRange.start || undefined}
+                    onChange={e => setCustomRange(p => ({ ...p, end: e.target.value }))}
+                    className={`w-full px-2 py-1.5 rounded-lg text-xs border focus:outline-none ${
+                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+                    }`}
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => { if (customRange.start && customRange.end) setShowCustomPicker(false) }}
+                disabled={!customRange.start || !customRange.end}
+                className={`w-full py-1.5 rounded-lg text-xs font-bold transition disabled:opacity-50 ${
+                  isDark ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white'
+                }`}
+              >
+                Apply
+              </button>
             </div>
+          )}
+
+          {/* Applied custom range banner */}
+          {stockFilter === 'custom' && !showCustomPicker && customRange.start && customRange.end && (
+            <div className={`mx-5 mt-3 flex items-center justify-between px-3 py-2 rounded-xl border ${
+              isDark ? 'bg-white/5 border-white/10' : 'bg-blue-50 border-blue-200'
+            }`}>
+              <p className={`text-xs font-bold ${isDark ? 'text-white/70' : 'text-blue-700'}`}>
+                {(() => {
+                  const fmt = (str) => {
+                    const d = new Date(str + 'T00:00:00')
+                    const ord = (n) => { const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v-20)%10] || s[v] || s[0]) }
+                    return `${ord(d.getDate())} ${d.toLocaleString('en-IN', { month: 'long' })} ${d.getFullYear()}`
+                  }
+                  return `${fmt(customRange.start)} — ${fmt(customRange.end)}`
+                })()}
+              </p>
+              <button
+                onClick={() => { setCustomRange({ start: '', end: '' }); setShowCustomPicker(true) }}
+                className={`text-xs font-bold px-2 py-1 rounded-lg ml-3 ${
+                  isDark ? 'bg-white/10 text-white/60 hover:bg-white/20' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                }`}
+              >
+                ✕ Clear
+              </button>
+            </div>
+          )}
+
+          <div className="p-5">
+            {filteredStock.length === 0 ? (
+              <p className={`text-center text-sm py-6 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>No stock taken in this period</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {filteredStock.map((stock, idx) => {
+                  const product = products.find(p => p.id === stock.productId)
+                  const productName = product?.name || stock.productName
+                  const productCategory = product?.category || 'Uncategorized'
+                  return (
+                    <motion.div
+                      key={stock.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className={`rounded-xl p-4 border ${
+                        isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <h4 className={`font-bold text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{productName}</h4>
+                          <span className={`text-xs font-medium ${isDark ? 'text-white/50' : 'text-gray-500'}`}>{productCategory}</span>
+                        </div>
+                      </div>
+                      <div className={`text-center p-2 rounded-lg ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
+                        <p className="text-base font-black">{stock.takenQuantity}</p>
+                        <p className="text-[9px] font-semibold opacity-70">Taken</p>
+                      </div>
+                      {(stock.lastTakenAt || stock.takenAt) && (
+                        <div className={`mt-3 pt-3 border-t text-xs ${isDark ? 'border-white/10 text-white/40' : 'border-gray-200 text-gray-500'}`}>
+                          <p className="font-semibold">📅 {(() => { const ts = stock.lastTakenAt || stock.takenAt; const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000); return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) })()}</p>
+                        </div>
+                      )}
+                    </motion.div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </motion.div>
       )}

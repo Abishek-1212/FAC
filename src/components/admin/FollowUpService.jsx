@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import peopleImg from '../../Assets/people.png'
 import { collection, onSnapshot, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { motion } from 'framer-motion'
@@ -157,17 +158,13 @@ export default function FollowUpService() {
               { 
                 key: 'broadcast', 
                 label: 'Broadcast to All', 
-                desc: 'Technicians can accept',
                 svg: (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.961 1.961 0 01-2.773 1.753M5.007 7.307a1 1 0 00-.145-.742m11.667 0a1 1 0 00-.145.742M15.485 17.834a1.961 1.961 0 01-2.773-1.753V5.882m2.773-2.129A9.971 9.971 0 0112 2c-5.523 0-10 4.477-10 10s4.477 10 10 10 10-4.477 10-10c0-1.821-.487-3.53-1.34-5.011" />
-                  </svg>
+                  <img src={peopleImg} alt="broadcast" className="w-6 h-6 object-contain" />
                 )
               },
               { 
                 key: 'direct', 
                 label: 'Direct Assignment', 
-                desc: 'Assign to specific tech',
                 svg: (
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -186,10 +183,7 @@ export default function FollowUpService() {
                 }`}
               >
                 {mode.svg}
-                <div className="text-center">
-                  <div className="font-bold text-sm">{mode.label}</div>
-                  <div className="text-xs opacity-70">{mode.desc}</div>
-                </div>
+                <div className="font-bold text-sm text-center">{mode.label}</div>
               </button>
             ))}
           </div>

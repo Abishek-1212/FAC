@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import logoUrl from '../assets/Header_LOGO.png'
 
 // Utility: Format currency with Rs. prefix (better PDF compatibility)
 const formatCurrency = (value) => {
@@ -61,10 +62,20 @@ export const generateInvoice = (invoiceData) => {
   // ========================================================
   // HEADER SECTION (Logo, Typography & Branch Metadata)
   // ========================================================
+  // Logo top-left
+  try {
+    doc.setDrawColor(255, 255, 255)
+    doc.setLineWidth(1.5)
+    doc.rect(margin - 1, currentY - 1, 14, 14, 'S')
+    doc.addImage(logoUrl, 'PNG', margin, currentY, 12, 12)
+  } catch (e) {
+    // logo failed to load, skip
+  }
+
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(24)
   doc.setTextColor(...primaryColor)
-  doc.text('Friends Aqua Care', margin, currentY + 4)
+  doc.text('Friends Aqua Care', margin + 15, currentY + 8)
 
   // Business Contacts & Identifiers (Right side, aligned with Branch Office)
   doc.setFont('helvetica', 'normal')
@@ -98,7 +109,7 @@ export const generateInvoice = (invoiceData) => {
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8.5)
 
-  currentY += 10
+  currentY += 18
   doc.setFont('helvetica', 'oblique')
   doc.setFontSize(10)
   doc.setTextColor(...lightMuted)
