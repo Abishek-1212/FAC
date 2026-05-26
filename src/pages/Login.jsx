@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
+import headerLogo from '../assets/Header_LOGO.png'
 
 export default function Login() {
   const { loginWithEmail, loginWithGoogle, isProfileComplete, ROLE_ROUTES } = useAuth()
@@ -65,7 +66,7 @@ export default function Login() {
       >
         <div className="text-center mb-8">
           <div className="w-32 h-32 mx-auto mb-4">
-            <img src="/src/assets/Header_LOGO.png" alt="Friends Aqua Care" className="w-full h-full object-contain" />
+            <img src={headerLogo} alt="Friends Aqua Care" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-black text-gray-800" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.05em' }}>Friends Aqua Care</h1>
           <p className="text-gray-500 text-sm mt-1">Service Management System</p>

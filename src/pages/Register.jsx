@@ -5,6 +5,7 @@ import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
+import headerLogo from '../assets/Header_LOGO.png'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
@@ -128,7 +129,7 @@ export default function Register() {
         {/* header */}
         <div className="text-center mb-6">
           <div className="w-32 h-32 mx-auto mb-3">
-            <img src="/src/assets/Header_LOGO.png" alt="Friends Aqua Care" className="w-full h-full object-contain" />
+            <img src={headerLogo} alt="Friends Aqua Care" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-black text-gray-800">Create Account</h1>
           <p className="text-gray-500 text-sm mt-1">Friends Aqua Care</p>
