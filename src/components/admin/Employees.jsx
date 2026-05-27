@@ -165,7 +165,7 @@ export default function Employees() {
         <h1 className={`text-xl font-bold ${
           isDark ? 'text-white' : 'text-gray-900'
         }`}>
-          EMPLOYEES
+          MY TECHNICIANS
         </h1>
       </div>
 

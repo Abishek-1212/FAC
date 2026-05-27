@@ -9,6 +9,7 @@ export default function TechnicianAttendance() {
   const { isDark } = useTheme()
   const navigate = useNavigate()
   const [technicians, setTechnicians] = useState([])
+  const [todayAttendance, setTodayAttendance] = useState([])
   const [selectedTechnicianId, setSelectedTechnicianId] = useState('')
   const [selectedTechnicianName, setSelectedTechnicianName] = useState('')
   const [attendanceRecords, setAttendanceRecords] = useState([])
@@ -16,6 +17,7 @@ export default function TechnicianAttendance() {
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' })
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [activeView, setActiveView] = useState(null) // 'total', 'present', 'absent'
 
   // Load technicians
   useEffect(() => {
@@ -24,6 +26,27 @@ export default function TechnicianAttendance() {
       (snap) => {
         const techList = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         setTechnicians(techList)
+      }
+    )
+    return unsubscribe
+  }, [])
+
+  // Load today's attendance for all technicians
+  useEffect(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const unsubscribe = onSnapshot(
+      collection(db, 'attendance'),
+      (snap) => {
+        const records = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        const todayRecords = records.filter(record => {
+          const recordDate = record.date?.toDate ? record.date.toDate() : new Date(record.date?.seconds * 1000 || 0)
+          return recordDate >= today && recordDate < tomorrow
+        })
+        setTodayAttendance(todayRecords)
       }
     )
     return unsubscribe
@@ -136,6 +159,79 @@ export default function TechnicianAttendance() {
   const filteredRecords = filterRecordsByDateRange()
   const groupedRecords = groupRecordsByDate(filteredRecords)
 
+  // Calculate stats
+  const totalTechnicians = technicians.length
+  const presentTechnicians = technicians.filter(tech => 
+    todayAttendance.some(att => att.technicianId === tech.id)
+  )
+  const absentTechnicians = technicians.filter(tech => 
+    !todayAttendance.some(att => att.technicianId === tech.id)
+  )
+
+  const StatCard = ({ title, count, icon, color, isActive, onClick }) => (
+    <motion.button
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      style={{
+        width: '110px',
+        height: '85px',
+        borderRadius: '14px',
+        padding: '12px',
+        boxShadow: isActive 
+          ? color === 'blue'
+            ? '0 4px 12px rgba(59, 130, 246, 0.25)'
+            : color === 'green'
+            ? '0 4px 12px rgba(34, 197, 94, 0.25)'
+            : '0 4px 12px rgba(239, 68, 68, 0.25)'
+          : '0 2px 8px rgba(0, 0, 0, 0.08)'
+      }}
+      className={`transition-all duration-300 ${
+        isActive
+          ? color === 'blue' 
+            ? isDark ? 'bg-blue-500/20 border-2 border-blue-500/50' : 'bg-blue-50 border-2 border-blue-300'
+            : color === 'green'
+            ? isDark ? 'bg-green-500/20 border-2 border-green-500/50' : 'bg-green-50 border-2 border-green-300'
+            : isDark ? 'bg-red-500/20 border-2 border-red-500/50' : 'bg-red-50 border-2 border-red-300'
+          : color === 'blue'
+          ? isDark ? 'bg-blue-500/10 hover:bg-blue-500/15 border border-blue-500/20' : 'bg-blue-50 hover:bg-blue-100 border border-blue-200'
+          : color === 'green'
+          ? isDark ? 'bg-green-500/10 hover:bg-green-500/15 border border-green-500/20' : 'bg-green-50 hover:bg-green-100 border border-green-200'
+          : isDark ? 'bg-red-500/10 hover:bg-red-500/15 border border-red-500/20' : 'bg-red-50 hover:bg-red-100 border border-red-200'
+      }`}
+    >
+      <div className="flex flex-col items-center justify-center h-full">
+        {/* Count */}
+        <p 
+          style={{ fontSize: '28px', fontWeight: 700, lineHeight: 1 }}
+          className={`mb-2 ${
+            color === 'blue' 
+              ? isDark ? 'text-blue-400' : 'text-blue-600'
+              : color === 'green'
+              ? isDark ? 'text-green-400' : 'text-green-600'
+              : isDark ? 'text-red-400' : 'text-red-600'
+          }`}
+        >
+          {count}
+        </p>
+        
+        {/* Label */}
+        <p 
+          style={{ fontSize: '13px', fontWeight: 500, lineHeight: 1.2 }}
+          className={`text-center ${
+            color === 'blue'
+              ? isDark ? 'text-blue-300/80' : 'text-blue-700'
+              : color === 'green'
+              ? isDark ? 'text-green-300/80' : 'text-green-700'
+              : isDark ? 'text-red-300/80' : 'text-red-700'
+          }`}
+        >
+          {title}
+        </p>
+      </div>
+    </motion.button>
+  )
+
   return (
     <div className="space-y-5 pb-20 md:pb-0">
       {/* Pill-shaped Header with Back Button */}
@@ -155,6 +251,247 @@ export default function TechnicianAttendance() {
           </div>
         </div>
       </div>
+
+      {/* Stats Cards - Professional Dashboard Style */}
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+        <StatCard
+          title="Total Technicians"
+          count={totalTechnicians}
+          color="blue"
+          isActive={activeView === 'total'}
+          onClick={() => setActiveView(activeView === 'total' ? null : 'total')}
+        />
+        <StatCard
+          title="Present"
+          count={presentTechnicians.length}
+          color="green"
+          isActive={activeView === 'present'}
+          onClick={() => setActiveView(activeView === 'present' ? null : 'present')}
+        />
+        <StatCard
+          title="Absent"
+          count={absentTechnicians.length}
+          color="red"
+          isActive={activeView === 'absent'}
+          onClick={() => setActiveView(activeView === 'absent' ? null : 'absent')}
+        />
+      </div>
+
+      {/* Expanded View Below Stats */}
+      <AnimatePresence mode="wait">
+        {activeView === 'total' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className={`rounded-2xl p-5 border ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">👥</span>
+                <h3 className={`text-lg font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  All Technicians ({totalTechnicians})
+                </h3>
+              </div>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {technicians.length > 0 ? technicians.map((tech, i) => (
+                  <motion.div
+                    key={tech.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                    className={`rounded-xl p-4 border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                          isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {tech.name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {tech.name}
+                          </p>
+                          <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                            {tech.phone}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${
+                        todayAttendance.some(att => att.technicianId === tech.id)
+                          ? isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700'
+                          : isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {todayAttendance.some(att => att.technicianId === tech.id) ? 'Present' : 'Absent'}
+                      </span>
+                    </div>
+                  </motion.div>
+                )) : (
+                  <div className="text-center py-8">
+                    <p className="text-4xl mb-3">👥</p>
+                    <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                      No technicians found
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeView === 'present' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className={`rounded-2xl p-5 border ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">✅</span>
+                <h3 className={`text-lg font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  Present Today ({presentTechnicians.length})
+                </h3>
+              </div>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {presentTechnicians.length > 0 ? presentTechnicians.map((tech, i) => {
+                  const attendance = todayAttendance.find(att => att.technicianId === tech.id)
+                  return (
+                    <motion.div
+                      key={tech.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.03 }}
+                      className={`rounded-xl p-4 border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                          isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700'
+                        }`}>
+                          {tech.name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <p className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {tech.name}
+                          </p>
+                          <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                            {tech.phone}
+                          </p>
+                        </div>
+                        {attendance?.checkOut ? (
+                          <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${
+                            isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            Complete
+                          </span>
+                        ) : (
+                          <span className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 ${
+                            isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className={`rounded-lg p-3 ${isDark ? 'bg-white/5' : 'bg-white'}`}>
+                          <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                            Check In
+                          </p>
+                          <p className={`text-sm font-black ${isDark ? 'text-green-300' : 'text-green-700'}`}>
+                            {formatTime(attendance?.checkIn)}
+                          </p>
+                        </div>
+                        <div className={`rounded-lg p-3 ${isDark ? 'bg-white/5' : 'bg-white'}`}>
+                          <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                            Check Out
+                          </p>
+                          <p className={`text-sm font-black ${isDark ? 'text-purple-300' : 'text-purple-700'}`}>
+                            {formatTime(attendance?.checkOut)}
+                          </p>
+                        </div>
+                        <div className={`rounded-lg p-3 ${isDark ? 'bg-white/5' : 'bg-white'}`}>
+                          <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                            Duration
+                          </p>
+                          <p className={`text-sm font-black ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+                            {calculateWorkingHours(attendance?.checkIn, attendance?.checkOut)}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )
+                }) : (
+                  <div className="text-center py-8">
+                    <p className="text-4xl mb-3">🎉</p>
+                    <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                      No technicians present today
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeView === 'absent' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className={`rounded-2xl p-5 border ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">❌</span>
+                <h3 className={`text-lg font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  Absent Today ({absentTechnicians.length})
+                </h3>
+              </div>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {absentTechnicians.length > 0 ? absentTechnicians.map((tech, i) => (
+                  <motion.div
+                    key={tech.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                    className={`rounded-xl p-4 border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                        isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {tech.name?.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {tech.name}
+                        </p>
+                        <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                          {tech.phone}
+                        </p>
+                      </div>
+                      <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${
+                        isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700'
+                      }`}>
+                        Not Marked
+                      </span>
+                    </div>
+                  </motion.div>
+                )) : (
+                  <div className="text-center py-8">
+                    <p className="text-4xl mb-3">🎉</p>
+                    <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                      All technicians are present!
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Technician Selector */}
       <div className={`rounded-2xl p-5 border ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'}`}>
@@ -406,6 +743,8 @@ export default function TechnicianAttendance() {
           </div>
         </AnimatePresence>
       )}
+
+
     </div>
   )
 }
