@@ -159,6 +159,31 @@ export default function TechnicianAttendance() {
   const filteredRecords = filterRecordsByDateRange()
   const groupedRecords = groupRecordsByDate(filteredRecords)
 
+  // Calculate present/absent days for week/month/custom
+  const getTechnicianPeriodStats = () => {
+    if (!selectedTechnicianId || periodFilter === 'today') return null
+    const { start, end } = getDateRange()
+    // Count all calendar days (Mon-Sun) in range
+    const totalDays = []
+    const cursor = new Date(start)
+    while (cursor < end) {
+      totalDays.push(new Date(cursor))
+      cursor.setDate(cursor.getDate() + 1)
+    }
+    // Unique present dates from records
+    const presentDates = new Set(
+      filteredRecords.map(r => {
+        const d = r.date?.toDate ? r.date.toDate() : new Date(r.date?.seconds * 1000 || 0)
+        return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+      })
+    )
+    const present = presentDates.size
+    const absent = totalDays.length - present
+    return { present, absent, total: totalDays.length }
+  }
+
+  const periodStats = getTechnicianPeriodStats()
+
   // Calculate stats
   const totalTechnicians = technicians.length
   const presentTechnicians = technicians.filter(tech => 
@@ -174,8 +199,6 @@ export default function TechnicianAttendance() {
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       style={{
-        width: '110px',
-        height: '85px',
         borderRadius: '14px',
         padding: '12px',
         boxShadow: isActive 
@@ -200,7 +223,7 @@ export default function TechnicianAttendance() {
           : isDark ? 'bg-red-500/10 hover:bg-red-500/15 border border-red-500/20' : 'bg-red-50 hover:bg-red-100 border border-red-200'
       }`}
     >
-      <div className="flex flex-col items-center justify-center h-full">
+      <div className="flex flex-col items-center justify-center py-4 gap-1 w-full">
         {/* Count */}
         <p 
           style={{ fontSize: '28px', fontWeight: 700, lineHeight: 1 }}
@@ -247,13 +270,13 @@ export default function TechnicianAttendance() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </motion.button>
-            <h2 className={`text-lg font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Technician Attendance</h2>
+            <h2 className={`text-lg font-black tracking-wide ${isDark ? 'text-white' : 'text-gray-900'}`}>TECHNICIAN ATTENDANCE</h2>
           </div>
         </div>
       </div>
 
       {/* Stats Cards - Professional Dashboard Style */}
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="grid grid-cols-3 gap-3">
         <StatCard
           title="Total Technicians"
           count={totalTechnicians}
@@ -596,6 +619,36 @@ export default function TechnicianAttendance() {
           >
             Apply Range
           </motion.button>
+        </motion.div>
+      )}
+
+      {/* Present / Absent Summary Cards for week/month/custom */}
+      {periodStats && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-2 gap-3"
+        >
+          <div className={`rounded-2xl p-4 border flex flex-col items-center justify-center gap-1 ${
+            isDark ? 'bg-green-500/10 border-green-500/30' : 'bg-green-50 border-green-200'
+          }`}>
+            <p className={`text-3xl font-black ${
+              isDark ? 'text-green-400' : 'text-green-600'
+            }`}>{periodStats.present}</p>
+            <p className={`text-xs font-bold ${
+              isDark ? 'text-green-300/80' : 'text-green-700'
+            }`}>Days Present</p>
+          </div>
+          <div className={`rounded-2xl p-4 border flex flex-col items-center justify-center gap-1 ${
+            isDark ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'
+          }`}>
+            <p className={`text-3xl font-black ${
+              isDark ? 'text-red-400' : 'text-red-600'
+            }`}>{periodStats.absent}</p>
+            <p className={`text-xs font-bold ${
+              isDark ? 'text-red-300/80' : 'text-red-700'
+            }`}>Days Absent</p>
+          </div>
         </motion.div>
       )}
 

@@ -142,23 +142,17 @@ export default function ManageStock({ searchQuery = '' }) {
     grouped[cat].push(p)
   })
 
-  // Sort each category's products: low stock first (ascending), then by quantity ascending
+  // Sort each category's products: low stock first, then alphabetically
   Object.keys(grouped).forEach(cat => {
     grouped[cat].sort((a, b) => {
       const invA = invProducts.find(inv => inv.productName === a.name || inv.name === a.name)
       const invB = invProducts.find(inv => inv.productName === b.name || inv.name === b.name)
       const qtyA = invA?.quantity || 0
       const qtyB = invB?.quantity || 0
-      const thresholdA = a.threshold || 0
-      const thresholdB = b.threshold || 0
-      
-      // First, sort by low stock status (low stock first)
-      const isLowA = qtyA <= thresholdA && thresholdA > 0
-      const isLowB = qtyB <= thresholdB && thresholdB > 0
+      const isLowA = (a.threshold || 0) > 0 && qtyA <= (a.threshold || 0)
+      const isLowB = (b.threshold || 0) > 0 && qtyB <= (b.threshold || 0)
       if (isLowA !== isLowB) return isLowA ? -1 : 1
-      
-      // Then sort by quantity ascending (lowest first)
-      return qtyA - qtyB
+      return a.name.localeCompare(b.name)
     })
   })
 
