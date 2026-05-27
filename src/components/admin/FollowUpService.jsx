@@ -113,7 +113,7 @@ export default function FollowUpService() {
   const formatAddress = (addr) => {
     if (!addr) return '—'
     if (typeof addr === 'string') return addr
-    return [addr.houseNo, addr.building, addr.street, addr.landmark, addr.city, addr.state, addr.pinCode]
+    return [addr.houseNo, addr.building, addr.street, addr.city, addr.state, addr.pinCode, addr.landmark]
       .filter(Boolean).join(', ')
   }
 

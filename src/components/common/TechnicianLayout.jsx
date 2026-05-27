@@ -105,19 +105,22 @@ export default function TechnicianLayout({ children }) {
     <div className={`h-screen flex flex-col overflow-hidden ${isDark ? 'bg-dark-bg' : 'bg-slate-50'}`}>
 
       {/* Sticky Header */}
-      <header className={`flex-shrink-0 sticky top-0 z-50 border-b ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'} shadow-sm`}>
+      <header
+        className={`flex-shrink-0 sticky top-0 z-50 ${isDark ? 'bg-gradient-to-r from-cyan-800 to-blue-800' : 'bg-gradient-to-r from-cyan-400 to-blue-400'}`}
+        style={{ boxShadow: isDark ? '0 8px 40px 8px rgba(0,0,0,0.6)' : '0 8px 40px 8px rgba(103,232,249,0.6)' }}
+      >
         <div className="px-4 h-16 flex items-center justify-between max-w-2xl mx-auto w-full">
           {showBackButton ? (
             <>
               <button
                 onClick={() => navigate('/technician')}
-                className={`p-1.5 rounded-lg transition ${isDark ? 'hover:bg-white/10 text-white' : 'hover:bg-gray-100 text-gray-900'}`}
+                className="p-1.5 rounded-lg transition hover:bg-white/20 text-white"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <span className={`font-black text-base tracking-tight absolute left-1/2 -translate-x-1/2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <span className="font-black text-lg tracking-tight absolute left-1/2 -translate-x-1/2 text-white" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>
                 Friends Aqua Care
               </span>
               <div className="w-9" />
@@ -131,7 +134,7 @@ export default function TechnicianLayout({ children }) {
                 animate={{ y: [0, -5, 0] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
               />
-              <span className={`font-black text-base tracking-tight absolute left-1/2 -translate-x-1/2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <span className="font-black text-lg tracking-tight absolute left-1/2 -translate-x-1/2 text-white" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>
                 Friends Aqua Care
               </span>
               <button

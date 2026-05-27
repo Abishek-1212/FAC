@@ -31,14 +31,14 @@ function formatDate(ts) {
 }
 
 function formatAddress(address) {
-  if (typeof address === 'string') return address
-  if (!address) return ''
+  if (!address) return []
+  if (typeof address === 'string') return [address]
   return [
     address.houseNo,
     address.building,
     address.street,
-    address.area,
     address.city,
+    address.state,
     address.pinCode,
     address.landmark
   ].filter(Boolean)
@@ -208,8 +208,8 @@ export default function TechnicianHome() {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-2"
       >
-        <p className={`text-sm font-medium ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Welcome back,</p>
-        <h2 className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{profile?.name || 'Technician'}</h2>
+        <p className={`text-sm font-medium ${isDark ? 'text-cyan-300/70' : 'text-cyan-700'}`}>Welcome back,</p>
+        <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-cyan-900'}`}>{profile?.name || 'Technician'}</h2>
       </motion.div>
 
       {/* Navigation Cards */}
@@ -374,11 +374,11 @@ export default function TechnicianHome() {
                   : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
                 : statusFilter === key
                 ? isDark
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-blue-600 text-white'
+                  ? 'bg-blue-500 text-white shadow-[3px_3px_12px_rgba(59,130,246,0.5)]'
+                  : 'bg-blue-600 text-white shadow-[3px_3px_12px_rgba(59,130,246,0.35)]'
                 : isDark
-                ? 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                ? 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 shadow-[3px_3px_10px_rgba(0,0,0,0.3)]'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 shadow-[3px_3px_10px_rgba(0,0,0,0.1)]'
             }`}
           >
             {label}
@@ -443,8 +443,8 @@ export default function TechnicianHome() {
                   onClick={() => navigate(`/technician/job/${job.id}`)}
                   className={`rounded-2xl p-3 md:p-4 shadow-sm border cursor-pointer transition-all group ${
                     isDark
-                      ? 'bg-dark-card border-white/10 hover:border-cyan-500/30 hover:bg-white/5'
-                      : 'bg-white border-gray-100 hover:shadow-md hover:border-aqua-200'
+                      ? 'bg-dark-card border-white/10 hover:border-cyan-500/30 hover:bg-white/5 shadow-[4px_4px_18px_rgba(0,0,0,0.45)]'
+                      : 'bg-white border-gray-100 hover:shadow-md hover:border-aqua-200 shadow-[4px_4px_18px_rgba(0,0,0,0.12)]'
                   }`}
                 >
                   {/* Top Row: Customer Name & Status */}

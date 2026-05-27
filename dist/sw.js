@@ -32,11 +32,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
 
+  const url = new URL(event.request.url)
+  if (!url.protocol.startsWith('http')) return
+
   // Network-first strategy for dynamic content
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (!response || response.status !== 200 || response.type === 'error') {
+        if (!response || response.status !== 200 || response.type !== 'basic') {
           return response
         }
 

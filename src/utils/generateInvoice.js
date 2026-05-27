@@ -169,8 +169,8 @@ export const generateInvoice = (invoiceData) => {
         customerAddress.houseNo,
         customerAddress.building,
         customerAddress.street,
-        customerAddress.area,
         customerAddress.city,
+        customerAddress.state,
         customerAddress.pinCode,
         customerAddress.landmark
       ].filter(Boolean).map((val, idx, arr) => idx === arr.length - 1 ? val : val + ',')

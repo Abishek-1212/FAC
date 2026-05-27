@@ -153,7 +153,7 @@ export default function Layout({ children, navItems, title }) {
     <div className={`h-screen flex flex-col overflow-hidden ${isDark ? 'bg-dark-bg' : 'bg-light-bg'}`}>
       {/* Top Nav - Hidden for specific pages */}
       {!hideHeader && (
-        <header className={`shrink-0 sticky top-0 z-50 backdrop-blur-xl border-b ${isDark ? 'bg-dark-card/90 border-dark-border' : 'bg-white/90 border-light-border'}`}>
+        <header className={`shrink-0 sticky top-0 z-50 ${isDark ? 'bg-gradient-to-r from-cyan-800 to-blue-800' : 'bg-gradient-to-r from-cyan-400 to-blue-400'}`} style={{ boxShadow: isDark ? '0 8px 40px 8px rgba(0,0,0,0.6)' : '0 8px 40px 8px rgba(103,232,249,0.6)' }}>
         <div className="max-w-full mx-auto px-6 h-16 grid grid-cols-3 items-center">
           {/* Left: Logo + back button */}
           <div className="flex items-center gap-3">
@@ -178,7 +178,7 @@ export default function Layout({ children, navItems, title }) {
 
           {/* Center: Company name only */}
           <div className="flex items-center justify-center whitespace-nowrap">
-            <span className={`font-black text-lg tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Friends Aqua Care</span>
+            <span className="font-black text-lg tracking-tight text-white" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>Friends Aqua Care</span>
           </div>
 
           {/* Right: profile */}
@@ -190,8 +190,8 @@ export default function Layout({ children, navItems, title }) {
                 className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`}
               >
                 <div className="text-right hidden sm:block">
-                  <p className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{profile?.name}</p>
-                  <p className={`text-xs font-semibold capitalize ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>{profile?.role === 'customer' ? 'Viewer' : profile?.role}</p>
+                  <p className="text-sm font-bold leading-tight text-white">{profile?.name}</p>
+                  <p className="text-xs font-semibold capitalize text-white/70">{profile?.role === 'customer' ? 'Viewer' : profile?.role}</p>
                 </div>
                 <div className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-black ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}>
                   {profile?.photoURL

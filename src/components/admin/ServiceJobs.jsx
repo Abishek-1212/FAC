@@ -442,8 +442,8 @@ export default function ServiceJobs() {
             <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>How to Assign?</p>
             <div className="flex gap-2 mb-3">
               {[
-                { key: 'broadcast', label: 'Broadcast to All', icon: '📢', desc: 'Technicians can accept' },
-                { key: 'direct', label: 'Direct Assignment', icon: '👤', desc: 'Assign to specific tech' }
+                { key: 'broadcast', label: 'Broadcast to All', icon: '📢'},
+                { key: 'direct', label: 'Direct Assignment', icon: '👤' }
               ].map(mode => (
                 <button
                   key={mode.key}

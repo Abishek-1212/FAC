@@ -331,7 +331,22 @@ export default function JobDetail() {
               </div>
             </div>
           </div>
-          <span className={`text-xs font-bold px-4 py-2 rounded-lg border whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 ml-3 ${
+          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+          <button
+            onClick={() => {
+              const a = job.customerAddress
+              const query = typeof a === 'string'
+                ? a
+                : [a?.street, a?.city, a?.pinCode].filter(Boolean).join(', ')
+              window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank')
+            }}
+            className="w-9 h-9 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 transition-all"
+          >
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+          </button>
+          <span className={`text-xs font-bold px-4 py-2 rounded-lg border whitespace-nowrap flex items-center gap-1.5 ${
             isCompleted ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
             isInProgress ? 'bg-violet-100 text-violet-700 border-violet-200' :
             'bg-amber-100 text-amber-700 border-amber-200'
@@ -359,6 +374,7 @@ export default function JobDetail() {
               </>
             )}
           </span>
+          </div>
         </div>
 
         {job.serviceType && (
@@ -533,13 +549,7 @@ export default function JobDetail() {
 
 
       
-      {assignments.length === 0 && !isInProgress && !isCompleted && (
-        <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
-          <p className="text-4xl mb-2">📦</p>
-          <p className="text-gray-500 text-sm font-medium">No stock assigned to this job yet</p>
-          <p className="text-gray-400 text-xs mt-1">You can start work using your personal stock or wait for admin to assign stock</p>
-        </div>
-      )}
+
 
       {/* Completion Modal */}
       <Modal open={completionModal} onClose={() => setCompletionModal(false)} title="Complete Job" size="lg">

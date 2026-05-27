@@ -36,6 +36,7 @@ export function formatAddressCompact(addressObj) {
   if (addressObj.building) parts.push(addressObj.building)
   if (addressObj.street) parts.push(addressObj.street)
   if (addressObj.city) parts.push(addressObj.city)
+  if (addressObj.state) parts.push(addressObj.state)
   if (addressObj.pinCode) parts.push(addressObj.pinCode)
   if (addressObj.landmark) parts.push(addressObj.landmark)
 

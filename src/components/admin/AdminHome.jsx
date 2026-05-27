@@ -171,7 +171,7 @@ export default function AdminHome() {
               key={action.label}
               onClick={() => navigate(action.path)}
               className={`relative overflow-hidden rounded-xl p-4 text-left border transition-all ${
-                isDark ? 'bg-dark-card border-white/10 hover:border-white/20' : 'bg-white border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
+                isDark ? 'bg-dark-card border-blue-500/35 hover:border-blue-500/50 shadow-[4px_0px_16px_rgba(0,0,0,0.4)]' : 'bg-white border-blue-200 hover:border-blue-300 shadow-[4px_0px_16px_rgba(0,0,0,0.1)]'
               }`}
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 hover:opacity-5 transition-opacity`} />
@@ -194,7 +194,7 @@ export default function AdminHome() {
             <div
               key={card.key}
               className={`relative overflow-hidden rounded-2xl p-5 border group cursor-pointer ${
-                isDark ? 'glass-strong border-white/5' : 'bg-white border-sky-200 shadow-md hover:shadow-xl'
+                isDark ? 'glass-strong border-white/5 shadow-[4px_0px_16px_rgba(0,0,0,0.4)]' : 'bg-white border-sky-200 shadow-[4px_0px_16px_rgba(0,0,0,0.1)]'
               }`}
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-5 transition-opacity`} />
