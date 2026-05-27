@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -95,12 +95,21 @@ export default function TechnicianAttendance() {
   }
 
   const getDateRange = () => {
-    if (periodFilter === 'custom' && customDateRange.start && customDateRange.end) {
-      return { 
-        start: new Date(customDateRange.start), 
-        end: new Date(new Date(customDateRange.end).getTime() + 86400000)
+    if (periodFilter === 'custom') {
+      if (customDateRange.start && customDateRange.end) {
+        return { 
+          start: new Date(customDateRange.start), 
+          end: new Date(new Date(customDateRange.end).getTime() + 86400000)
+        }
       }
+      // Fallback to today if dates not set
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      return { start: today, end: tomorrow }
     }
+    
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const tomorrow = new Date(today)
@@ -126,26 +135,6 @@ export default function TechnicianAttendance() {
     }
   }
 
-  const filterRecordsByDateRange = () => {
-    const { start, end } = getDateRange()
-    return attendanceRecords.filter(record => {
-      const recordDate = record.date?.toDate ? record.date.toDate() : new Date(record.date?.seconds * 1000 || 0)
-      return recordDate >= start && recordDate < end
-    })
-  }
-
-  const groupRecordsByDate = (recordsList) => {
-    const grouped = {}
-    recordsList.forEach(record => {
-      const dateKey = formatDateOnly(record.date)
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = []
-      }
-      grouped[dateKey].push(record)
-    })
-    return grouped
-  }
-
   const calculateWorkingHours = (checkIn, checkOut) => {
     if (!checkIn || !checkOut) return '—'
     const checkInDate = checkIn.toDate ? checkIn.toDate() : new Date(checkIn.seconds * 1000)
@@ -156,21 +145,40 @@ export default function TechnicianAttendance() {
     return `${hours}h ${minutes}m`
   }
 
-  const filteredRecords = filterRecordsByDateRange()
-  const groupedRecords = groupRecordsByDate(filteredRecords)
+  const filteredRecords = React.useMemo(() => {
+    const { start, end } = getDateRange()
+    return attendanceRecords.filter(record => {
+      const recordDate = record.date?.toDate ? record.date.toDate() : new Date(record.date?.seconds * 1000 || 0)
+      return recordDate >= start && recordDate < end
+    })
+  }, [attendanceRecords, periodFilter, customDateRange.start, customDateRange.end])
+
+  const groupedRecords = React.useMemo(() => {
+    const grouped = {}
+    filteredRecords.forEach(record => {
+      const dateKey = formatDateOnly(record.date)
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = []
+      }
+      grouped[dateKey].push(record)
+    })
+    return grouped
+  }, [filteredRecords])
 
   // Calculate present/absent days for week/month/custom
-  const getTechnicianPeriodStats = () => {
+  const periodStats = React.useMemo(() => {
     if (!selectedTechnicianId || periodFilter === 'today') return null
+    // Don't calculate stats if custom range is selected but dates aren't set
+    if (periodFilter === 'custom' && (!customDateRange.start || !customDateRange.end)) return null
+    
     const { start, end } = getDateRange()
-    // Count all calendar days (Mon-Sun) in range
     const totalDays = []
     const cursor = new Date(start)
     while (cursor < end) {
       totalDays.push(new Date(cursor))
       cursor.setDate(cursor.getDate() + 1)
     }
-    // Unique present dates from records
+    
     const presentDates = new Set(
       filteredRecords.map(r => {
         const d = r.date?.toDate ? r.date.toDate() : new Date(r.date?.seconds * 1000 || 0)
@@ -180,9 +188,7 @@ export default function TechnicianAttendance() {
     const present = presentDates.size
     const absent = totalDays.length - present
     return { present, absent, total: totalDays.length }
-  }
-
-  const periodStats = getTechnicianPeriodStats()
+  }, [selectedTechnicianId, periodFilter, customDateRange.start, customDateRange.end, filteredRecords])
 
   // Calculate stats
   const totalTechnicians = technicians.length
@@ -543,7 +549,7 @@ export default function TechnicianAttendance() {
 
       {/* Period Filter Pills - Only show when technician is selected */}
       {selectedTechnicianId && (
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide relative z-10">
           {[
             { key: 'today', label: 'Today' },
             { key: 'week', label: 'This Week' },
@@ -553,11 +559,18 @@ export default function TechnicianAttendance() {
             <motion.button
               key={key}
               whileTap={{ scale: 0.95 }}
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
                 setPeriodFilter(key)
-                if (key === 'custom') setShowDatePicker(true)
+                if (key === 'custom') {
+                  setShowDatePicker(true)
+                } else {
+                  setShowDatePicker(false)
+                  setCustomDateRange({ start: '', end: '' })
+                }
               }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 periodFilter === key
                   ? isDark
                     ? 'bg-blue-500 text-white'
@@ -611,7 +624,8 @@ export default function TechnicianAttendance() {
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setShowDatePicker(false)}
-            className={`w-full py-2 rounded-lg text-sm font-bold transition-all ${
+            disabled={!customDateRange.start || !customDateRange.end}
+            className={`w-full py-2 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
               isDark
                 ? 'bg-blue-500 text-white hover:bg-blue-600'
                 : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -627,8 +641,18 @@ export default function TechnicianAttendance() {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 gap-3"
+          className="grid grid-cols-3 gap-3"
         >
+          <div className={`rounded-2xl p-4 border flex flex-col items-center justify-center gap-1 ${
+            isDark ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'
+          }`}>
+            <p className={`text-3xl font-black ${
+              isDark ? 'text-blue-400' : 'text-blue-600'
+            }`}>{periodStats.total}</p>
+            <p className={`text-xs font-bold ${
+              isDark ? 'text-blue-300/80' : 'text-blue-700'
+            }`}>Total Days</p>
+          </div>
           <div className={`rounded-2xl p-4 border flex flex-col items-center justify-center gap-1 ${
             isDark ? 'bg-green-500/10 border-green-500/30' : 'bg-green-50 border-green-200'
           }`}>
