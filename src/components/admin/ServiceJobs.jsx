@@ -71,6 +71,23 @@ export default function ServiceJobs() {
     return () => { u1(); u2() }
   }, [])
 
+  useEffect(() => {
+    const prefillData = sessionStorage.getItem('prefillFollowUpData')
+    if (prefillData) {
+      const data = JSON.parse(prefillData)
+      setForm(prev => ({
+        ...prev,
+        customerName: data.customerName || '',
+        customerPhone: data.customerPhone || '',
+        customerAddress: data.customerAddress || { houseNo: '', building: '', street: '', city: '', state: 'Tamil Nadu', pinCode: '', landmark: '' },
+        problemDescription: data.problemDescription || '',
+        serviceType: data.serviceType || 'Service / Repair'
+      }))
+      setModal(true)
+      sessionStorage.removeItem('prefillFollowUpData')
+    }
+  }, [])
+
   const handlePreview = (e) => {
     e.preventDefault()
     if (form.customerPhone.length !== 10) {
@@ -90,6 +107,9 @@ export default function ServiceJobs() {
         status: form.assignmentMode === 'direct' && form.technicianId ? 'assigned' : 'pending',
         assignmentMode: form.assignmentMode,
         createdAt: serverTimestamp(),
+        isFollowUp: form.isFollowUp || false,
+        originalJobId: form.originalJobId || null,
+        movedToFollowUp: form.movedToFollowUp || false,
       }
       
       const jobRef = await addDoc(collection(db, 'service_jobs'), jobData)

@@ -203,6 +203,17 @@ export default function JobDetail() {
         usedPersonalStock: !hasAssignedStock,
       })
 
+      // If this is a follow-up job, update the original job with next service date
+      if (job.isFollowUp && job.originalJobId) {
+        const nextDate = new Date()
+        nextDate.setMonth(nextDate.getMonth() + 3)
+        
+        await updateDoc(doc(db, 'service_jobs', job.originalJobId), {
+          nextServiceDate: nextDate,
+          movedToFollowUp: true,
+        })
+      }
+
       // Create completion report
       const reportData = {
         jobId,

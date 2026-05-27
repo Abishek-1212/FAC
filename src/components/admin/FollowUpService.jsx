@@ -16,6 +16,47 @@ export default function FollowUpService() {
   const [assignmentMode, setAssignmentMode] = useState('broadcast')
   const [selectedTechnician, setSelectedTechnician] = useState('')
   const [creating, setCreating] = useState(false)
+  const [dateRange, setDateRange] = useState('today')
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
+
+  const getDateRange = () => {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    if (dateRange === 'today') {
+      return { start: today, end: tomorrow }
+    } else if (dateRange === 'week') {
+      const weekStart = new Date(today)
+      weekStart.setDate(today.getDate() - today.getDay())
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekEnd.getDate() + 7)
+      return { start: weekStart, end: weekEnd }
+    } else if (dateRange === 'custom' && customStartDate && customEndDate) {
+      return {
+        start: new Date(customStartDate),
+        end: new Date(new Date(customEndDate).setDate(new Date(customEndDate).getDate() + 1))
+      }
+    } else if (dateRange === 'all') {
+      return null
+    }
+    return null
+  }
+
+  const filterJobsByDateRange = (jobs) => {
+    const range = getDateRange()
+    if (!range) return jobs
+
+    return jobs.filter(job => {
+      const completedDate = job.completedAt?.toDate ? job.completedAt.toDate() : new Date((job.completedAt?.seconds || job.createdAt?.seconds || 0) * 1000)
+      const nextDueDate = new Date(completedDate)
+      nextDueDate.setMonth(nextDueDate.getMonth() + 3)
+      
+      return nextDueDate >= range.start && nextDueDate < range.end
+    })
+  }
 
   useEffect(() => {
     // Load completed jobs that haven't been moved to follow-up yet
@@ -24,9 +65,20 @@ export default function FollowUpService() {
       snap => {
         const jobs = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
-          .filter(job => !job.movedToFollowUp)
-          .sort((a, b) => (a.completedAt?.seconds || a.createdAt?.seconds || 0) - (b.completedAt?.seconds || b.createdAt?.seconds || 0))
-        setCompletedJobs(jobs)
+          .filter(job => !job.movedToFollowUp && !job.isFollowUp && job.serviceType === 'New Fitting')
+          .sort((a, b) => (b.completedAt?.seconds || b.createdAt?.seconds || 0) - (a.completedAt?.seconds || a.createdAt?.seconds || 0))
+        
+        let filtered = jobs
+        if (dateRange === 'all') {
+          filtered = jobs.sort((a, b) => {
+            const dateA = a.nextServiceDate?.seconds || (a.completedAt?.seconds || a.createdAt?.seconds || 0)
+            const dateB = b.nextServiceDate?.seconds || (b.completedAt?.seconds || b.createdAt?.seconds || 0)
+            return dateA - dateB
+          })
+        } else if (dateRange === 'today' || dateRange === 'week' || dateRange === 'custom') {
+          filtered = filterJobsByDateRange(jobs)
+        }
+        setCompletedJobs(filtered)
       }
     )
 
@@ -37,7 +89,7 @@ export default function FollowUpService() {
     )
 
     return () => { u1(); u2() }
-  }, [])
+  }, [dateRange, customStartDate, customEndDate])
 
   const handleScheduleFollowUp = async () => {
     if (!selectedJob) {
@@ -45,78 +97,20 @@ export default function FollowUpService() {
       return
     }
 
-    if (assignmentMode === 'direct' && !selectedTechnician) {
-      toast.error('Please select a technician')
-      return
-    }
+    // Store selected job in sessionStorage to prefill the form
+    sessionStorage.setItem('prefillFollowUpData', JSON.stringify({
+      customerName: selectedJob.customerName,
+      customerPhone: selectedJob.customerPhone,
+      customerAddress: selectedJob.customerAddress,
+      problemDescription: 'Follow-up service after 3 months',
+      serviceType: 'Service / Repair',
+      originalJobId: selectedJob.id,
+      isFollowUp: true,
+      movedToFollowUp: true
+    }))
 
-    setCreating(true)
-    try {
-      const techName = assignmentMode === 'direct' 
-        ? technicians.find(t => t.id === selectedTechnician)?.name || ''
-        : ''
-
-      const followUpJobData = {
-        customerName: selectedJob.customerName,
-        customerPhone: selectedJob.customerPhone,
-        customerAddress: formatAddress(selectedJob.customerAddress),
-        problemDescription: 'Follow-up service after 3 months',
-        serviceType: 'Service / Repair',
-        technicianId: assignmentMode === 'direct' ? selectedTechnician : '',
-        technicianName: techName,
-        priority: 'normal',
-        assignmentMode: assignmentMode,
-        status: assignmentMode === 'direct' && selectedTechnician ? 'assigned' : 'pending',
-        originalJobId: selectedJob.id,
-        isFollowUp: true,
-        createdAt: serverTimestamp(),
-      }
-
-      const jobRef = await addDoc(collection(db, 'service_jobs'), followUpJobData)
-
-      // Mark original job as moved to follow-up and set next service date
-      const originalJobRef = doc(db, 'service_jobs', selectedJob.id)
-      await updateDoc(originalJobRef, { 
-        movedToFollowUp: true,
-        nextServiceDate: jobRef.createdAt || serverTimestamp()
-      })
-
-      // If broadcast mode, create notifications for all technicians
-      if (assignmentMode === 'broadcast') {
-        const notificationData = {
-          jobId: jobRef.id,
-          customerName: selectedJob.customerName,
-          customerPhone: selectedJob.customerPhone,
-          customerAddress: formatAddress(selectedJob.customerAddress),
-          serviceType: 'Service / Repair',
-          priority: 'normal',
-          createdAt: serverTimestamp(),
-          read: false,
-          type: 'job_available'
-        }
-
-        for (const tech of technicians) {
-          await addDoc(collection(db, 'users', tech.id, 'notifications'), notificationData)
-        }
-      }
-
-      toast.success(assignmentMode === 'broadcast' 
-        ? '✅ Follow-up service scheduled! Technicians notified.' 
-        : '✅ Follow-up service assigned!'
-      )
-      
-      // Reset form
-      setSelectedJob(null)
-      setAssignmentMode('broadcast')
-      setSelectedTechnician('')
-      
-      // Navigate to service jobs page
-      setTimeout(() => navigate('/admin/jobs'), 1500)
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setCreating(false)
-    }
+    // Navigate to service jobs page
+    navigate('/admin/jobs')
   }
 
   const formatAddress = (addr) => {
@@ -126,9 +120,12 @@ export default function FollowUpService() {
       .filter(Boolean).join(', ')
   }
 
-  const formatDate = (ts) => {
+  const formatDate = (ts, monthsToAdd = 0) => {
     if (!ts) return '—'
     const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000)
+    if (monthsToAdd > 0) {
+      d.setMonth(d.getMonth() + monthsToAdd)
+    }
     return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
@@ -158,63 +155,103 @@ export default function FollowUpService() {
       </div>
 
       <div className="space-y-5 mt-5">
-        {/* Assignment Mode Selection */}
+        {/* Date Range Filter */}
         <div className={`rounded-2xl p-5 border ${
           isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
         }`}>
-          <div className="flex gap-3">
-            {[
-              { 
-                key: 'broadcast', 
-                label: 'Broadcast to All', 
-                svg: (
-                  <img src={peopleImg} alt="broadcast" className="w-6 h-6 object-contain" />
-                )
-              },
-              { 
-                key: 'direct', 
-                label: 'Direct Assignment', 
-                svg: (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                )
-              }
-            ].map(mode => (
-              <button
-                key={mode.key}
-                type="button"
-                onClick={() => setAssignmentMode(mode.key)}
-                className={`flex-1 py-4 px-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
-                  assignmentMode === mode.key
-                    ? isDark ? 'border-purple-500 bg-purple-500/20 text-purple-400' : 'border-purple-500 bg-purple-50 text-purple-700'
-                    : isDark ? 'border-white/10 bg-white/5 text-white/60 hover:border-white/20' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
-                }`}
-              >
-                {mode.svg}
-                <div className="font-bold text-sm text-center">{mode.label}</div>
-              </button>
-            ))}
+          <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide mb-3">
+            <div className="flex gap-2 flex-shrink-0">
+              {[
+                { key: 'today', label: 'Today' },
+                { key: 'week', label: 'This Week' },
+                { key: 'all', label: 'All Services' },
+                { key: 'custom', label: 'Custom Range' }
+              ].map(range => (
+                <button
+                  key={range.key}
+                  type="button"
+                  onClick={() => setDateRange(range.key)}
+                  className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
+                    dateRange === range.key
+                      ? isDark ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500' : 'bg-cyan-50 text-cyan-700 border border-cyan-500'
+                      : isDark ? 'bg-white/5 text-white/60 border border-white/10 hover:border-white/20' : 'bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Technician Selection (if direct mode) */}
-          {assignmentMode === 'direct' && (
-            <div className="mt-4">
-              <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
-                Select Technician *
-              </label>
-              <select
-                value={selectedTechnician}
-                onChange={e => setSelectedTechnician(e.target.value)}
-                className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                  isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-                }`}
-              >
-                <option value="" className="text-gray-900">Select Technician</option>
-                {technicians.map(t => (
-                  <option key={t.id} value={t.id} className="text-gray-900">{t.name}</option>
-                ))}
-              </select>
+          {/* Display selected date range */}
+          {dateRange !== 'custom' && (
+            <div className={`text-xs font-semibold px-3 py-2 rounded-lg ${
+              isDark ? 'bg-white/5 text-white/60' : 'bg-gray-50 text-gray-600'
+            }`}>
+              {dateRange === 'today' && `Today: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+              {dateRange === 'week' && (() => {
+                const now = new Date()
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+                const weekStart = new Date(today)
+                weekStart.setDate(today.getDate() - today.getDay())
+                const weekEnd = new Date(weekStart)
+                weekEnd.setDate(weekEnd.getDate() + 6)
+                return `${weekStart.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} to ${weekEnd.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+              })()}
+              {dateRange === 'all' && 'All Services (sorted by due date)'}
+            </div>
+          )}
+
+          {/* Custom Date Range Inputs */}
+          {dateRange === 'custom' && (
+            <div className="space-y-2">
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className={`text-xs font-semibold block mb-1 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                    Start
+                  </label>
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={e => setCustomStartDate(e.target.value)}
+                    className={`w-full border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
+                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+                    }`}
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className={`text-xs font-semibold block mb-1 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                    End
+                  </label>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={e => setCustomEndDate(e.target.value)}
+                    className={`w-full border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
+                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+                    }`}
+                  />
+                </div>
+              </div>
+              {customStartDate && customEndDate && (
+                <div className={`text-xs font-semibold px-3 py-2 rounded-lg flex items-center justify-between ${
+                  isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-50 text-cyan-700'
+                }`}>
+                  <span>
+                    {new Date(customStartDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} to {new Date(customEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomStartDate('')
+                      setCustomEndDate('')
+                    }}
+                    className={`ml-3 text-lg font-semibold transition-all hover:opacity-70`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -275,9 +312,19 @@ export default function FollowUpService() {
                         }`}>
                           👷 {job.technicianName || 'N/A'}
                         </span>
-                        <span className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-                          📅 {formatDate(job.completedAt || job.createdAt)}
-                        </span>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-lg whitespace-nowrap flex items-center gap-1 ${
+                            isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-50 text-orange-700'
+                          }`}>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {formatDate(job.completedAt || job.createdAt, 3)}
+                          </span>
+                          <span className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                            Fitted: {formatDate(job.completedAt || job.createdAt)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -301,13 +348,16 @@ export default function FollowUpService() {
             animate={{ opacity: 1, y: 0 }}
             onClick={handleScheduleFollowUp}
             disabled={creating}
-            className={`w-full rounded-xl py-4 text-sm font-bold text-white disabled:opacity-60 transition-all ${
+            className={`w-full rounded-xl py-4 text-sm font-bold text-white disabled:opacity-60 transition-all flex items-center justify-center gap-2 ${
               isDark
                 ? 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg shadow-purple-500/20'
                 : 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-md'
             }`}
           >
-            {creating ? '⏳ Creating Follow-up Service...' : '📅 Schedule Follow-up Service'}
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            {creating ? 'Creating Follow-up Service...' : 'Schedule Follow-up Service'}
           </motion.button>
         )}
       </div>
