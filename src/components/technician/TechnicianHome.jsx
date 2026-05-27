@@ -37,6 +37,7 @@ function formatAddress(address) {
     address.houseNo,
     address.building,
     address.street,
+    address.locality,
     address.city,
     address.state,
     address.pinCode,

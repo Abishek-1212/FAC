@@ -169,6 +169,7 @@ export const generateInvoice = (invoiceData) => {
         customerAddress.houseNo,
         customerAddress.building,
         customerAddress.street,
+        customerAddress.locality,
         customerAddress.city,
         customerAddress.state,
         customerAddress.pinCode,

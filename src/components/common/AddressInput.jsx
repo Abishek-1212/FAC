@@ -4,11 +4,12 @@ export default function AddressInput({ value, onChange, disabled = false }) {
   const { isDark } = useTheme()
 
   const fields = [
-    { key: 'houseNo', label: 'House No', placeholder: 'Example: 12/4', required: false },
+    { key: 'houseNo', label: 'House No / Door Number', placeholder: 'Example: 331', required: false },
     { key: 'building', label: 'Building Name', placeholder: 'Example: ABC Apartments', required: true },
     { key: 'street', label: 'Street Name', placeholder: 'Example: Gandhi Street', required: true },
-    { key: 'city', label: 'City', placeholder: 'Example: Chennai', required: true },
-    { key: 'pinCode', label: 'PIN Code', placeholder: 'Example: 620019', required: true },
+    { key: 'locality', label: 'Locality', placeholder: 'Example: Athipalayam', required: true },
+    { key: 'city', label: 'City', placeholder: 'Example: Coimbatore', required: true },
+    { key: 'pinCode', label: 'PIN Code', placeholder: 'Example: 641110', required: true },
     { key: 'landmark', label: 'Landmark', placeholder: 'Example: Near Bus Stand', required: false },
   ]
 

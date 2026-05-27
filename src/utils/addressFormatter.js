@@ -10,6 +10,7 @@ export function formatAddressForDisplay(addressObj) {
   if (addressObj.houseNo) parts.push(addressObj.houseNo)
   if (addressObj.building) parts.push(addressObj.building)
   if (addressObj.street) parts.push(addressObj.street)
+  if (addressObj.locality) parts.push(addressObj.locality)
   if (addressObj.city) parts.push(addressObj.city)
   if (addressObj.state) parts.push(addressObj.state)
   
@@ -35,6 +36,7 @@ export function formatAddressCompact(addressObj) {
   if (addressObj.houseNo) parts.push(addressObj.houseNo)
   if (addressObj.building) parts.push(addressObj.building)
   if (addressObj.street) parts.push(addressObj.street)
+  if (addressObj.locality) parts.push(addressObj.locality)
   if (addressObj.city) parts.push(addressObj.city)
   if (addressObj.state) parts.push(addressObj.state)
   if (addressObj.pinCode) parts.push(addressObj.pinCode)

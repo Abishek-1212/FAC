@@ -322,12 +322,15 @@ export default function JobDetail() {
                 </svg>
                 <span className="font-medium">{job.customerPhone}</span>
               </div>
-              <div className="flex items-start gap-2 text-sm text-gray-700">
+            <div className="flex items-start gap-2 text-sm text-gray-700">
                 <svg className="w-4 h-4 flex-shrink-0 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span className="font-medium flex-1 whitespace-pre-line">{formatAddressForDisplay(job.customerAddress)}</span>
+                <div className="flex-1">
+                  <p className="font-bold mb-1">Address:</p>
+                  <div className="whitespace-pre-line text-left font-medium ml-2">{formatAddressForDisplay(job.customerAddress)}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -337,7 +340,7 @@ export default function JobDetail() {
               const a = job.customerAddress
               const query = typeof a === 'string'
                 ? a
-                : [a?.street, a?.city, a?.pinCode].filter(Boolean).join(', ')
+                : [a?.street, a?.locality, a?.city, a?.state, a?.pinCode].filter(Boolean).join(', ')
               window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank')
             }}
             className="w-9 h-9 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 transition-all"

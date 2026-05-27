@@ -139,9 +139,9 @@ export default function ServiceJobs() {
     })
   }
 
-  const active = jobs.filter(j => ['pending', 'assigned', 'in_progress'].includes(j.status))
-  const completed = jobs.filter(j => ['completed', 'verified'].includes(j.status))
-  const total = jobs
+  const active = jobs.filter(j => ['pending', 'assigned', 'in_progress'].includes(j.status) && !j.movedToFollowUp)
+  const completed = jobs.filter(j => ['completed', 'verified'].includes(j.status) && !j.movedToFollowUp)
+  const total = jobs.filter(j => !j.movedToFollowUp)
 
   const todayActive = filterJobsByToday(active)
   const todayCompleted = filterJobsByToday(completed)
@@ -319,6 +319,13 @@ export default function ServiceJobs() {
                         }`}>
                           {job.technicianName ? `👷 ${job.technicianName}` : '⚠️ Unassigned'}
                         </span>
+                        {job.nextServiceDate && (
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-lg whitespace-nowrap ${
+                            isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-50 text-purple-600'
+                          }`}>
+                            📅 Next: {formatDate(job.nextServiceDate)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </motion.div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import peopleImg from '../../Assets/people.png'
-import { collection, onSnapshot, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore'
+import { collection, onSnapshot, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { motion } from 'framer-motion'
 import { useTheme } from '../../context/ThemeContext'
@@ -18,11 +18,13 @@ export default function FollowUpService() {
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
-    // Load completed jobs
+    // Load completed jobs that haven't been moved to follow-up yet
     const u1 = onSnapshot(
       query(collection(db, 'service_jobs'), where('status', 'in', ['completed', 'verified'])),
       snap => {
-        const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        const jobs = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(job => !job.movedToFollowUp)
           .sort((a, b) => (a.completedAt?.seconds || a.createdAt?.seconds || 0) - (b.completedAt?.seconds || b.createdAt?.seconds || 0))
         setCompletedJobs(jobs)
       }
@@ -72,6 +74,13 @@ export default function FollowUpService() {
 
       const jobRef = await addDoc(collection(db, 'service_jobs'), followUpJobData)
 
+      // Mark original job as moved to follow-up and set next service date
+      const originalJobRef = doc(db, 'service_jobs', selectedJob.id)
+      await updateDoc(originalJobRef, { 
+        movedToFollowUp: true,
+        nextServiceDate: jobRef.createdAt || serverTimestamp()
+      })
+
       // If broadcast mode, create notifications for all technicians
       if (assignmentMode === 'broadcast') {
         const notificationData = {
@@ -113,7 +122,7 @@ export default function FollowUpService() {
   const formatAddress = (addr) => {
     if (!addr) return '—'
     if (typeof addr === 'string') return addr
-    return [addr.houseNo, addr.building, addr.street, addr.city, addr.state, addr.pinCode, addr.landmark]
+    return [addr.houseNo, addr.building, addr.street, addr.locality, addr.city, addr.state, addr.pinCode, addr.landmark]
       .filter(Boolean).join(', ')
   }
 
