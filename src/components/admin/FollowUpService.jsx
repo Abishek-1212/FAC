@@ -45,15 +45,21 @@ export default function FollowUpService() {
     return null
   }
 
+  const getNextDueDate = (job) => {
+    if (job.nextServiceDate) {
+      return job.nextServiceDate.toDate ? job.nextServiceDate.toDate() : new Date(job.nextServiceDate.seconds * 1000)
+    }
+    const completedDate = job.completedAt?.toDate ? job.completedAt.toDate() : new Date((job.completedAt?.seconds || job.createdAt?.seconds || 0) * 1000)
+    const d = new Date(completedDate)
+    d.setMonth(d.getMonth() + 3)
+    return d
+  }
+
   const filterJobsByDateRange = (jobs) => {
     const range = getDateRange()
     if (!range) return jobs
-
     return jobs.filter(job => {
-      const completedDate = job.completedAt?.toDate ? job.completedAt.toDate() : new Date((job.completedAt?.seconds || job.createdAt?.seconds || 0) * 1000)
-      const nextDueDate = new Date(completedDate)
-      nextDueDate.setMonth(nextDueDate.getMonth() + 3)
-      
+      const nextDueDate = getNextDueDate(job)
       return nextDueDate >= range.start && nextDueDate < range.end
     })
   }
@@ -68,15 +74,13 @@ export default function FollowUpService() {
           .filter(job => !job.movedToFollowUp && !job.isFollowUp && job.serviceType === 'New Fitting')
           .sort((a, b) => (b.completedAt?.seconds || b.createdAt?.seconds || 0) - (a.completedAt?.seconds || a.createdAt?.seconds || 0))
         
+        const sortByDueDate = (list) => [...list].sort((a, b) => getNextDueDate(a) - getNextDueDate(b))
+
         let filtered = jobs
         if (dateRange === 'all') {
-          filtered = jobs.sort((a, b) => {
-            const dateA = a.nextServiceDate?.seconds || (a.completedAt?.seconds || a.createdAt?.seconds || 0)
-            const dateB = b.nextServiceDate?.seconds || (b.completedAt?.seconds || b.createdAt?.seconds || 0)
-            return dateA - dateB
-          })
+          filtered = sortByDueDate(jobs)
         } else if (dateRange === 'today' || dateRange === 'week' || dateRange === 'custom') {
-          filtered = filterJobsByDateRange(jobs)
+          filtered = sortByDueDate(filterJobsByDateRange(jobs))
         }
         setCompletedJobs(filtered)
       }
@@ -117,7 +121,7 @@ export default function FollowUpService() {
     if (!addr) return '—'
     if (typeof addr === 'string') return addr
     return [addr.houseNo, addr.building, addr.street, addr.locality, addr.city, addr.state, addr.pinCode, addr.landmark]
-      .filter(Boolean).join(', ')
+      .filter(Boolean).join('\n')
   }
 
   const formatDate = (ts, monthsToAdd = 0) => {
@@ -297,7 +301,7 @@ export default function FollowUpService() {
                         <p className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
                           {job.customerPhone}
                         </p>
-                        <p className={`text-xs mt-1 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                        <p className={`text-xs mt-1 whitespace-pre-line ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
                           📍 {formatAddress(job.customerAddress)}
                         </p>
                       </div>
@@ -319,9 +323,15 @@ export default function FollowUpService() {
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            {formatDate(job.completedAt || job.createdAt, 3)}
+                            Next: {getNextDueDate(job).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
-                          <span className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-lg whitespace-nowrap flex items-center gap-1 ${
+                            isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'
+                          }`}>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
                             Fitted: {formatDate(job.completedAt || job.createdAt)}
                           </span>
                         </div>

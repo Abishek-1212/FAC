@@ -58,6 +58,12 @@ export default function Invoices() {
         .map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => (b.generatedDate?.seconds || 0) - (a.generatedDate?.seconds || 0))
       setInvoices(data)
+      // Mark all unread invoices as viewed when admin opens the invoices page
+      snap.docs.forEach(d => {
+        if (d.data().submittedByTechnician && !d.data().adminViewed) {
+          updateDoc(doc(db, 'invoices', d.id), { adminViewed: true, adminViewedAt: new Date() })
+        }
+      })
     })
   }, [])
 

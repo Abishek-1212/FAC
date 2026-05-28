@@ -420,7 +420,17 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
       }
 
       await addDoc(collection(db, 'invoices'), invoiceData)
-      
+
+      // If this is a follow-up job, update the original job's nextServiceDate to +3 months
+      if (job.isFollowUp && job.originalJobId) {
+        const newNextServiceDate = new Date()
+        newNextServiceDate.setMonth(newNextServiceDate.getMonth() + 3)
+        await updateDoc(doc(db, 'service_jobs', job.originalJobId), {
+          nextServiceDate: newNextServiceDate,
+          lastServicedAt: serverTimestamp(),
+        })
+      }
+
       // Update personal stock if used
       if (personalStockUsage.length > 0) {
         for (const item of personalStockUsage) {
@@ -1005,7 +1015,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                     ) : (
                       <p className={`text-xs font-semibold flex items-center gap-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
                         <span>⚠️</span>
-                        <span>Partial payment - Pending: ₹{(grandTotal - parseFloat(amountReceived)).toFixed(2)} - Status will be marked as "Pending"</span>
+                        <span>Partial payment - Pending: ₹{(grandTotal - parseFloat(amountReceived)).toFixed(2)}</span>
                       </p>
                     )}
                   </div>
@@ -1058,7 +1068,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                   })
                   toast.success('📥 Invoice downloaded!')
                 }}
-                disabled={amountReceived === '' || amountReceived === null || amountReceived === undefined}
+                disabled={amountReceived === '' || amountReceived === null || amountReceived === undefined || parseFloat(amountReceived) > grandTotal}
                 className={`w-full md:flex-1 rounded-lg md:rounded-xl py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-white transition disabled:opacity-50 disabled:cursor-not-allowed ${
                   isDark ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
                 }`}
@@ -1071,7 +1081,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowSaveConfirmation(true)}
-                  disabled={saving || sharing || amountReceived === '' || amountReceived === null || amountReceived === undefined}
+                  disabled={saving || sharing || amountReceived === '' || amountReceived === null || amountReceived === undefined || parseFloat(amountReceived) > grandTotal}
                   className={`w-full md:flex-1 rounded-lg md:rounded-xl py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-white disabled:opacity-60 disabled:cursor-not-allowed transition ${
                     isDark ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
                   }`}

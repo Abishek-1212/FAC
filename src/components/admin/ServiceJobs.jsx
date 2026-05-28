@@ -81,7 +81,10 @@ export default function ServiceJobs() {
         customerPhone: data.customerPhone || '',
         customerAddress: data.customerAddress || { houseNo: '', building: '', street: '', city: '', state: 'Tamil Nadu', pinCode: '', landmark: '' },
         problemDescription: data.problemDescription || '',
-        serviceType: data.serviceType || 'Service / Repair'
+        serviceType: data.serviceType || 'Service / Repair',
+        isFollowUp: data.isFollowUp || false,
+        originalJobId: data.originalJobId || null,
+        movedToFollowUp: data.movedToFollowUp || false,
       }))
       setModal(true)
       sessionStorage.removeItem('prefillFollowUpData')
@@ -113,7 +116,6 @@ export default function ServiceJobs() {
       }
       
       const jobRef = await addDoc(collection(db, 'service_jobs'), jobData)
-      
       // If broadcast mode, create notifications for all technicians
       if (form.assignmentMode === 'broadcast') {
         const notificationData = {
