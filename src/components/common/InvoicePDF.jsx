@@ -43,7 +43,7 @@ const InvoicePDF = forwardRef(function InvoicePDF({ inv }, ref) {
         <div className="space-y-2 text-sm">
           <div className="flex"><span className="font-bold w-40">Customer Name:</span><span>{inv.customerName}</span></div>
           <div className="flex"><span className="font-bold w-40">Phone Number:</span><span>{inv.customerPhone}</span></div>
-          <div className="flex"><span className="font-bold w-40">Location / Address:</span><span>{inv.customerAddress}</span></div>
+          <div className="flex"><span className="font-bold w-40">Location / Address:</span><span className="whitespace-pre-line">{typeof inv.customerAddress === 'string' ? inv.customerAddress : [inv.customerAddress?.houseNo, inv.customerAddress?.building, inv.customerAddress?.street, inv.customerAddress?.locality, inv.customerAddress?.city, inv.customerAddress?.state, inv.customerAddress?.pinCode, inv.customerAddress?.landmark].filter(Boolean).join('\n')}</span></div>
         </div>
       </div>
 

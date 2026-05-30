@@ -162,8 +162,8 @@ export const generateInvoice = (invoiceData) => {
   const cardWidth = (contentWidth - 6) / 2
   
   // Format address with commas
-  const cleanAddress = typeof customerAddress === 'string' 
-    ? customerAddress
+  const cleanAddress = typeof customerAddress === 'string'
+    ? customerAddress.split(', ').filter(Boolean).join('\n')
     : typeof customerAddress === 'object' && customerAddress
     ? [
         customerAddress.houseNo,
@@ -174,8 +174,7 @@ export const generateInvoice = (invoiceData) => {
         customerAddress.state,
         customerAddress.pinCode,
         customerAddress.landmark
-      ].filter(Boolean).map((val, idx, arr) => idx === arr.length - 1 ? val : val + ',')
-       .join('\n')
+      ].filter(Boolean).join('\n')
     : (customerAddress || 'N/A').toString()
   
   // Calculate dynamic height based on address lines

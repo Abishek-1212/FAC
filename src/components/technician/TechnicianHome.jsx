@@ -45,15 +45,23 @@ function formatAddress(address) {
   ].filter(Boolean)
 }
 
-function AddressDisplay({ address, isDark }) {
-  const parts = formatAddress(address)
+function AddressDisplay({ address }) {
+  if (!address) return null
   if (typeof address === 'string') {
-    return <p className="truncate font-medium">{address}</p>
+    const lines = address.split(', ').filter(Boolean)
+    return (
+      <div className="space-y-0.5">
+        {lines.map((line, idx) => (
+          <p key={idx} className="text-xs font-medium">{line}</p>
+        ))}
+      </div>
+    )
   }
+  const parts = formatAddress(address)
   return (
     <div className="space-y-0.5">
       {parts.map((part, idx) => (
-        <p key={idx} className="text-xs font-medium truncate">{part}</p>
+        <p key={idx} className="text-xs font-medium">{part}</p>
       ))}
     </div>
   )
@@ -216,10 +224,42 @@ export default function TechnicianHome() {
       {/* Navigation Cards */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: 'My Reports', path: '/technician/reports' },
-          { label: 'My Stock', path: '/technician/stock' },
-          { label: 'Take Stock', path: '/technician/take-stock' },
-          { label: 'My Attendance', path: '/technician/attendance' },
+          {
+            label: 'My Reports',
+            path: '/technician/reports',
+            icon: (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            ),
+          },
+          {
+            label: 'My Stock',
+            path: '/technician/stock',
+            icon: (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            ),
+          },
+          {
+            label: 'Take Stock',
+            path: '/technician/take-stock',
+            icon: (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            ),
+          },
+          {
+            label: 'My Attendance',
+            path: '/technician/attendance',
+            icon: (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            ),
+          },
         ].map((card, i) => (
           <motion.button
             key={card.path}
@@ -228,12 +268,13 @@ export default function TechnicianHome() {
             transition={{ delay: 0.1 + i * 0.05 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => navigate(card.path)}
-            className={`rounded-2xl p-4 border-2 transition-all ${
-              isDark 
-                ? 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-500/50' 
+            className={`rounded-2xl p-4 border-2 transition-all flex flex-col items-center gap-2 ${
+              isDark
+                ? 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-500/50'
                 : 'bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
             }`}
           >
+            <div className={isDark ? 'text-blue-300' : 'text-blue-900'}>{card.icon}</div>
             <p className={`font-black text-sm text-center ${isDark ? 'text-blue-300' : 'text-blue-900'}`}>{card.label}</p>
           </motion.button>
         ))}
@@ -287,7 +328,7 @@ export default function TechnicianHome() {
                         📞 {job.customerPhone}
                       </p>
                       <p className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                        📍 {formatAddress(job.customerAddress).join(', ')}
+                        📍 {formatAddress(job.customerAddress).join('\n')}
                       </p>
                     </div>
                     {job.priority === 'urgent' && (

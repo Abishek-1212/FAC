@@ -2,7 +2,7 @@ export function formatAddressForDisplay(addressObj) {
   if (!addressObj) return '—'
   
   if (typeof addressObj === 'string') {
-    return addressObj
+    return addressObj.split(', ').filter(Boolean).join('\n')
   }
 
   const parts = []
@@ -13,15 +13,10 @@ export function formatAddressForDisplay(addressObj) {
   if (addressObj.locality) parts.push(addressObj.locality)
   if (addressObj.city) parts.push(addressObj.city)
   if (addressObj.state) parts.push(addressObj.state)
-  
-  if (addressObj.pinCode) {
-    const lastPart = parts[parts.length - 1]
-    parts[parts.length - 1] = `${lastPart} - ${addressObj.pinCode}`
-  }
-
+  if (addressObj.pinCode) parts.push(addressObj.pinCode)
   if (addressObj.landmark) parts.push(addressObj.landmark)
 
-  return parts.join(',\n')
+  return parts.join('\n')
 }
 
 export function formatAddressCompact(addressObj) {

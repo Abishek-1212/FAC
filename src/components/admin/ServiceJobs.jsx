@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, query, where } from 'firebase/firestore'
+import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, query, where, deleteDoc, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import Modal from '../common/Modal'
 import AddressInput from '../common/AddressInput'
@@ -58,6 +58,7 @@ export default function ServiceJobs() {
   const [statusFilter, setStatusFilter] = useState('active')
   const [invoiceModal, setInvoiceModal] = useState(false)
   const [selectedJobForInvoice, setSelectedJobForInvoice] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   const STATUS_META = isDark ? STATUS_META_DARK : STATUS_META_LIGHT
 
@@ -98,6 +99,25 @@ export default function ServiceJobs() {
       return
     }
     setShowConfirm(true)
+  }
+
+  const handleDelete = async (job) => {
+    const toastId = toast.loading('🗑️ Deleting job...')
+    try {
+      if (job.assignmentMode === 'broadcast') {
+        for (const tech of technicians) {
+          const notifSnap = await getDocs(
+            query(collection(db, 'users', tech.id, 'notifications'), where('jobId', '==', job.id))
+          )
+          for (const n of notifSnap.docs) await deleteDoc(n.ref)
+        }
+      }
+      await deleteDoc(doc(db, 'service_jobs', job.id))
+      toast.success('🗑️ Job deleted successfully', { id: toastId })
+      setDeleteConfirm(null)
+    } catch (err) {
+      toast.error(err.message, { id: toastId })
+    }
   }
 
   const handleCreate = async () => {
@@ -317,8 +337,8 @@ export default function ServiceJobs() {
                         : 'bg-gradient-to-br from-white to-gray-50 border-gray-200 hover:border-gray-300 hover:shadow-md'
                     }`}
                   >
-                    <div className="flex items-start justify-between" onClick={() => setDetailJob(job)}>
-                      <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0" onClick={() => setDetailJob(job)}>
                         <p className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
                           {job.customerName}
                         </p>
@@ -660,6 +680,21 @@ export default function ServiceJobs() {
                 </div>
               </div>
 
+              {/* Delete button — only before technician starts work */}
+              {['pending', 'assigned'].includes(detailJob.status) && (
+                <button
+                  onClick={() => { setDeleteConfirm(detailJob); setDetailJob(null) }}
+                  className={`w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-all ${
+                    isDark ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30' : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete Job
+                </button>
+              )}
+
               {/* Info grid */}
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -687,6 +722,38 @@ export default function ServiceJobs() {
             </div>
           )
         })()}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Job" size="sm">
+        {deleteConfirm && (
+          <div className="space-y-4">
+            <div className={`rounded-xl p-4 border ${
+              isDark ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'
+            }`}>
+              <p className={`text-sm font-bold ${isDark ? 'text-red-300' : 'text-red-700'}`}>⚠️ This action cannot be undone</p>
+              <p className={`text-xs mt-1 ${isDark ? 'text-red-400/70' : 'text-red-600'}`}>
+                Job for <span className="font-bold">{deleteConfirm.customerName}</span> will be permanently deleted.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+                  isDark ? 'bg-white/5 text-white/80 hover:bg-white/10' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirm)}
+                className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg transition-all"
+              >
+                🗑️ Delete Job
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {selectedJobForInvoice && (
