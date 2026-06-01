@@ -122,7 +122,8 @@ export function AuthProvider({ children }) {
     await setDoc(doc(db, 'users', cred.user.uid), {
       uid: cred.user.uid,
       name, email, phone, role,
-      isActive: true,
+      isActive: false,
+      isApproved: false,
       isOnline: true,
       lastSeen: serverTimestamp(),
       createdAt: serverTimestamp(),

@@ -55,6 +55,7 @@ export default function Employees() {
         phone: form.phone,
         role: 'technician',
         isActive: true,
+        isApproved: true,
         isOnline: false,
         createdAt: new Date(),
       })
@@ -93,6 +94,12 @@ export default function Employees() {
   const toggleActive = async (u) => {
     await updateDoc(doc(db, 'users', u.id), { isActive: !u.isActive })
     toast.success(u.isActive ? 'Deactivated' : 'Activated')
+  }
+
+  const approveTechnician = async (u) => {
+    await updateDoc(doc(db, 'users', u.id), { role: 'technician', isApproved: true, isActive: true })
+    toast.success(`${u.name} has been approved and activated!`)
+    if (newTechs.length === 1) setFilter('all')
   }
 
   const [selectedTech, setSelectedTech] = useState(null)
@@ -141,8 +148,21 @@ export default function Employees() {
     return () => unsubs.forEach(u => u())
   }
 
-  const technicians = users.filter(u => u.role === 'technician')
-  const filtered    = filter === 'all' ? technicians : technicians.filter(u => u.isActive === (filter === 'active'))
+  // New technicians = role is customer/technician but not yet approved by admin
+  const newTechs      = users.filter(u => u.role !== 'admin' && !u.isApproved)
+  const technicians   = users.filter(u => u.role === 'technician' && u.isApproved)
+  const approvedTechs = technicians
+  const filtered =
+    filter === 'new'
+      ? newTechs
+      : filter === 'all'
+      ? approvedTechs
+      : approvedTechs.filter(u => u.isActive === (filter === 'active'))
+
+  // Auto-switch to 'new' tab when new technicians arrive and we're on 'all'
+  useEffect(() => {
+    if (newTechs.length > 0 && filter === 'all') setFilter('new')
+  }, [newTechs.length])
 
   return (
     <div className="pb-20 md:pb-0">
@@ -186,11 +206,11 @@ export default function Employees() {
 
       <div className="flex justify-center">
         <div className="flex gap-2 pb-1 overflow-x-auto scrollbar-hide">
-          {[['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive']].map(([val, label]) => (
+          {([['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive'], ...(newTechs.length > 0 ? [['new', 'New Technicians']] : [])]).map(([val, label]) => (
             <button
               key={val}
               onClick={() => setFilter(val)}
-              className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${
+              className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
                 filter === val
                   ? isDark
                     ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
@@ -201,6 +221,13 @@ export default function Employees() {
               }`}
             >
               {label}
+              {val === 'new' && newTechs.length > 0 && (
+                <span className={`text-xs font-black px-1.5 py-0.5 rounded-full ${
+                  filter === 'new' ? 'bg-white/30 text-white' : 'bg-orange-500 text-white'
+                }`}>
+                  {newTechs.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -230,16 +257,29 @@ export default function Employees() {
                 </div>
               </div>
               {u.id !== currentUser?.uid && (
-                <button
-                  onClick={e => { e.stopPropagation(); toggleActive(u) }}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition ${
-                    u.isActive
-                      ? isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-50 text-green-600'
-                      : isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-50 text-red-500'
-                  }`}
-                >
-                  {u.isActive ? 'Active' : 'Inactive'}
-                </button>
+                !u.isApproved ? (
+                  <button
+                    onClick={e => { e.stopPropagation(); approveTechnician(u) }}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-xl transition ${
+                      isDark
+                        ? 'bg-orange-500/20 text-orange-300 hover:bg-orange-500/40'
+                        : 'bg-orange-50 text-orange-600 hover:bg-orange-100'
+                    }`}
+                  >
+                    Join
+                  </button>
+                ) : (
+                  <button
+                    onClick={e => { e.stopPropagation(); toggleActive(u) }}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition ${
+                      u.isActive
+                        ? isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-50 text-green-600'
+                        : isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-50 text-red-500'
+                    }`}
+                  >
+                    {u.isActive ? 'Active' : 'Inactive'}
+                  </button>
+                )
               )}
             </div>
           </div>
