@@ -2,29 +2,9 @@ import { useEffect, useState, useRef } from 'react'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
-import RecentServiceJobs from './RecentServiceJobs'
-
-// ── Stock Bar Component ───────────────────────────────────────────────────────
-function StockBar({ label, value, max, color, isDark }) {
-  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-1">
-        <span className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-500'}`}>{label}</span>
-        <span className={`text-xs font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{value}</span>
-      </div>
-      <div className={`w-full h-3 rounded-full overflow-hidden ${isDark ? 'bg-white/10' : 'bg-gray-100'}`}>
-        <div
-          className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, background: color, minWidth: value > 0 ? '8px' : '0px' }}
-        />
-      </div>
-    </div>
-  )
-}
 
 const STAT_CARDS = [
   { key: 'jobs',        label: 'Total Jobs',    gradient: 'from-cyan-500 to-cyan-600' },
@@ -35,10 +15,126 @@ const STAT_CARDS = [
   { key: 'missing',     label: 'Missing Stock', gradient: 'from-red-500 to-rose-600' },
 ]
 
+const QUICK_ACTIONS = [
+  {
+    label: 'Service Job',
+    path: '/admin/jobs',
+    gradient: 'from-cyan-500 to-blue-600',
+    iconBg: 'bg-cyan-500/20',
+    iconBgLight: 'bg-cyan-50',
+    iconColor: 'text-cyan-400',
+    iconColorLight: 'text-cyan-600',
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Follow-up Service',
+    path: '/admin/follow-up',
+    gradient: 'from-purple-500 to-pink-600',
+    iconBg: 'bg-purple-500/20',
+    iconBgLight: 'bg-purple-50',
+    iconColor: 'text-purple-400',
+    iconColorLight: 'text-purple-600',
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'View Invoices',
+    path: '/admin/invoices',
+    gradient: 'from-emerald-500 to-green-600',
+    iconBg: 'bg-emerald-500/20',
+    iconBgLight: 'bg-emerald-50',
+    iconColor: 'text-emerald-400',
+    iconColorLight: 'text-emerald-600',
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Verify Stock',
+    path: '/admin/verify-stock',
+    gradient: 'from-blue-500 to-indigo-600',
+    iconBg: 'bg-blue-500/20',
+    iconBgLight: 'bg-blue-50',
+    iconColor: 'text-blue-400',
+    iconColorLight: 'text-blue-600',
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Technician Attendance',
+    path: '/admin/attendance',
+    gradient: 'from-teal-500 to-cyan-600',
+    iconBg: 'bg-teal-500/20',
+    iconBgLight: 'bg-teal-50',
+    iconColor: 'text-teal-400',
+    iconColorLight: 'text-teal-600',
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Reports',
+    path: '/admin/reports',
+    gradient: 'from-orange-500 to-red-600',
+    iconBg: 'bg-orange-500/20',
+    iconBgLight: 'bg-orange-50',
+    iconColor: 'text-orange-400',
+    iconColorLight: 'text-orange-600',
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'My Technicians',
+    path: '/admin/employees',
+    gradient: 'from-violet-500 to-purple-600',
+    iconBg: 'bg-violet-500/20',
+    iconBgLight: 'bg-violet-50',
+    iconColor: 'text-violet-400',
+    iconColorLight: 'text-violet-600',
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Generate Invoice',
+    path: '/admin/generate-invoice',
+    gradient: 'from-orange-500 to-amber-600',
+    iconBg: 'bg-orange-500/20',
+    iconBgLight: 'bg-orange-50',
+    iconColor: 'text-orange-400',
+    iconColorLight: 'text-orange-600',
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+  },
+]
+
 export default function AdminHome() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
-  const { profile, logout } = useAuth()
+  const { profile } = useAuth()
   const [stats, setStats] = useState({ jobs: 0, pending: 0, products: 0, technicians: 0, revenue: 0, missing: 0, unreadInvoices: 0 })
 
   useEffect(() => {
@@ -158,15 +254,7 @@ export default function AdminHome() {
       <div>
         <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>QUICK ACTIONS</p>
         <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Service Job', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>, path: '/admin/jobs', gradient: 'from-cyan-500 to-blue-600', iconBg: isDark ? 'bg-cyan-500/20' : 'bg-cyan-50', iconColor: isDark ? 'text-cyan-400' : 'text-cyan-600' },
-            { label: 'Follow-up Service', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>, path: '/admin/follow-up', gradient: 'from-purple-500 to-pink-600', iconBg: isDark ? 'bg-purple-500/20' : 'bg-purple-50', iconColor: isDark ? 'text-purple-400' : 'text-purple-600' },
-            { label: 'View Invoices', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>, path: '/admin/invoices', gradient: 'from-emerald-500 to-green-600', iconBg: isDark ? 'bg-emerald-500/20' : 'bg-emerald-50', iconColor: isDark ? 'text-emerald-400' : 'text-emerald-600' },
-            { label: 'Verify Stock', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>, path: '/admin/verify-stock', gradient: 'from-blue-500 to-indigo-600', iconBg: isDark ? 'bg-blue-500/20' : 'bg-blue-50', iconColor: isDark ? 'text-blue-400' : 'text-blue-600' },
-            { label: 'Technician Attendance', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>, path: '/admin/attendance', gradient: 'from-teal-500 to-cyan-600', iconBg: isDark ? 'bg-teal-500/20' : 'bg-teal-50', iconColor: isDark ? 'text-teal-400' : 'text-teal-600' },
-            { label: 'Reports', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>, path: '/admin/reports', gradient: 'from-orange-500 to-red-600', iconBg: isDark ? 'bg-orange-500/20' : 'bg-orange-50', iconColor: isDark ? 'text-orange-400' : 'text-orange-600' },
-            { label: 'My Technicians', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>, path: '/admin/employees', gradient: 'from-violet-500 to-purple-600', iconBg: isDark ? 'bg-violet-500/20' : 'bg-violet-50', iconColor: isDark ? 'text-violet-400' : 'text-violet-600' },
-          ].map((action, i) => (
+          {QUICK_ACTIONS.map((action) => (
             <button
               key={action.label}
               onClick={() => navigate(action.path)}
@@ -176,7 +264,7 @@ export default function AdminHome() {
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 hover:opacity-5 transition-opacity`} />
               <div className="relative flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg ${action.iconBg} flex items-center justify-center ${action.iconColor}`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDark ? `${action.iconBg} ${action.iconColor}` : `${action.iconBgLight} ${action.iconColorLight}`}`}>
                   {action.icon}
                 </div>
                 <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{action.label}</p>
@@ -190,7 +278,7 @@ export default function AdminHome() {
       <div>
         <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>OVERVIEW</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {STAT_CARDS.map((card, i) => (
+          {STAT_CARDS.map((card) => (
             <div
               key={card.key}
               className={`relative overflow-hidden rounded-2xl p-5 border group cursor-pointer ${
@@ -206,7 +294,6 @@ export default function AdminHome() {
           ))}
         </div>
       </div>
-
     </div>
   )
 }

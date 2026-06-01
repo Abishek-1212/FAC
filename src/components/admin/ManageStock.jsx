@@ -142,16 +142,19 @@ export default function ManageStock({ searchQuery = '' }) {
     grouped[cat].push(p)
   })
 
-  // Sort each category's products: low stock first, then alphabetically
+  // Check if any product has had stock reduced (quantity < totalStock)
+  const stockHasBeenReduced = invProducts.some(inv => (inv.quantity || 0) < (inv.totalStock || 0))
+
+  // Sort: alphabetically initially, then by quantity ascending once stock is reduced
   Object.keys(grouped).forEach(cat => {
     grouped[cat].sort((a, b) => {
-      const invA = invProducts.find(inv => inv.productName === a.name || inv.name === a.name)
-      const invB = invProducts.find(inv => inv.productName === b.name || inv.name === b.name)
-      const qtyA = invA?.quantity || 0
-      const qtyB = invB?.quantity || 0
-      const isLowA = (a.threshold || 0) > 0 && qtyA <= (a.threshold || 0)
-      const isLowB = (b.threshold || 0) > 0 && qtyB <= (b.threshold || 0)
-      if (isLowA !== isLowB) return isLowA ? -1 : 1
+      if (stockHasBeenReduced) {
+        const invA = invProducts.find(inv => inv.productName === a.name || inv.name === a.name)
+        const invB = invProducts.find(inv => inv.productName === b.name || inv.name === b.name)
+        const qtyA = invA?.quantity ?? 0
+        const qtyB = invB?.quantity ?? 0
+        return qtyA !== qtyB ? qtyA - qtyB : a.name.localeCompare(b.name)
+      }
       return a.name.localeCompare(b.name)
     })
   })
