@@ -136,9 +136,16 @@ export default function FollowUpService() {
   return (
     <div className="pb-20 md:pb-0">
       {/* Header */}
-      <div className={`flex items-center justify-center px-4 py-4 border rounded-full mx-4 relative ${
-        isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
-      }`}>
+      <div
+        className="flex items-center justify-center px-4 py-4 rounded-full mx-4 relative"
+        style={isDark ? {
+          background: '#151B2B',
+          boxShadow: '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)'
+        } : {
+          background: '#e8f0f7',
+          boxShadow: '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5)'
+        }}
+      >
         <button
           onClick={() => navigate('/admin')}
           className={`absolute left-4 p-2 rounded-lg transition-all ${
@@ -160,11 +167,18 @@ export default function FollowUpService() {
 
       <div className="space-y-5 mt-5">
         {/* Date Range Filter */}
-        <div className={`rounded-2xl p-5 border ${
-          isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
-        }`}>
-          <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide mb-3">
-            <div className="flex gap-2 flex-shrink-0">
+        <div
+          className="rounded-2xl p-5"
+          style={isDark ? {
+            background: '#151B2B',
+            boxShadow: '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)'
+          } : {
+            background: '#e8f0f7',
+            boxShadow: '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5)'
+          }}
+        >
+          <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide mb-3 py-2 px-1">
+            <div className="flex gap-3 flex-shrink-0">
               {[
                 { key: 'today', label: 'Today' },
                 { key: 'week', label: 'This Week' },
@@ -177,9 +191,17 @@ export default function FollowUpService() {
                   onClick={() => setDateRange(range.key)}
                   className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
                     dateRange === range.key
-                      ? isDark ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500' : 'bg-cyan-50 text-cyan-700 border border-cyan-500'
-                      : isDark ? 'bg-white/5 text-white/60 border border-white/10 hover:border-white/20' : 'bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300'
+                      ? isDark ? 'text-cyan-300' : 'text-cyan-700'
+                      : isDark ? 'text-white/60' : 'text-gray-600'
                   }`}
+                  style={dateRange === range.key
+                    ? isDark
+                      ? { background: '#151B2B', boxShadow: 'inset 3px 3px 7px rgba(0,0,0,0.7), inset -2px -2px 5px rgba(255,255,255,0.04)', border: '1px solid rgba(6,182,212,0.4)' }
+                      : { background: '#e8f0f7', boxShadow: 'inset 3px 3px 7px rgba(163,177,198,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)', border: '1px solid rgba(6,182,212,0.4)' }
+                    : isDark
+                      ? { background: '#151B2B', boxShadow: '-3px -3px 7px rgba(255,255,255,0.04), 3px 3px 7px rgba(0,0,0,0.6)' }
+                      : { background: '#e8f0f7', boxShadow: '-3px -3px 7px rgba(255,255,255,0.9), 3px 3px 7px rgba(163,177,198,0.5)' }
+                  }
                 >
                   {range.label}
                 </button>
@@ -189,9 +211,13 @@ export default function FollowUpService() {
 
           {/* Display selected date range */}
           {dateRange !== 'custom' && (
-            <div className={`text-xs font-semibold px-3 py-2 rounded-lg ${
-              isDark ? 'bg-white/5 text-white/60' : 'bg-gray-50 text-gray-600'
-            }`}>
+            <div
+              className={`text-xs font-semibold px-3 py-2 rounded-lg ${isDark ? 'text-white/60' : 'text-gray-600'}`}
+              style={isDark
+                ? { background: '#151B2B', boxShadow: 'inset 3px 3px 7px rgba(0,0,0,0.7), inset -2px -2px 5px rgba(255,255,255,0.04)' }
+                : { background: '#e8f0f7', boxShadow: 'inset 3px 3px 7px rgba(163,177,198,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)' }
+              }
+            >
               {dateRange === 'today' && `Today: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`}
               {dateRange === 'week' && (() => {
                 const now = new Date()
@@ -218,9 +244,11 @@ export default function FollowUpService() {
                     type="date"
                     value={customStartDate}
                     onChange={e => setCustomStartDate(e.target.value)}
-                    className={`w-full border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-                    }`}
+                    className={`w-full rounded-lg px-2 py-1 text-xs focus:outline-none ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    style={isDark
+                      ? { background: '#151B2B', boxShadow: 'inset 3px 3px 7px rgba(0,0,0,0.7), inset -2px -2px 5px rgba(255,255,255,0.04)' }
+                      : { background: '#e8f0f7', boxShadow: 'inset 3px 3px 7px rgba(163,177,198,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)' }
+                    }
                   />
                 </div>
                 <div className="flex-1">
@@ -231,9 +259,11 @@ export default function FollowUpService() {
                     type="date"
                     value={customEndDate}
                     onChange={e => setCustomEndDate(e.target.value)}
-                    className={`w-full border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-                    }`}
+                    className={`w-full rounded-lg px-2 py-1 text-xs focus:outline-none ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    style={isDark
+                      ? { background: '#151B2B', boxShadow: 'inset 3px 3px 7px rgba(0,0,0,0.7), inset -2px -2px 5px rgba(255,255,255,0.04)' }
+                      : { background: '#e8f0f7', boxShadow: 'inset 3px 3px 7px rgba(163,177,198,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)' }
+                    }
                   />
                 </div>
               </div>
@@ -261,12 +291,23 @@ export default function FollowUpService() {
         </div>
 
         {/* Completed Jobs List */}
-        <div className={`rounded-2xl border overflow-hidden ${
-          isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
-        }`}>
-          <div className={`px-5 py-4 border-b ${
-            isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
-          }`}>
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={isDark ? {
+            background: '#151B2B',
+            boxShadow: '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6)'
+          } : {
+            background: '#e8f0f7',
+            boxShadow: '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5)'
+          }}
+        >
+          <div
+            className="px-5 py-4"
+            style={isDark
+              ? { background: '#0B0F19', boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }
+              : { background: '#dce6f0', boxShadow: '0 2px 6px rgba(163,177,198,0.4)' }
+            }
+          >
             <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               Select Completed Job
             </h3>
@@ -277,21 +318,21 @@ export default function FollowUpService() {
 
           <div className="p-4 max-h-[60vh] overflow-y-auto">
             {completedJobs.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {completedJobs.map((job) => (
                   <motion.div
                     key={job.id}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedJob(job)}
-                    className={`rounded-xl p-4 border-2 cursor-pointer transition-all ${
-                      selectedJob?.id === job.id
-                        ? isDark
-                          ? 'border-purple-500 bg-purple-500/20'
-                          : 'border-purple-500 bg-purple-50'
-                        : isDark
-                        ? 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
-                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
-                    }`}
+                    className="rounded-xl p-4 cursor-pointer transition-all"
+                    style={selectedJob?.id === job.id
+                      ? isDark
+                        ? { background: '#151B2B', boxShadow: 'inset 4px 4px 10px rgba(0,0,0,0.7), inset -3px -3px 8px rgba(255,255,255,0.04), 0 0 0 1px rgba(147,51,234,0.4)' }
+                        : { background: '#e8f0f7', boxShadow: 'inset 4px 4px 10px rgba(163,177,198,0.6), inset -4px -4px 10px rgba(255,255,255,0.9), 0 0 0 1px rgba(147,51,234,0.4)' }
+                      : isDark
+                        ? { background: '#151B2B', boxShadow: '-3px -3px 8px rgba(255,255,255,0.04), 3px 3px 8px rgba(0,0,0,0.6)' }
+                        : { background: '#e8f0f7', boxShadow: '-4px -4px 8px rgba(255,255,255,0.9), 4px 4px 8px rgba(163,177,198,0.5)' }
+                    }
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
@@ -358,11 +399,14 @@ export default function FollowUpService() {
             animate={{ opacity: 1, y: 0 }}
             onClick={handleScheduleFollowUp}
             disabled={creating}
-            className={`w-full rounded-xl py-4 text-sm font-bold text-white disabled:opacity-60 transition-all flex items-center justify-center gap-2 ${
-              isDark
-                ? 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg shadow-purple-500/20'
-                : 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-md'
-            }`}
+            className="w-full rounded-xl py-4 text-sm font-bold text-white disabled:opacity-60 transition-all flex items-center justify-center gap-2"
+            style={isDark ? {
+              background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+              boxShadow: '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)'
+            } : {
+              background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+              boxShadow: '-5px -5px 12px rgba(255,255,255,0.5), 5px 5px 12px rgba(109,40,217,0.4)'
+            }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />

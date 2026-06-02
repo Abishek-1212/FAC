@@ -108,8 +108,17 @@ export default function ManageStock({ searchQuery = '' }) {
 
   const t = isDark ? 'text-white' : 'text-gray-900'
   const s = isDark ? 'text-white/40' : 'text-gray-400'
-  const cardBase = `rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`
-  const inputCls = `w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white placeholder-white/30' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`
+  const neuBg = isDark ? '#151B2B' : '#e8f4fb'
+  const neuShadowOut = isDark
+    ? '6px 6px 14px #0a0f1a, -6px -6px 14px #202d42'
+    : '6px 6px 14px #c5d8e8, -6px -6px 14px #ffffff'
+  const neuShadowIn = isDark
+    ? 'inset 3px 3px 6px #0a0f1a, inset -3px -3px 6px #202d42'
+    : 'inset 3px 3px 6px #c5d8e8, inset -3px -3px 6px #ffffff'
+  const cardBase = `rounded-2xl`
+  const cardStyle = { background: neuBg, boxShadow: neuShadowOut }
+  const inputCls = `w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 border-0 ${isDark ? 'text-white placeholder-white/30' : 'text-gray-900 placeholder-gray-400'}`
+  const inputStyle = { background: neuBg, boxShadow: neuShadowIn }
 
   // Prevent scroll on number inputs
   useEffect(() => {
@@ -171,13 +180,11 @@ export default function ManageStock({ searchQuery = '' }) {
     <div className="space-y-6 pb-20 md:pb-0">
 
       {products.length === 0 ? (
-        <div className={`${cardBase} p-12 text-center`}>
-          <p className="text-4xl mb-3">📦</p>
+        <div className={`${cardBase} p-12 text-center`} style={cardStyle}>
           <p className={`text-sm ${s}`}>No products available</p>
         </div>
       ) : filteredProducts.length === 0 ? (
-        <div className={`${cardBase} p-12 text-center`}>
-          <p className="text-4xl mb-3">🔍</p>
+        <div className={`${cardBase} p-12 text-center`} style={cardStyle}>
           <p className={`text-sm ${s}`}>No products found matching "{searchQuery}"</p>
         </div>
       ) : (
@@ -192,9 +199,9 @@ export default function ManageStock({ searchQuery = '' }) {
                 </span>
               </div>
 
-              <div className={`${cardBase} overflow-hidden`}>
+              <div className={`${cardBase} overflow-hidden`} style={cardStyle}>
                 {/* Table Header */}
-                <div className={`grid grid-cols-12 gap-3 px-4 py-3 border-b text-xs font-bold uppercase tracking-wider ${isDark ? 'border-white/10 text-white/40' : 'border-gray-100 text-gray-400'}`}>
+                <div className={`grid grid-cols-12 gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider ${isDark ? 'border-b border-white/10 text-white/40' : 'border-b border-[#d0e8f5] text-gray-400'}`}>
                   <div className="col-span-4">Product</div>
                   <div className="col-span-2 text-center">Avail Stock</div>
                   <div className="col-span-3 text-center">New Stock</div>
@@ -202,12 +209,19 @@ export default function ManageStock({ searchQuery = '' }) {
                 </div>
 
                 {/* Table Rows */}
-                <div className={`divide-y ${isDark ? 'divide-white/5' : 'divide-gray-50'}`}>
+                <div className={`divide-y ${isDark ? 'divide-white/5' : 'divide-[#d8edf8]'}`}>
                   {categoryProducts.map((product, i) => {
                     const invItem = invProducts.find(inv => inv.productName === product.name || inv.name === product.name)
                     const stockQty = invItem?.quantity || 0
                     const threshold = product.threshold || 0
                     const isLowStock = threshold > 0 && stockQty <= threshold
+
+                    const rowCls = isLowStock
+                      ? (isDark ? 'bg-red-500/10 border-l-2 border-red-500/50' : 'bg-red-50 border-l-2 border-red-400')
+                      : (isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50')
+                    const stockColor = isLowStock
+                      ? (isDark ? 'text-red-300' : 'text-red-600')
+                      : (isDark ? 'text-blue-300' : 'text-blue-600')
 
                     return (
                       <motion.div
@@ -215,11 +229,7 @@ export default function ManageStock({ searchQuery = '' }) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: i * 0.03 }}
-                        className={`grid grid-cols-12 gap-3 items-center px-4 py-3.5 transition ${
-                          isLowStock
-                            ? isDark ? 'bg-red-500/10 hover:bg-red-500/15 border-l-2 border-red-500/50' : 'bg-red-50 hover:bg-red-100 border-l-2 border-red-400'
-                            : isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'
-                        }`}
+                        className={`grid grid-cols-12 gap-3 items-center px-4 py-3.5 transition ${rowCls}`}
                       >
                         {/* Product Name */}
                         <div className="col-span-4 min-w-0">
@@ -233,11 +243,8 @@ export default function ManageStock({ searchQuery = '' }) {
                         <div className="col-span-2 flex justify-center">
                           <span
                             onClick={() => invItem && startEditStock(invItem, product)}
-                            className={`text-sm font-black px-3 py-1.5 rounded-lg cursor-pointer transition ${
-                              isLowStock
-                                ? isDark ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' : 'bg-red-100 text-red-700 hover:bg-red-200'
-                                : isDark ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                            }`}
+                            className={`text-sm font-black px-3 py-1.5 rounded-lg cursor-pointer transition ${stockColor}`}
+                            style={{ background: neuBg, boxShadow: neuShadowIn }}
                           >
                             {stockQty}
                           </span>
@@ -252,6 +259,7 @@ export default function ManageStock({ searchQuery = '' }) {
                             onChange={(e) => handleNewStockChange(product.id, e.target.value)}
                             placeholder="0"
                             className={inputCls}
+                            style={inputStyle}
                           />
                         </div>
 
@@ -260,7 +268,8 @@ export default function ManageStock({ searchQuery = '' }) {
                           <button
                             onClick={() => handleUpdateStock(product)}
                             disabled={saving || !newStockValues[product.id] || Number(newStockValues[product.id]) <= 0}
-                            className="px-4 py-2 rounded-lg bg-green-500 text-white text-xs font-bold hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-2 rounded-lg bg-green-500 text-white text-xs font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ boxShadow: '3px 3px 8px rgba(0,0,0,0.3), -2px -2px 6px rgba(255,255,255,0.08)' }}
                           >
                             {saving ? '...' : '+ Add'}
                           </button>
@@ -278,7 +287,7 @@ export default function ManageStock({ searchQuery = '' }) {
       {/* Edit Stock Modal */}
       {showEditModal && editingProduct && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className={`w-full max-w-md rounded-2xl shadow-2xl ${isDark ? 'bg-gray-800 border border-white/10' : 'bg-white'}`}>
+          <div className="w-full max-w-md rounded-2xl" style={cardStyle}>
             {/* Header */}
             <div className={`px-6 py-4 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
               <h3 className={`text-lg font-black ${t}`}>Edit Stock</h3>
@@ -287,7 +296,7 @@ export default function ManageStock({ searchQuery = '' }) {
             {/* Content */}
             <div className="px-6 py-5 space-y-4">
               {/* Product Info */}
-              <div className={`p-4 rounded-xl ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+              <div className="p-4 rounded-xl" style={{ background: neuBg, boxShadow: neuShadowIn }}>
                 <div className="space-y-2">
                   <div>
                     <p className={`text-xs font-semibold ${s}`}>Category</p>

@@ -268,14 +268,14 @@ export default function TechnicianHome() {
             transition={{ delay: 0.1 + i * 0.05 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => navigate(card.path)}
-            className={`rounded-2xl p-4 border-2 transition-all flex flex-col items-center gap-2 ${
+            className={`rounded-2xl p-4 transition-all flex flex-col items-center gap-2 ${
               isDark
-                ? 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-500/50'
-                : 'bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
+                ? 'bg-[#151B2B] text-blue-400 shadow-[6px_6px_14px_#0a0e1a,-6px_-6px_14px_#202a3c] active:shadow-[inset_6px_6px_14px_#0a0e1a,inset_-6px_-6px_14px_#202a3c]'
+                : 'bg-[#e8f4f8] text-blue-600 shadow-[6px_6px_14px_#c5d8e0,-6px_-6px_14px_#ffffff] active:shadow-[inset_6px_6px_14px_#c5d8e0,inset_-6px_-6px_14px_#ffffff]'
             }`}
           >
-            <div className={isDark ? 'text-blue-300' : 'text-blue-900'}>{card.icon}</div>
-            <p className={`font-black text-sm text-center ${isDark ? 'text-blue-300' : 'text-blue-900'}`}>{card.label}</p>
+            <div className={isDark ? 'text-blue-400' : 'text-blue-600'}>{card.icon}</div>
+            <p className={`font-black text-sm text-center ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{card.label}</p>
           </motion.button>
         ))}
       </div>
@@ -414,7 +414,7 @@ export default function TechnicianHome() {
       )}
 
       {/* Status Filter Pills */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
         {[
           { key: 'active', label: 'Active', count: active.length },
           { key: 'completed', label: 'Completed', count: completed.length },
@@ -422,30 +422,36 @@ export default function TechnicianHome() {
         ].map(({ key, label, count }) => (
           <motion.button
             key={key}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => attendanceMarked && setStatusFilter(key)}
             disabled={!attendanceMarked}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
               !attendanceMarked
                 ? isDark
-                  ? 'bg-white/5 text-white/30 border border-white/10 cursor-not-allowed'
-                  : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                  ? 'bg-[#151B2B] text-white/20 shadow-[inset_3px_3px_8px_#0a0e1a,inset_-3px_-3px_8px_#202a3c] cursor-not-allowed'
+                  : 'bg-[#e8f4f8] text-gray-300 shadow-[inset_3px_3px_8px_#c5d8e0,inset_-3px_-3px_8px_#ffffff] cursor-not-allowed'
                 : statusFilter === key
                 ? isDark
-                  ? 'bg-blue-500 text-white shadow-[3px_3px_12px_rgba(59,130,246,0.5)]'
-                  : 'bg-blue-600 text-white shadow-[3px_3px_12px_rgba(59,130,246,0.35)]'
+                  ? 'bg-[#151B2B] text-cyan-400 shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+                  : 'bg-[#e8f4f8] text-cyan-600 shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
                 : isDark
-                ? 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 shadow-[3px_3px_10px_rgba(0,0,0,0.3)]'
-                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 shadow-[3px_3px_10px_rgba(0,0,0,0.1)]'
+                ? 'bg-[#151B2B] text-white/60 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] hover:text-white/90'
+                : 'bg-[#e8f4f8] text-gray-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] hover:text-gray-800'
             }`}
           >
             {label}
             <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
               !attendanceMarked
-                ? isDark ? 'bg-white/5 text-white/30' : 'bg-gray-200 text-gray-400'
+                ? isDark
+                  ? 'bg-[#151B2B] text-white/20 shadow-[inset_2px_2px_5px_#0a0e1a,inset_-2px_-2px_5px_#202a3c]'
+                  : 'bg-[#e8f4f8] text-gray-300 shadow-[inset_2px_2px_5px_#c5d8e0,inset_-2px_-2px_5px_#ffffff]'
                 : statusFilter === key
-                ? 'bg-white/20 text-white'
-                : isDark ? 'bg-white/10 text-white/40' : 'bg-gray-100 text-gray-500'
+                ? isDark
+                  ? 'bg-[#151B2B] text-cyan-400 shadow-[inset_2px_2px_5px_#0a0e1a,inset_-2px_-2px_5px_#202a3c]'
+                  : 'bg-[#e8f4f8] text-cyan-600 shadow-[inset_2px_2px_5px_#c5d8e0,inset_-2px_-2px_5px_#ffffff]'
+                : isDark
+                ? 'bg-[#151B2B] text-white/40 shadow-[inset_2px_2px_5px_#0a0e1a,inset_-2px_-2px_5px_#202a3c]'
+                : 'bg-[#e8f4f8] text-gray-400 shadow-[inset_2px_2px_5px_#c5d8e0,inset_-2px_-2px_5px_#ffffff]'
             }`}>
               {count}
             </span>
@@ -499,10 +505,10 @@ export default function TechnicianHome() {
                   exit={{ opacity: 0, scale: 0.97 }}
                   transition={{ delay: i * 0.04, duration: 0.25 }}
                   onClick={() => navigate(`/technician/job/${job.id}`)}
-                  className={`rounded-2xl p-3 md:p-4 shadow-sm border cursor-pointer transition-all group ${
+                  className={`rounded-2xl p-4 cursor-pointer transition-all ${
                     isDark
-                      ? 'bg-dark-card border-white/10 hover:border-cyan-500/30 hover:bg-white/5 shadow-[4px_4px_18px_rgba(0,0,0,0.45)]'
-                      : 'bg-white border-gray-100 hover:shadow-md hover:border-aqua-200 shadow-[4px_4px_18px_rgba(0,0,0,0.12)]'
+                      ? 'bg-[#151B2B] shadow-[6px_6px_16px_#0a0e1a,-6px_-6px_16px_#202a3c] hover:shadow-[8px_8px_20px_#0a0e1a,-8px_-8px_20px_#202a3c]'
+                      : 'bg-[#e8f4f8] shadow-[6px_6px_16px_#c5d8e0,-6px_-6px_16px_#ffffff] hover:shadow-[8px_8px_20px_#c5d8e0,-8px_-8px_20px_#ffffff]'
                   }`}
                 >
                   {/* Top Row: Customer Name & Status */}
@@ -513,7 +519,17 @@ export default function TechnicianHome() {
                         {job.customerName}
                       </p>
                     </div>
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full border flex-shrink-0 whitespace-nowrap ${meta.color}`}>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0 whitespace-nowrap ${
+                      isDark
+                        ? 'bg-[#151B2B] shadow-[inset_2px_2px_6px_#0a0e1a,inset_-2px_-2px_6px_#202a3c] ' +
+                          (job.status === 'completed' || job.status === 'verified' ? 'text-emerald-400' :
+                           job.status === 'in_progress' ? 'text-violet-400' :
+                           job.status === 'assigned' ? 'text-blue-400' : 'text-amber-400')
+                        : 'bg-[#e8f4f8] shadow-[inset_2px_2px_6px_#c5d8e0,inset_-2px_-2px_6px_#ffffff] ' +
+                          (job.status === 'completed' || job.status === 'verified' ? 'text-emerald-600' :
+                           job.status === 'in_progress' ? 'text-violet-600' :
+                           job.status === 'assigned' ? 'text-blue-600' : 'text-amber-600')
+                    }`}>
                       {meta.icon} {meta.label}
                     </span>
                   </div>
@@ -543,8 +559,12 @@ export default function TechnicianHome() {
                     {job.serviceType && (
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex items-center gap-1.5 ${
                         job.serviceType === 'New Fitting'
-                          ? isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'
-                          : isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-50 text-orange-700'
+                          ? isDark
+                            ? 'bg-[#151B2B] text-blue-400 shadow-[inset_2px_2px_6px_#0a0e1a,inset_-2px_-2px_6px_#202a3c]'
+                            : 'bg-[#e8f4f8] text-blue-600 shadow-[inset_2px_2px_6px_#c5d8e0,inset_-2px_-2px_6px_#ffffff]'
+                          : isDark
+                            ? 'bg-[#151B2B] text-orange-400 shadow-[inset_2px_2px_6px_#0a0e1a,inset_-2px_-2px_6px_#202a3c]'
+                            : 'bg-[#e8f4f8] text-orange-500 shadow-[inset_2px_2px_6px_#c5d8e0,inset_-2px_-2px_6px_#ffffff]'
                       }`}>
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -554,7 +574,9 @@ export default function TechnicianHome() {
                       </span>
                     )}
                     <span className={`text-xs font-medium px-2.5 py-1 rounded-lg whitespace-nowrap flex items-center gap-1.5 ${
-                      isDark ? 'bg-white/5 text-white/50' : 'bg-gray-100 text-gray-600'
+                      isDark
+                        ? 'bg-[#151B2B] text-white/50 shadow-[inset_2px_2px_6px_#0a0e1a,inset_-2px_-2px_6px_#202a3c]'
+                        : 'bg-[#e8f4f8] text-gray-500 shadow-[inset_2px_2px_6px_#c5d8e0,inset_-2px_-2px_6px_#ffffff]'
                     }`}>
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -563,7 +585,9 @@ export default function TechnicianHome() {
                     </span>
                     {isUrgent && (
                       <span className={`text-xs px-2.5 py-1 rounded-lg font-bold whitespace-nowrap flex items-center gap-1.5 ${
-                        isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700'
+                        isDark
+                          ? 'bg-[#151B2B] text-red-400 shadow-[inset_2px_2px_6px_#0a0e1a,inset_-2px_-2px_6px_#202a3c]'
+                          : 'bg-[#e8f4f8] text-red-500 shadow-[inset_2px_2px_6px_#c5d8e0,inset_-2px_-2px_6px_#ffffff]'
                       }`}>
                         <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -573,7 +597,9 @@ export default function TechnicianHome() {
                     )}
                     {job.status === 'in_progress' && (
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex items-center gap-1.5 ${
-                        isDark ? 'bg-violet-500/20 text-violet-300' : 'bg-violet-100 text-violet-700'
+                        isDark
+                          ? 'bg-[#151B2B] text-violet-400 shadow-[inset_2px_2px_6px_#0a0e1a,inset_-2px_-2px_6px_#202a3c]'
+                          : 'bg-[#e8f4f8] text-violet-600 shadow-[inset_2px_2px_6px_#c5d8e0,inset_-2px_-2px_6px_#ffffff]'
                       }`}>
                         <svg className="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

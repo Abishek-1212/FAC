@@ -27,8 +27,10 @@ const STATUS_META_DARK = {
 
 const SERVICE_TYPES = ['New Fitting', 'Service / Repair']
 
-const inputCls = (isDark) => `w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-  isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900 shadow-[0_1px_4px_rgba(0,0,0,0.07)]'
+const inputCls = (isDark) => `w-full mt-1 border-0 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-shadow ${
+  isDark
+    ? 'bg-[#151b2b] text-white shadow-[inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.04)] focus:shadow-[inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.04),0_0_0_2px_rgba(6,182,212,0.3)]'
+    : 'bg-[#e8f4fb] text-gray-800 shadow-[inset_3px_3px_7px_rgba(163,196,215,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.9)] focus:shadow-[inset_3px_3px_7px_rgba(163,196,215,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.9),0_0_0_2px_rgba(6,182,212,0.3)]'
 }`
 
 const EMPTY_FORM = {
@@ -194,24 +196,31 @@ export default function ServiceJobs() {
   return (
     <div className="pb-20 md:pb-0">
       {/* Header with Back Button and Title */}
-      <div className={`flex items-center justify-center px-4 py-4 border rounded-full mx-4 relative ${
-        isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
-      }`}>
+      <div
+        className="flex items-center justify-center px-4 py-4 rounded-full mx-4 relative"
+        style={{
+          background: isDark ? '#151B2B' : '#e8f4fb',
+          boxShadow: isDark
+            ? '6px 6px 14px #0a0f1a, -6px -6px 14px #202d42'
+            : '6px 6px 14px #c5d8e8, -6px -6px 14px #ffffff'
+        }}
+      >
         <button
           onClick={() => window.history.back()}
-          className={`absolute left-4 p-2 rounded-lg transition-all ${
-            isDark
-              ? 'hover:bg-white/10 text-white/70 hover:text-white'
-              : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
-          }`}
+          className="absolute left-4 p-2 rounded-xl transition-all"
+          style={{
+            background: isDark ? '#151B2B' : '#e8f4fb',
+            boxShadow: isDark
+              ? '3px 3px 7px #0a0f1a, -3px -3px 7px #202d42'
+              : '3px 3px 7px #c5d8e8, -3px -3px 7px #ffffff',
+            color: isDark ? 'rgba(255,255,255,0.7)' : '#4b5563'
+          }}
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className={`text-xl font-bold ${
-          isDark ? 'text-white' : 'text-gray-900'
-        }`}>
+        <h1 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           SERVICE JOBS
         </h1>
       </div>
@@ -220,13 +229,12 @@ export default function ServiceJobs() {
       {/* New Job Button - Centered below header */}
       <div className="flex justify-center mb-5">
         <motion.button
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.97 }}
+          whileTap={{ scale: 0.96 }}
           onClick={() => setModal(true)}
-          className={`px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-shadow ${
+          className={`px-6 py-3 rounded-xl text-sm font-bold border-0 transition-shadow ${
             isDark
-              ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-cyan-500/20 hover:shadow-cyan-500/40'
-              : 'bg-gradient-to-r from-aqua-500 to-aqua-600 text-white shadow-aqua-200 hover:shadow-aqua-300'
+              ? 'bg-gradient-to-br from-cyan-500 to-cyan-700 text-white shadow-[4px_4px_12px_rgba(6,182,212,0.4),-2px_-2px_8px_rgba(255,255,255,0.05)] active:shadow-[inset_3px_3px_7px_rgba(0,0,0,0.4),inset_-2px_-2px_5px_rgba(6,182,212,0.2)]'
+              : 'bg-gradient-to-br from-cyan-400 to-cyan-600 text-white shadow-[4px_4px_12px_rgba(6,182,212,0.35),-2px_-2px_8px_rgba(255,255,255,0.8)] active:shadow-[inset_3px_3px_7px_rgba(6,182,212,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.5)]'
           }`}
         >
           + New Job
@@ -281,16 +289,16 @@ export default function ServiceJobs() {
           return (
             <motion.button
               key={key}
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.96 }}
               onClick={() => setStatusFilter(key)}
-              className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-bold whitespace-nowrap transition-all shadow-sm ${
+              className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-bold whitespace-nowrap border-0 transition-shadow ${
                 statusFilter === key
                   ? isDark
-                    ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg`
-                    : `bg-gradient-to-r ${config.gradient} text-white shadow-md`
+                    ? `bg-gradient-to-br ${config.gradient} text-white shadow-[inset_3px_3px_7px_rgba(0,0,0,0.4),inset_-2px_-2px_5px_rgba(255,255,255,0.06)]`
+                    : `bg-gradient-to-br ${config.gradient} text-white shadow-[inset_3px_3px_7px_rgba(0,0,0,0.15),inset_-2px_-2px_5px_rgba(255,255,255,0.25)]`
                   : isDark
-                  ? 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10'
-                  : `${config.bgLight} ${config.textLight} border ${config.borderLight} hover:shadow-md`
+                  ? 'bg-[#1a2235] text-white/60 shadow-[4px_4px_10px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:text-white/80'
+                  : 'bg-[#e8f4fb] text-gray-500 shadow-[4px_4px_10px_rgba(163,196,215,0.6),-3px_-3px_8px_rgba(255,255,255,0.9)] hover:text-gray-700'
               }`}
             >
               <div className={statusFilter === key ? '' : 'opacity-60'}>
@@ -300,7 +308,9 @@ export default function ServiceJobs() {
               <span className={`min-w-[28px] h-6 flex items-center justify-center px-2 rounded-lg text-xs font-black ${
                 statusFilter === key
                   ? 'bg-white/25 text-white'
-                  : isDark ? 'bg-white/10 text-white/50' : 'bg-white/60 text-gray-700'
+                  : isDark
+                  ? 'bg-[#151b2b] text-white/50 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.04)]'
+                  : 'bg-[#dceef8] text-gray-600 shadow-[inset_2px_2px_4px_rgba(163,196,215,0.5),inset_-1px_-1px_3px_rgba(255,255,255,0.9)]'
               }`}>
                 {config.count}
               </span>
@@ -310,20 +320,15 @@ export default function ServiceJobs() {
       </div>
 
       {/* Service Jobs List */}
-      <div className={`rounded-2xl border overflow-hidden shadow-sm mt-4 ${
-        isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
+      <div className={`rounded-2xl mt-4 p-4 ${
+        isDark
+          ? 'bg-[#151b2b] shadow-[inset_3px_3px_8px_rgba(0,0,0,0.5),inset_-2px_-2px_6px_rgba(255,255,255,0.03)]'
+          : 'bg-[#e8f4fb] shadow-[inset_3px_3px_8px_rgba(163,196,215,0.5),inset_-2px_-2px_6px_rgba(255,255,255,0.9)]'
       }`}>
         <AnimatePresence mode="popLayout">
           {filtered.length > 0 ? (
-            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 ${
-              isDark ? 'bg-dark-card' : 'bg-white'
-            }`}>
-              {filtered.map((job, i) => {
-                const meta = STATUS_META[job.status] || STATUS_META.pending
-                const isUrgent = job.priority === 'urgent'
-                const time = job.createdAt?.toDate?.() || (job.createdAt?.seconds ? new Date(job.createdAt.seconds * 1000) : new Date())
-
-                return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map((job, i) => (
                   <motion.div
                     key={job.id}
                     layout
@@ -331,14 +336,15 @@ export default function ServiceJobs() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className={`rounded-2xl border p-4 transition-all hover:shadow-lg ${
+                    onClick={() => setDetailJob(job)}
+                    className={`rounded-2xl p-4 cursor-pointer transition-shadow ${
                       isDark
-                        ? 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 hover:border-white/20 hover:bg-white/10'
-                        : 'bg-gradient-to-br from-white to-gray-50 border-gray-200 hover:border-gray-300 hover:shadow-md'
+                        ? 'bg-[#1a2235] shadow-[4px_4px_10px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:shadow-[6px_6px_14px_rgba(0,0,0,0.6),-4px_-4px_10px_rgba(255,255,255,0.05)]'
+                        : 'bg-[#e8f4fb] shadow-[4px_4px_10px_rgba(163,196,215,0.7),-3px_-3px_8px_rgba(255,255,255,0.95)] hover:shadow-[6px_6px_14px_rgba(163,196,215,0.8),-4px_-4px_10px_rgba(255,255,255,1)]'
                     }`}
                   >
                     <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0" onClick={() => setDetailJob(job)}>
+                      <div className="flex-1 min-w-0">
                         <p className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
                           {job.customerName}
                         </p>
@@ -348,22 +354,18 @@ export default function ServiceJobs() {
                       </div>
                       <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-3">
                         <span className={`text-xs font-semibold px-2 py-1 rounded-lg whitespace-nowrap ${
-                          job.serviceType === 'New Fitting'
-                            ? isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-600'
-                            : isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-50 text-orange-600'
+                          isDark ? 'bg-[#151b2b] text-white/70 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.04)]' : 'bg-[#dceef8] text-gray-600 shadow-[inset_2px_2px_4px_rgba(163,196,215,0.5),inset_-1px_-1px_3px_rgba(255,255,255,0.9)]'
                         }`}>
                           {job.serviceType === 'New Fitting' ? '🔧 New Fitting' : '🛠️ Service'}
                         </span>
                         <span className={`text-xs font-bold px-2 py-1 rounded-lg whitespace-nowrap ${
-                          job.technicianName
-                            ? isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-50 text-cyan-700'
-                            : isDark ? 'bg-gray-500/20 text-gray-300' : 'bg-gray-100 text-gray-600'
+                          isDark ? 'bg-[#151b2b] text-white/70 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.04)]' : 'bg-[#dceef8] text-gray-600 shadow-[inset_2px_2px_4px_rgba(163,196,215,0.5),inset_-1px_-1px_3px_rgba(255,255,255,0.9)]'
                         }`}>
                           {job.technicianName ? `👷 ${job.technicianName}` : '⚠️ Unassigned'}
                         </span>
                         {job.nextServiceDate && (
                           <span className={`text-xs font-semibold px-2 py-1 rounded-lg whitespace-nowrap ${
-                            isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-50 text-purple-600'
+                            isDark ? 'bg-[#151b2b] text-white/70 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.04)]' : 'bg-[#dceef8] text-gray-600 shadow-[inset_2px_2px_4px_rgba(163,196,215,0.5),inset_-1px_-1px_3px_rgba(255,255,255,0.9)]'
                           }`}>
                             📅 Next: {formatDate(job.nextServiceDate)}
                           </span>
@@ -371,16 +373,13 @@ export default function ServiceJobs() {
                       </div>
                     </div>
                   </motion.div>
-                )
-              })}
+              ))}
             </div>
           ) : (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className={`p-12 text-center ${
-                isDark ? 'bg-dark-card' : 'bg-white'
-              }`}
+              className="p-12 text-center"
             >
               <p className="text-4xl mb-3">🔧</p>
               <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>No service jobs found</p>
@@ -496,10 +495,14 @@ export default function ServiceJobs() {
                   key={mode.key}
                   type="button"
                   onClick={() => setForm(f => ({ ...f, assignmentMode: mode.key }))}
-                  className={`flex-1 py-3 px-3 rounded-xl text-sm font-semibold border-2 transition ${
+                  className={`flex-1 py-3 px-3 rounded-xl text-sm font-semibold transition-shadow ${
                     form.assignmentMode === mode.key
-                      ? isDark ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-cyan-500 bg-cyan-50 text-cyan-700'
-                      : isDark ? 'border-white/10 bg-white/5 text-white/60 hover:border-white/20' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                      ? isDark
+                        ? 'bg-[#151b2b] text-white border-2 border-white/40 shadow-[inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.04)]'
+                        : 'bg-[#e8f4fb] text-gray-800 border-2 border-gray-400 shadow-[inset_3px_3px_7px_rgba(163,196,215,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.9)]'
+                      : isDark
+                        ? 'border border-white/10 bg-[#1a2235] text-white/60 shadow-[4px_4px_10px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:text-white/80'
+                        : 'border border-gray-200 bg-[#e8f4fb] text-gray-500 shadow-[4px_4px_10px_rgba(163,196,215,0.6),-3px_-3px_8px_rgba(255,255,255,0.9)] hover:text-gray-700'
                   }`}
                 >
                   <div className="text-lg mb-1">{mode.icon}</div>
@@ -541,13 +544,17 @@ export default function ServiceJobs() {
                 placeholder="10-digit phone number"
                 maxLength="10"
                 required
-                className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${
+                className={`w-full mt-1 border-0 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition-shadow ${
                   form.customerPhone.length === 10
-                    ? isDark ? 'border-green-500 focus:ring-green-500' : 'border-green-500 focus:ring-green-500'
+                    ? 'focus:ring-green-400/50'
                     : form.customerPhone.length > 0
-                    ? isDark ? 'border-amber-500 focus:ring-amber-500' : 'border-amber-500 focus:ring-amber-500'
-                    : isDark ? 'border-white/10 focus:ring-cyan-500' : 'border-gray-200 focus:ring-cyan-500'
-                } ${isDark ? 'bg-white/5 text-white' : 'bg-white text-gray-900 shadow-[0_1px_4px_rgba(0,0,0,0.07)]'}`}
+                    ? 'focus:ring-amber-400/50'
+                    : 'focus:ring-cyan-400/50'
+                } ${
+                  isDark
+                    ? 'bg-[#151b2b] text-white shadow-[inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.04)]'
+                    : 'bg-[#e8f4fb] text-gray-800 shadow-[inset_3px_3px_7px_rgba(163,196,215,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.9)]'
+                }`}
               />
               <div className="mt-1.5 flex items-center gap-2">
                 {form.customerPhone.length > 0 && form.customerPhone.length < 10 && (
@@ -583,10 +590,14 @@ export default function ServiceJobs() {
                       key={t}
                       type="button"
                       onClick={() => setForm(f => ({ ...f, serviceType: t }))}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition ${
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-shadow ${
                         form.serviceType === t
-                          ? isDark ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-cyan-500 bg-cyan-50 text-cyan-700'
-                          : isDark ? 'border-white/10 bg-white/5 text-white/60 hover:border-white/20' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                          ? isDark
+                            ? 'bg-[#151b2b] text-white border-2 border-white/40 shadow-[inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.04)]'
+                            : 'bg-[#e8f4fb] text-gray-800 border-2 border-gray-400 shadow-[inset_3px_3px_7px_rgba(163,196,215,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.9)]'
+                          : isDark
+                            ? 'border border-white/10 bg-[#1a2235] text-white/60 shadow-[4px_4px_10px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:text-white/80'
+                            : 'border border-gray-200 bg-[#e8f4fb] text-gray-500 shadow-[4px_4px_10px_rgba(163,196,215,0.6),-3px_-3px_8px_rgba(255,255,255,0.9)] hover:text-gray-700'
                       }`}
                     >
                       {t === 'New Fitting' ? '🔧 New Fitting' : '🛠️ Service / Repair'}
@@ -603,7 +614,11 @@ export default function ServiceJobs() {
                   onChange={e => setForm(f => ({ ...f, problemDescription: e.target.value }))}
                   required
                   rows={3}
-                  className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900 shadow-[0_1px_4px_rgba(0,0,0,0.07)]'}`}
+                  className={`w-full mt-1 border-0 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/50 resize-none transition-shadow ${
+                    isDark
+                      ? 'bg-[#151b2b] text-white shadow-[inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.04)]'
+                      : 'bg-[#e8f4fb] text-gray-800 shadow-[inset_3px_3px_7px_rgba(163,196,215,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.9)]'
+                  }`}
                 />
               </div>
             </div>
@@ -648,13 +663,21 @@ export default function ServiceJobs() {
             <button
               type="button"
               onClick={() => setModal(false)}
-              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${isDark ? 'bg-white/5 text-white/80 hover:bg-white/10' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-0 transition-shadow active:scale-95 ${
+                isDark
+                  ? 'bg-[#1a2235] text-white/70 shadow-[4px_4px_10px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:text-white active:shadow-[inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.04)]'
+                  : 'bg-[#e8f4fb] text-gray-600 shadow-[4px_4px_10px_rgba(163,196,215,0.6),-3px_-3px_8px_rgba(255,255,255,0.9)] hover:text-gray-800 active:shadow-[inset_3px_3px_7px_rgba(163,196,215,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.9)]'
+              }`}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white ${isDark ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 shadow-glow-cyan-sm' : 'bg-gradient-to-r from-cyan-500 to-cyan-600'}`}
+              className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white border-0 transition-shadow active:scale-95 ${
+                isDark
+                  ? 'bg-gradient-to-br from-cyan-500 to-cyan-700 shadow-[4px_4px_12px_rgba(6,182,212,0.4),-2px_-2px_8px_rgba(255,255,255,0.05)] active:shadow-[inset_3px_3px_7px_rgba(0,0,0,0.4),inset_-2px_-2px_5px_rgba(6,182,212,0.2)]'
+                  : 'bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-[4px_4px_12px_rgba(6,182,212,0.35),-2px_-2px_8px_rgba(255,255,255,0.8)] active:shadow-[inset_3px_3px_7px_rgba(6,182,212,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.5)]'
+              }`}
             >
               Review Job →
             </button>
@@ -703,16 +726,28 @@ export default function ServiceJobs() {
                   ['⚡ Priority', detailJob.priority === 'urgent' ? '🔴 Urgent' : '🟢 Normal'],
                   ['🛠️ Service Type', detailJob.serviceType || '—'],
                 ].map(([label, value]) => (
-                  <div key={label} className={`rounded-xl p-3 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
+                  <div key={label} className={`rounded-xl p-3 ${
+                    isDark
+                      ? 'bg-[#1a2235] shadow-[4px_4px_8px_rgba(0,0,0,0.5),-2px_-2px_6px_rgba(255,255,255,0.04)]'
+                      : 'bg-[#e8f4fb] shadow-[4px_4px_8px_rgba(163,196,215,0.6),-2px_-2px_6px_rgba(255,255,255,0.95)]'
+                  }`}>
                     <p className={`text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{label}</p>
                     <p className={`font-bold text-sm mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{value}</p>
                   </div>
                 ))}
-                <div className={`col-span-2 rounded-xl p-3 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
+                <div className={`col-span-2 rounded-xl p-3 ${
+                  isDark
+                    ? 'bg-[#1a2235] shadow-[4px_4px_8px_rgba(0,0,0,0.5),-2px_-2px_6px_rgba(255,255,255,0.04)]'
+                    : 'bg-[#e8f4fb] shadow-[4px_4px_8px_rgba(163,196,215,0.6),-2px_-2px_6px_rgba(255,255,255,0.95)]'
+                }`}>
                   <p className={`text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-400'}`}>📍 Address</p>
                   <p className={`font-bold text-sm mt-0.5 whitespace-pre-line ${isDark ? 'text-white' : 'text-gray-900'}`}>{formatAddressForDisplay(detailJob.customerAddress)}</p>
                 </div>
-                <div className={`col-span-2 rounded-xl p-3 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
+                <div className={`col-span-2 rounded-xl p-3 ${
+                  isDark
+                    ? 'bg-[#1a2235] shadow-[4px_4px_8px_rgba(0,0,0,0.5),-2px_-2px_6px_rgba(255,255,255,0.04)]'
+                    : 'bg-[#e8f4fb] shadow-[4px_4px_8px_rgba(163,196,215,0.6),-2px_-2px_6px_rgba(255,255,255,0.95)]'
+                }`}>
                   <p className={`text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-400'}`}>📝 Problem</p>
                   <p className={`font-bold text-sm mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{detailJob.problemDescription}</p>
                 </div>

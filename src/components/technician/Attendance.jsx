@@ -354,7 +354,7 @@ export default function Attendance() {
       )}
 
       {/* Records */}
-      <div className="space-y-3">
+      <div className="space-y-3 pb-28 md:pb-32">
         {loading ? (
           <div className="text-center py-8">
             <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
@@ -366,24 +366,26 @@ export default function Attendance() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className={`rounded-2xl p-4 border ${
-                isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'
-              }`}
+              className="rounded-2xl p-4"
+              style={isDark
+                ? { background: '#151B2B', boxShadow: '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6)' }
+                : { background: '#e8f0f7', boxShadow: '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5)' }
+              }
             >
               <div className="flex items-center justify-between mb-3">
                 <p className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {formatDate(rec.date)}
                 </p>
                 <span
-                  className={`text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 ${
+                  className={`text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 ${
                     rec.checkOut
-                      ? isDark
-                        ? 'bg-green-500/20 text-green-300'
-                        : 'bg-green-100 text-green-700'
-                      : isDark
-                      ? 'bg-amber-500/20 text-amber-300'
-                      : 'bg-amber-100 text-amber-700'
+                      ? isDark ? 'text-green-300' : 'text-green-700'
+                      : isDark ? 'text-amber-300' : 'text-amber-700'
                   }`}
+                  style={isDark
+                    ? { background: '#151B2B', boxShadow: 'inset 2px 2px 5px rgba(0,0,0,0.6), inset -1px -1px 3px rgba(255,255,255,0.04)' }
+                    : { background: '#e8f0f7', boxShadow: 'inset 2px 2px 5px rgba(163,177,198,0.45), inset -2px -2px 5px rgba(255,255,255,0.9)' }
+                  }
                 >
                   {rec.checkOut ? (
                     <>
@@ -394,28 +396,35 @@ export default function Attendance() {
                     </>
                   ) : (
                     <>
-                      <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
-                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" fill="none" />
-                      </svg>
+                      <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
                       In Progress
                     </>
                   )}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Check In</p>
-                  <p className={`font-bold ${isDark ? 'text-green-400' : 'text-green-600'}`}>
-                    {formatTime(rec.checkIn)}
-                  </p>
-                </div>
-                <div>
-                  <p className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Check Out</p>
-                  <p className={`font-bold ${isDark ? 'text-red-400' : 'text-red-600'}`}>
-                    {formatTime(rec.checkOut)}
-                  </p>
-                </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[['Check In', formatTime(rec.checkIn), isDark ? 'text-green-300' : 'text-green-700'],
+                  ['Check Out', formatTime(rec.checkOut), isDark ? 'text-red-300' : 'text-red-700'],
+                  ['Duration', (() => {
+                    if (!rec.checkIn || !rec.checkOut) return '—'
+                    const a = rec.checkIn.toDate ? rec.checkIn.toDate() : new Date(rec.checkIn.seconds * 1000)
+                    const b = rec.checkOut.toDate ? rec.checkOut.toDate() : new Date(rec.checkOut.seconds * 1000)
+                    const diff = b - a
+                    return `${Math.floor(diff/3600000)}h ${Math.floor((diff%3600000)/60000)}m`
+                  })(), isDark ? 'text-blue-300' : 'text-blue-700']
+                ].map(([label, value, color]) => (
+                  <div
+                    key={label}
+                    className="rounded-xl p-2.5"
+                    style={isDark
+                      ? { background: '#151B2B', boxShadow: 'inset 2px 2px 5px rgba(0,0,0,0.6), inset -1px -1px 3px rgba(255,255,255,0.04)' }
+                      : { background: '#e8f0f7', boxShadow: 'inset 2px 2px 5px rgba(163,177,198,0.45), inset -2px -2px 5px rgba(255,255,255,0.9)' }
+                    }
+                  >
+                    <p className={`text-[10px] font-semibold mb-0.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>{label}</p>
+                    <p className={`text-xs font-black ${color}`}>{value}</p>
+                  </div>
+                ))}
               </div>
             </motion.div>
           ))

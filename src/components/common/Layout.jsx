@@ -150,7 +150,7 @@ export default function Layout({ children, navItems, title }) {
   }
 
   return (
-    <div className={`h-screen flex flex-col overflow-hidden ${isDark ? 'bg-dark-bg' : 'bg-light-bg'}`}>
+    <div className={`h-screen flex flex-col overflow-hidden ${isDark ? 'bg-[#151B2B]' : 'bg-[#e8f0f7]'}`}>
       {/* Top Nav - Hidden for specific pages */}
       {!hideHeader && (
         <header className={`shrink-0 sticky top-0 z-50 ${isDark ? 'bg-gradient-to-r from-cyan-800 to-blue-800' : 'bg-gradient-to-r from-cyan-400 to-blue-400'}`} style={{ boxShadow: isDark ? '0 8px 40px 8px rgba(0,0,0,0.6)' : '0 8px 40px 8px rgba(103,232,249,0.6)' }}>
@@ -281,9 +281,11 @@ export default function Layout({ children, navItems, title }) {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className={`pointer-events-auto flex items-center gap-1 p-1.5 rounded-full border
-              shadow-[0_20px_60px_rgba(0,0,0,0.3),0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.2)]
-              ${isDark ? 'bg-white/8 backdrop-blur-2xl border-white/15' : 'bg-white/70 backdrop-blur-2xl border-white/90'}`}
+            className={`pointer-events-auto flex items-center gap-1 p-1.5 rounded-full border ${
+              isDark
+                ? 'bg-[#1a2535] border-white/10 shadow-[6px_6px_16px_rgba(0,0,0,0.6),-4px_-4px_12px_rgba(255,255,255,0.04),inset_0_1px_0_rgba(255,255,255,0.06)]'
+                : 'bg-[#e8edf4] border-white/80 shadow-[6px_6px_16px_rgba(163,177,198,0.7),-4px_-4px_12px_rgba(255,255,255,0.9),inset_0_1px_0_rgba(255,255,255,0.8)]'
+            }`}
             style={{ perspective: '600px', transformStyle: 'preserve-3d', transform: 'rotateX(3deg)' }}
           >
             {/* Admin pill */}

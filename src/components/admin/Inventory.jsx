@@ -321,8 +321,23 @@ export default function Inventory() {
 
   const t = isDark ? 'text-white' : 'text-gray-900'
   const s = isDark ? 'text-white/40' : 'text-gray-400'
-  const cardBase = `rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`
-  const inputCls = `w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white placeholder-white/30' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`
+  const neuBg = isDark ? '#151B2B' : '#e8f4fb'
+  const neuShadowOut = isDark
+    ? '6px 6px 14px #0a0f1a, -6px -6px 14px #202d42'
+    : '6px 6px 14px #c5d8e8, -6px -6px 14px #ffffff'
+  const neuShadowIn = isDark
+    ? 'inset 3px 3px 6px #0a0f1a, inset -3px -3px 6px #202d42'
+    : 'inset 3px 3px 6px #c5d8e8, inset -3px -3px 6px #ffffff'
+  const cardStyle = { background: neuBg, boxShadow: neuShadowOut }
+  const cardBase = 'rounded-2xl'
+  const inputCls = `w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 border-0 ${isDark ? 'text-white placeholder-white/30' : 'text-gray-900 placeholder-gray-400'}`
+  const inputStyle = { background: neuBg, boxShadow: neuShadowIn }
+  const neuContainer = isDark
+    ? 'bg-[#151B2B] border-0 shadow-[6px_6px_12px_#0a0f1a,-6px_-6px_12px_#202d42]'
+    : 'bg-[#e8f4fb] border-0 shadow-[6px_6px_12px_#c5d8e8,-6px_-6px_12px_#ffffff]'
+  const neuActive = isDark
+    ? 'bg-cyan-500 text-white shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_5px_rgba(255,255,255,0.05)]'
+    : 'bg-cyan-500 text-white shadow-[inset_3px_3px_6px_rgba(0,0,0,0.2),inset_-2px_-2px_5px_rgba(255,255,255,0.3)]'
 
   // Prevent scroll on number inputs
   useEffect(() => {
@@ -343,23 +358,26 @@ export default function Inventory() {
         <div className="text-center">
           <h2 className={`text-2xl font-black ${t}`}>Inventory Management</h2>
         </div>
-        <div className={`flex items-center gap-3 border rounded-full p-1 ${isDark ? 'border-white/20' : 'border-gray-300'}`}>
+        <div className={`flex items-center gap-3 rounded-full p-1.5`} style={{ background: neuBg, boxShadow: neuShadowOut }}>
           <button
             onClick={() => setShowCategoryModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500 border border-cyan-500 text-white text-xs font-bold hover:bg-cyan-600 transition"
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-white text-xs font-bold transition"
+            style={{ background: '#06B6D4', boxShadow: '3px 3px 8px rgba(0,0,0,0.3), -2px -2px 6px rgba(255,255,255,0.08)' }}
           >
             Manage Categories
           </button>
           <button
             onClick={openAddProduct}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500 border border-cyan-500 text-white text-xs font-bold hover:bg-cyan-600 transition"
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-white text-xs font-bold transition"
+            style={{ background: '#06B6D4', boxShadow: '3px 3px 8px rgba(0,0,0,0.3), -2px -2px 6px rgba(255,255,255,0.08)' }}
           >
             <span className="text-xs">+</span> Add Product
           </button>
           <button
             onClick={handleSyncInventory}
             disabled={syncing}
-            className="flex items-center justify-center px-4 py-2 rounded-full bg-purple-500 border border-purple-500 text-white text-xs font-bold hover:bg-purple-600 transition disabled:opacity-60"
+            className="flex items-center justify-center px-4 py-2 rounded-full text-white text-xs font-bold transition disabled:opacity-60"
+            style={{ background: '#a855f7', boxShadow: '3px 3px 8px rgba(0,0,0,0.3), -2px -2px 6px rgba(255,255,255,0.08)' }}
           >
             {syncing ? (
               <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -381,7 +399,7 @@ export default function Inventory() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by product name..."
-          className={`w-full px-4 py-3 pl-12 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white placeholder-white/30' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`}
+          className={`w-full px-4 py-3 pl-12 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'text-white placeholder-white/30' : 'text-gray-900 placeholder-gray-400'} ${neuContainer}`}
         />
         <svg className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-white/30' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
@@ -398,23 +416,23 @@ export default function Inventory() {
 
       {/* Tab Pills */}
       <div className="flex justify-center">
-        <div className={`flex gap-3 border rounded-full p-1 ${isDark ? 'border-white/20' : 'border-gray-300'}`}>
+        <div className={`flex gap-3 rounded-full p-1.5 ${neuContainer}`}>
           <button
             onClick={() => setActiveTab('manage')}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition border ${
+            className={`px-4 py-2 rounded-full text-xs font-bold transition ${
               activeTab === 'manage'
-                ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30 border-cyan-500'
-                : isDark ? 'bg-transparent text-white/60 hover:bg-white/10 border-white/10' : 'bg-transparent text-gray-600 hover:bg-gray-200 border-black/20'
+                ? neuActive
+                : isDark ? 'text-white/60 hover:text-white' : 'text-gray-500 hover:text-gray-800'
             }`}
           >
             MANAGE STOCK
           </button>
           <button
             onClick={() => setActiveTab('inventory')}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition border ${
+            className={`px-4 py-2 rounded-full text-xs font-bold transition ${
               activeTab === 'inventory'
-                ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30 border-cyan-500'
-                : isDark ? 'bg-transparent text-white/60 hover:bg-white/10 border-white/10' : 'bg-transparent text-gray-600 hover:bg-gray-200 border-black/20'
+                ? neuActive
+                : isDark ? 'text-white/60 hover:text-white' : 'text-gray-500 hover:text-gray-800'
             }`}
           >
            INVENTORY STOCK
@@ -433,7 +451,7 @@ export default function Inventory() {
         </div>
 
         {products.length === 0 ? (
-          <div className={`${cardBase} p-12 text-center`}>
+          <div className={`${cardBase} p-12 text-center`} style={cardStyle}>
             <p className="text-4xl mb-3">📦</p>
             <p className={`text-sm ${s}`}>No products yet. Click "Add Product" to get started.</p>
           </div>
@@ -466,7 +484,7 @@ export default function Inventory() {
           
           if (filteredProducts.length === 0) {
             return (
-              <div className={`${cardBase} p-12 text-center`}>
+              <div className={`${cardBase} p-12 text-center`} style={cardStyle}>
                 <p className="text-4xl mb-3">🔍</p>
                 <p className={`text-sm ${s}`}>No products found matching "{searchQuery}"</p>
               </div>
@@ -487,15 +505,15 @@ export default function Inventory() {
                   </div>
 
                   {/* Products Table */}
-                  <div className={`${cardBase} overflow-hidden`}>
+                  <div className={`${cardBase} overflow-hidden`} style={cardStyle}>
                     {/* Table Header */}
-                    <div className={`grid grid-cols-12 px-4 py-3 border-b text-xs font-bold uppercase tracking-wider ${isDark ? 'border-white/10 text-white/40' : 'border-gray-100 text-gray-400'}`}>
+                    <div className={`grid grid-cols-12 px-4 py-3 border-b text-xs font-bold uppercase tracking-wider ${isDark ? 'border-white/10 text-white/40' : 'border-[#d0e8f5] text-gray-400'}`}>
                       <div className="col-span-10">Product</div>
                       <div className="col-span-2 text-right">Price</div>
                     </div>
 
                     {/* Table Rows */}
-                    <div className={`divide-y ${isDark ? 'divide-white/5' : 'divide-gray-50'}`}>
+                    <div className={`divide-y ${isDark ? 'divide-white/5' : 'divide-[#d8edf8]'}`}>
                       {categoryProducts.map((product, i) => {
                         const invItem = invProducts.find(inv => inv.productName === product.name || inv.name === product.name)
                         const stockQty = invItem?.quantity || 0
@@ -549,20 +567,20 @@ export default function Inventory() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Product Name *</label>
-              <input type="text" value={productForm.name} onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))} required className={inputCls} />
+              <input type="text" value={productForm.name} onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))} required className={inputCls} style={inputStyle} />
             </div>
             <div>
               <label className={`text-xs font-semibold block mb-1.5 ${s}`}>SKU (optional)</label>
-              <input type="text" value={productForm.sku} onChange={e => setProductForm(f => ({ ...f, sku: e.target.value }))} className={inputCls} />
+              <input type="text" value={productForm.sku} onChange={e => setProductForm(f => ({ ...f, sku: e.target.value }))} className={inputCls} style={inputStyle} />
             </div>
           </div>
           <div>
             <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Price (₹) *</label>
-            <input type="number" value={productForm.price} onChange={e => setProductForm(f => ({ ...f, price: e.target.value }))} required className={inputCls} />
+            <input type="number" value={productForm.price} onChange={e => setProductForm(f => ({ ...f, price: e.target.value }))} required className={inputCls} style={inputStyle} />
           </div>
           <div>
             <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Category *</label>
-            <select value={productForm.category} onChange={e => setProductForm(f => ({ ...f, category: e.target.value }))} required className={inputCls}>
+            <select value={productForm.category} onChange={e => setProductForm(f => ({ ...f, category: e.target.value }))} required className={inputCls} style={inputStyle}>
               <option value="">Select category</option>
               {categories.map(c => (<option key={c.id} value={c.name}>{c.name}</option>))}
             </select>
@@ -570,11 +588,11 @@ export default function Inventory() {
           </div>
           <div>
             <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Description</label>
-            <textarea value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Enter product description..." className={inputCls} />
+            <textarea value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Enter product description..." className={inputCls} style={inputStyle} />
           </div>
           <div>
             <label className={`text-xs font-semibold block mb-1.5 ${s}`}>Low Stock Threshold *</label>
-            <input type="number" min="0" value={productForm.threshold} onChange={e => setProductForm(f => ({ ...f, threshold: e.target.value }))} placeholder="Alert when stock falls below this" required className={inputCls} />
+            <input type="number" min="0" value={productForm.threshold} onChange={e => setProductForm(f => ({ ...f, threshold: e.target.value }))} placeholder="Alert when stock falls below this" required className={inputCls} style={inputStyle} />
             <p className={`text-xs mt-1 ${s}`}>When stock ≤ threshold, item shows in red</p>
           </div>
           <div className="flex gap-2 pt-3 border-t border-gray-100">
@@ -588,7 +606,7 @@ export default function Inventory() {
       <Modal open={showCategoryModal} onClose={() => setShowCategoryModal(false)} title="Manage Categories">
         <div className="space-y-4">
           <form onSubmit={handleAddCategory} className="flex gap-2">
-            <input value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="New category name..." className={inputCls} />
+            <input value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="New category name..." className={inputCls} style={inputStyle} />
             <button type="submit" disabled={addingCategory || !newCategory.trim()} className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-cyan-600 transition disabled:opacity-50">{addingCategory ? '...' : 'Add'}</button>
           </form>
           {categories.length === 0 ? (

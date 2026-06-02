@@ -150,7 +150,7 @@ export default function Reports() {
   const newFitting = filteredJobs.filter(j => j.serviceType === 'New Fitting').length
   const serviceRepair = filteredJobs.filter(j => j.serviceType === 'Service / Repair').length
 
-  const card = `rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-100 shadow-sm'}`
+  const card = `rounded-2xl ${isDark ? 'bg-[#151B2B] shadow-[6px_6px_16px_#0a0e1a,-6px_-6px_16px_#202a3c]' : 'bg-[#e8f4f8] shadow-[6px_6px_16px_#c5d8e0,-6px_-6px_16px_#ffffff]'}`
   const t = isDark ? 'text-white' : 'text-gray-900'
   const s = isDark ? 'text-white/40' : 'text-gray-400'
 
@@ -246,25 +246,27 @@ export default function Reports() {
   }
 
   return (
-    <div className="pb-20 md:pb-0">
+    <div className="pb-32">
       {/* Header with Back Button and Title */}
-      <div className={`flex items-center justify-center px-4 py-4 border rounded-full mx-4 mb-5 relative ${
-        isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
+      <div className={`flex items-center justify-center px-4 py-4 rounded-full mx-4 mb-5 relative ${
+        isDark
+          ? 'bg-[#151B2B] shadow-[6px_6px_14px_#0a0e1a,-6px_-6px_14px_#202a3c]'
+          : 'bg-[#e8f4f8] shadow-[6px_6px_14px_#c5d8e0,-6px_-6px_14px_#ffffff]'
       }`}>
         <button
           onClick={() => window.history.back()}
-          className={`absolute left-4 p-2 rounded-lg transition-all ${
+          className={`absolute left-4 p-2 rounded-xl transition-all ${
             isDark
-              ? 'hover:bg-white/10 text-white/70 hover:text-white'
-              : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+              ? 'text-white/70 hover:text-white shadow-[3px_3px_7px_#0a0e1a,-3px_-3px_7px_#202a3c] hover:shadow-[inset_3px_3px_7px_#0a0e1a,inset_-3px_-3px_7px_#202a3c]'
+              : 'text-gray-500 hover:text-gray-900 shadow-[3px_3px_7px_#c5d8e0,-3px_-3px_7px_#ffffff] hover:shadow-[inset_3px_3px_7px_#c5d8e0,inset_-3px_-3px_7px_#ffffff]'
           }`}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className={`text-xl font-bold ${
-          isDark ? 'text-white' : 'text-gray-900'
+        <h1 className={`text-xl font-bold tracking-widest ${
+          isDark ? 'text-white/90' : 'text-gray-700'
         }`}>
           REPORTS
         </h1>
@@ -294,11 +296,11 @@ export default function Reports() {
             className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
               dateFilter === key
                 ? isDark
-                  ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
-                  : 'bg-gradient-to-r from-aqua-500 to-aqua-600 text-white shadow-lg shadow-aqua-300/40'
+                  ? 'bg-[#151B2B] text-cyan-400 shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+                  : 'bg-[#e8f4f8] text-cyan-600 shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
                 : isDark
-                ? 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:border-white/20'
-                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm'
+                ? 'bg-[#151B2B] text-white/60 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] hover:text-white/90'
+                : 'bg-[#e8f4f8] text-gray-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] hover:text-gray-800'
             }`}
           >
             {icon}
@@ -336,13 +338,13 @@ export default function Reports() {
       {/* Action Buttons */}
       <div className="flex flex-col md:flex-row gap-3 justify-center">
         <motion.button
-          whileTap={{ scale: 0.95 }}
+          whileTap={{ scale: 0.97 }}
           onClick={handleGenerateMissingInvoices}
           disabled={generatingInvoices || completedJobs === 0}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-all disabled:opacity-60 ${
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50 ${
             isDark
-              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-blue-500/25 hover:shadow-blue-500/40'
-              : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-blue-200 hover:shadow-blue-300'
+              ? 'bg-[#151B2B] text-blue-400 shadow-[5px_5px_12px_#0a0e1a,-5px_-5px_12px_#202a3c] active:shadow-[inset_5px_5px_12px_#0a0e1a,inset_-5px_-5px_12px_#202a3c]'
+              : 'bg-[#e8f4f8] text-blue-600 shadow-[5px_5px_12px_#c5d8e0,-5px_-5px_12px_#ffffff] active:shadow-[inset_5px_5px_12px_#c5d8e0,inset_-5px_-5px_12px_#ffffff]'
           }`}
         >
           {generatingInvoices ? (
@@ -362,13 +364,13 @@ export default function Reports() {
           )}
         </motion.button>
         <motion.button
-          whileTap={{ scale: 0.95 }}
+          whileTap={{ scale: 0.97 }}
           onClick={handleDownloadReport}
           disabled={generatingReport}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-all disabled:opacity-60 ${
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50 ${
             isDark
-              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40'
-              : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-emerald-200 hover:shadow-emerald-300'
+              ? 'bg-[#151B2B] text-emerald-400 shadow-[5px_5px_12px_#0a0e1a,-5px_-5px_12px_#202a3c] active:shadow-[inset_5px_5px_12px_#0a0e1a,inset_-5px_-5px_12px_#202a3c]'
+              : 'bg-[#e8f4f8] text-emerald-600 shadow-[5px_5px_12px_#c5d8e0,-5px_-5px_12px_#ffffff] active:shadow-[inset_5px_5px_12px_#c5d8e0,inset_-5px_-5px_12px_#ffffff]'
           }`}
         >
           {generatingReport ? (
@@ -538,8 +540,7 @@ export default function Reports() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            className={`rounded-xl p-5 border-2 transition-all ${isDark ? 'bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/30 hover:border-blue-500/50' : 'bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200 hover:border-blue-300 hover:shadow-lg'}`}
-          >
+            className={`rounded-xl p-5 transition-all ${isDark ? 'bg-[#151B2B] shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]' : 'bg-[#e8f4f8] shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'}`}>
             <div className="mb-3">
               <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>New Fitting</p>
             </div>
@@ -550,8 +551,7 @@ export default function Reports() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
-            className={`rounded-xl p-5 border-2 transition-all ${isDark ? 'bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/30 hover:border-orange-500/50' : 'bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-200 hover:border-orange-300 hover:shadow-lg'}`}
-          >
+            className={`rounded-xl p-5 transition-all ${isDark ? 'bg-[#151B2B] shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]' : 'bg-[#e8f4f8] shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'}`}>
             <div className="mb-3">
               <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-orange-300' : 'text-orange-600'}`}>Service/Repair</p>
             </div>

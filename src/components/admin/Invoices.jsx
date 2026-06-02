@@ -169,9 +169,16 @@ export default function Invoices() {
   return (
     <div className="pb-20 md:pb-0">
       {/* Header with Back Button and Title */}
-      <div className={`flex items-center justify-center px-4 py-4 border rounded-full mx-4 mb-5 relative ${
-        isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
-      }`}>
+      <div
+        className="flex items-center justify-center px-4 py-4 rounded-full mx-4 mb-5 relative"
+        style={isDark ? {
+          background: '#151B2B',
+          boxShadow: '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)'
+        } : {
+          background: '#e8f0f7',
+          boxShadow: '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5)'
+        }}
+      >
         <button
           onClick={() => window.history.back()}
           className={`absolute left-4 p-2 rounded-lg transition-all ${
@@ -195,7 +202,17 @@ export default function Invoices() {
 
       {/* Date Filter */}
       <div className="space-y-3">
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+        <div
+          className="rounded-2xl p-4"
+          style={isDark ? {
+            background: '#151B2B',
+            boxShadow: '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6)'
+          } : {
+            background: '#e8f0f7',
+            boxShadow: '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5)'
+          }}
+        >
+        <div className="flex gap-3 overflow-x-auto scrollbar-hide py-1 px-1">
           {[
             { key: 'all', label: 'All Time', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
             { key: 'today', label: 'Today', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
@@ -212,12 +229,25 @@ export default function Invoices() {
                   setShowCustomDatePicker(false)
                 }
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap ${dateFilter === tab.key ? 'bg-blue-500 text-white' : isDark ? 'bg-white/5 text-white/60 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap flex-shrink-0 ${
+                dateFilter === tab.key
+                  ? isDark ? 'text-blue-300' : 'text-blue-700'
+                  : isDark ? 'text-white/60' : 'text-gray-600'
+              }`}
+              style={dateFilter === tab.key
+                ? isDark
+                  ? { background: '#151B2B', boxShadow: 'inset 3px 3px 7px rgba(0,0,0,0.7), inset -2px -2px 5px rgba(255,255,255,0.04)', border: '1px solid rgba(59,130,246,0.4)' }
+                  : { background: '#e8f0f7', boxShadow: 'inset 3px 3px 7px rgba(163,177,198,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)', border: '1px solid rgba(59,130,246,0.4)' }
+                : isDark
+                  ? { background: '#151B2B', boxShadow: '-3px -3px 7px rgba(255,255,255,0.04), 3px 3px 7px rgba(0,0,0,0.6)' }
+                  : { background: '#e8f0f7', boxShadow: '-3px -3px 7px rgba(255,255,255,0.9), 3px 3px 7px rgba(163,177,198,0.5)' }
+              }
             >
               {tab.icon}
               {tab.label}
             </button>
           ))}
+        </div>
         </div>
 
         {/* Custom Date Range Picker */}
@@ -272,23 +302,30 @@ export default function Invoices() {
           { 
             label: 'Total Billed', 
             value: totalRevenue, 
-            bgColor: isDark ? 'bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-cyan-500/20' : 'bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-200',
             valueColor: isDark ? 'text-cyan-300' : 'text-cyan-700'
           },
           { 
             label: 'Received', 
             value: totalReceived, 
-            bgColor: isDark ? 'bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20' : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200',
             valueColor: isDark ? 'text-green-300' : 'text-green-700'
           },
           { 
             label: 'Pending', 
             value: totalPending, 
-            bgColor: isDark ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10 border-red-500/20' : 'bg-gradient-to-br from-red-50 to-orange-50 border-red-200',
             valueColor: isDark ? 'text-red-300' : 'text-red-700'
           },
         ].map(card => (
-          <div key={card.label} className={`rounded-xl p-3 border ${card.bgColor}`}>
+          <div
+            key={card.label}
+            className="rounded-xl p-3"
+            style={isDark ? {
+              background: '#151B2B',
+              boxShadow: '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6)'
+            } : {
+              background: '#e8f0f7',
+              boxShadow: '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5)'
+            }}
+          >
             <p className={`text-xs font-bold mb-2 ${s}`}>{card.label}</p>
             <p className={`text-lg font-black ${card.valueColor}`}>₹<AnimatedCounter value={card.value} duration={400} /></p>
           </div>
@@ -296,20 +333,43 @@ export default function Invoices() {
       </div>
 
       {/* Payment Status Filter */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-        {[
-          { key: 'all', label: 'All' },
-          { key: 'pending', label: 'Pending Payment' },
-          { key: 'paid', label: 'Fully Paid' },
-        ].map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setFilter(tab.key)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap ${filter === tab.key ? 'bg-cyan-500 text-white' : isDark ? 'bg-white/5 text-white/60 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div
+        className="rounded-2xl p-4"
+        style={isDark ? {
+          background: '#151B2B',
+          boxShadow: '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6)'
+        } : {
+          background: '#e8f0f7',
+          boxShadow: '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5)'
+        }}
+      >
+        <div className="flex gap-3 overflow-x-auto scrollbar-hide py-1 px-1">
+          {[
+            { key: 'all', label: 'All' },
+            { key: 'pending', label: 'Pending Payment' },
+            { key: 'paid', label: 'Fully Paid' },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setFilter(tab.key)}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap flex-shrink-0 ${
+                filter === tab.key
+                  ? isDark ? 'text-cyan-300' : 'text-cyan-700'
+                  : isDark ? 'text-white/60' : 'text-gray-600'
+              }`}
+              style={filter === tab.key
+                ? isDark
+                  ? { background: '#151B2B', boxShadow: 'inset 3px 3px 7px rgba(0,0,0,0.7), inset -2px -2px 5px rgba(255,255,255,0.04)', border: '1px solid rgba(6,182,212,0.4)' }
+                  : { background: '#e8f0f7', boxShadow: 'inset 3px 3px 7px rgba(163,177,198,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)', border: '1px solid rgba(6,182,212,0.4)' }
+                : isDark
+                  ? { background: '#151B2B', boxShadow: '-3px -3px 7px rgba(255,255,255,0.04), 3px 3px 7px rgba(0,0,0,0.6)' }
+                  : { background: '#e8f0f7', boxShadow: '-3px -3px 7px rgba(255,255,255,0.9), 3px 3px 7px rgba(163,177,198,0.5)' }
+              }
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Invoice List */}
@@ -323,7 +383,16 @@ export default function Invoices() {
           {Object.entries(groupedInvoices).map(([date, dateInvoices], dateIndex) => (
             <div key={date} className="space-y-3">
               {/* Date Header - Sticky */}
-              <div className={`sticky top-0 z-10 backdrop-blur-md py-3.5 px-5 rounded-xl border shadow-sm ${isDark ? 'bg-slate-800/95 border-slate-700/50' : 'bg-slate-50/95 border-slate-200/80'}`}>
+              <div
+                className="sticky top-0 z-10 backdrop-blur-md py-3.5 px-5 rounded-xl"
+                style={isDark ? {
+                  background: 'rgba(21,27,43,0.95)',
+                  boxShadow: '-3px -3px 8px rgba(255,255,255,0.03), 3px 3px 8px rgba(0,0,0,0.5)'
+                } : {
+                  background: 'rgba(232,240,247,0.95)',
+                  boxShadow: '-4px -4px 10px rgba(255,255,255,0.9), 4px 4px 10px rgba(163,177,198,0.4)'
+                }}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className={`p-1.5 rounded-lg ${isDark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
@@ -350,10 +419,27 @@ export default function Invoices() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}
               onClick={() => openInvoice(inv)}
-              className={`${cardBase} overflow-hidden cursor-pointer transition-all hover:shadow-xl ${!inv.adminViewed && inv.submittedByTechnician ? isDark ? 'border-cyan-500 shadow-lg shadow-cyan-500/20' : 'border-cyan-400 shadow-lg shadow-cyan-200' : isDark ? 'hover:border-cyan-500/30' : 'hover:border-cyan-300'}`}
+              className="rounded-2xl overflow-hidden cursor-pointer transition-all"
+              style={isDark ? {
+                background: '#151B2B',
+                boxShadow: !inv.adminViewed && inv.submittedByTechnician
+                  ? '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6), 0 0 0 1px rgba(6,182,212,0.5)'
+                  : '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6)'
+              } : {
+                background: '#e8f0f7',
+                boxShadow: !inv.adminViewed && inv.submittedByTechnician
+                  ? '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5), 0 0 0 1px rgba(6,182,212,0.5)'
+                  : '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5)'
+              }}
             >
               {/* Top Bar with Invoice Number and Status */}
-              <div className={`px-5 py-3 flex items-center justify-between border-b ${isDark ? 'bg-gradient-to-r from-gray-800 to-gray-700 border-white/10' : 'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200'}`}>
+              <div
+                className="px-5 py-3 flex items-center justify-between"
+                style={isDark
+                  ? { background: '#0B0F19', boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }
+                  : { background: '#dce6f0', boxShadow: '0 2px 6px rgba(163,177,198,0.4)' }
+                }
+              >
                 <div className="flex items-center gap-3">
                   <span className={`text-sm font-black ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>{inv.billNo}</span>
                   {!inv.adminViewed && inv.submittedByTechnician && (

@@ -321,9 +321,16 @@ export default function VerifyStock() {
   return (
     <div className="pb-20 md:pb-0">
       {/* Header with Back Button and Title */}
-      <div className={`flex items-center justify-center px-4 py-4 border rounded-full mx-4 mb-5 relative ${
-        isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'
-      }`}>
+      <div
+        className="flex items-center justify-center px-4 py-4 rounded-full mx-4 mb-5 relative"
+        style={isDark ? {
+          background: '#151B2B',
+          boxShadow: '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)'
+        } : {
+          background: '#e8f0f7',
+          boxShadow: '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5)'
+        }}
+      >
         <button
           onClick={() => window.history.back()}
           className={`absolute left-4 p-2 rounded-lg transition-all ${
@@ -350,11 +357,16 @@ export default function VerifyStock() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`rounded-2xl p-5 shadow-sm border ${
-          isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'
-        }`}
+        className="rounded-2xl p-5"
+        style={isDark ? {
+          background: '#151B2B',
+          boxShadow: '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6)'
+        } : {
+          background: '#e8f0f7',
+          boxShadow: '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5)'
+        }}
       >
-        <label className={`text-xs font-bold uppercase tracking-wider block mb-2 ${
+        <label className={`text-xs font-bold uppercase tracking-wider block mb-3 ${
           isDark ? 'text-white/60' : 'text-gray-500'
         }`}>
           Select Technician
@@ -362,11 +374,14 @@ export default function VerifyStock() {
         <select
           value={selectedTech}
           onChange={e => setSelectedTech(e.target.value)}
-          className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition ${
-            isDark
-              ? 'bg-white/5 border-white/10 text-white focus:ring-cyan-500'
-              : 'bg-white border-gray-200 text-gray-900 focus:ring-aqua-300'
-          }`}
+          className={`w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none transition ${isDark ? 'text-white' : 'text-gray-900'}`}
+          style={isDark ? {
+            background: '#151B2B',
+            boxShadow: 'inset 3px 3px 7px rgba(0,0,0,0.7), inset -2px -2px 5px rgba(255,255,255,0.04)'
+          } : {
+            background: '#e8f0f7',
+            boxShadow: 'inset 3px 3px 7px rgba(163,177,198,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)'
+          }}
         >
           <option value="" className="text-gray-900">Choose a technician...</option>
           {technicians.map(tech => (
@@ -382,13 +397,22 @@ export default function VerifyStock() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`rounded-2xl overflow-hidden shadow-sm border ${
-            isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'
-          }`}
+          className="rounded-2xl overflow-hidden"
+          style={isDark ? {
+            background: '#151B2B',
+            boxShadow: '-4px -4px 10px rgba(255,255,255,0.04), 4px 4px 12px rgba(0,0,0,0.6)'
+          } : {
+            background: '#e8f0f7',
+            boxShadow: '-5px -5px 12px rgba(255,255,255,0.9), 5px 5px 12px rgba(163,177,198,0.5)'
+          }}
         >
-          <div className={`px-5 py-4 border-b ${
-            isDark ? 'border-white/10' : 'border-gray-100'
-          }`}>
+          <div
+            className="px-5 py-4"
+            style={isDark
+              ? { background: '#0B0F19', boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }
+              : { background: '#dce6f0', boxShadow: '0 2px 6px rgba(163,177,198,0.4)' }
+            }
+          >
             <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Stock Overview</p>
             <h3 className={`text-lg font-black mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedTechData?.name}</h3>
           </div>
@@ -422,11 +446,14 @@ export default function VerifyStock() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: idx * 0.05 }}
-                    className={`rounded-xl p-4 border ${
-                      isZero
-                        ? isDark ? 'bg-gray-800/40 border-white/5 opacity-60' : 'bg-gray-100 border-gray-200 opacity-70'
-                        : isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
-                    }`}
+                    className={`rounded-xl p-4 ${isZero ? 'opacity-60' : ''}`}
+                    style={isDark ? {
+                      background: '#151B2B',
+                      boxShadow: '-3px -3px 8px rgba(255,255,255,0.04), 3px 3px 8px rgba(0,0,0,0.6)'
+                    } : {
+                      background: '#e8f0f7',
+                      boxShadow: '-4px -4px 8px rgba(255,255,255,0.9), 4px 4px 8px rgba(163,177,198,0.5)'
+                    }}
                   >
                     {/* Product Header */}
                     <div className="flex items-start justify-between mb-3">
@@ -452,12 +479,19 @@ export default function VerifyStock() {
                     {/* Stats Grid */}
                     <div className="grid grid-cols-4 gap-2 mb-3">
                       {[
-                        { label: 'Taken', value: taken, color: isZero ? isDark ? 'bg-gray-500/10 text-gray-500' : 'bg-gray-100 text-gray-400' : isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700', hover: isZero ? '' : isDark ? 'hover:bg-blue-500/30' : 'hover:bg-blue-100' },
-                        { label: 'Used', value: used, color: isZero ? isDark ? 'bg-gray-500/10 text-gray-500' : 'bg-gray-100 text-gray-400' : isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-50 text-green-700', hover: isZero ? '' : isDark ? 'hover:bg-green-500/30' : 'hover:bg-green-100' },
-                        { label: 'Returned', value: returned, color: isZero ? isDark ? 'bg-gray-500/10 text-gray-500' : 'bg-gray-100 text-gray-400' : isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-50 text-purple-700', hover: isZero ? '' : isDark ? 'hover:bg-purple-500/30' : 'hover:bg-purple-100' },
-                        { label: 'Damaged', value: damaged, color: isZero ? isDark ? 'bg-gray-500/10 text-gray-500' : 'bg-gray-100 text-gray-400' : isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-50 text-red-700', hover: isZero ? '' : isDark ? 'hover:bg-red-500/30' : 'hover:bg-red-100' },
+                        { label: 'Taken', value: taken, textColor: isZero ? isDark ? 'text-gray-500' : 'text-gray-400' : isDark ? 'text-sky-300' : 'text-sky-700', bg: isZero ? '' : isDark ? 'rgba(56,189,248,0.08)' : 'rgba(186,230,253,0.45)' },
+                        { label: 'Used', value: used, textColor: isZero ? isDark ? 'text-gray-500' : 'text-gray-400' : isDark ? 'text-teal-300' : 'text-teal-700', bg: isZero ? '' : isDark ? 'rgba(45,212,191,0.08)' : 'rgba(153,246,228,0.45)' },
+                        { label: 'Returned', value: returned, textColor: isZero ? isDark ? 'text-gray-500' : 'text-gray-400' : isDark ? 'text-violet-300' : 'text-violet-700', bg: isZero ? '' : isDark ? 'rgba(167,139,250,0.08)' : 'rgba(221,214,254,0.45)' },
+                        { label: 'Damaged', value: damaged, textColor: isZero ? isDark ? 'text-gray-500' : 'text-gray-400' : isDark ? 'text-rose-300' : 'text-rose-700', bg: isZero ? '' : isDark ? 'rgba(251,113,133,0.08)' : 'rgba(254,205,211,0.45)' },
                       ].map(stat => (
-                        <button key={stat.label} onClick={() => openDrill(stat.label, stock)} className={`text-center p-2 rounded-lg active:scale-95 transition-transform ${stat.color} ${stat.hover}`}>
+                        <button
+                          key={stat.label}
+                          onClick={() => openDrill(stat.label, stock)}
+                          className={`text-center p-2 rounded-lg active:scale-95 transition-all ${stat.textColor}`}
+                          style={isDark
+                            ? { background: stat.bg || '#151B2B', boxShadow: 'inset 3px 3px 7px rgba(0,0,0,0.7), inset -2px -2px 5px rgba(255,255,255,0.04)' }
+                            : { background: stat.bg || '#e8f0f7', boxShadow: 'inset 3px 3px 7px rgba(163,177,198,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)' }
+                          }>
                           <p className="text-base font-black">{stat.value}</p>
                           <p className="text-[9px] font-semibold opacity-70">{stat.label}</p>
                         </button>
@@ -471,19 +505,28 @@ export default function VerifyStock() {
                           whileTap={{ scale: 0.97 }}
                           onClick={() => openReturnModal(stock)}
                           disabled={verifying}
-                          className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition shadow-sm ${
-                            isDark
-                              ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 shadow-none'
-                              : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 shadow-emerald-100'
-                          } disabled:opacity-50`}
+                          className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition disabled:opacity-50 ${
+                            isDark ? 'text-cyan-300' : 'text-cyan-700'
+                          }`}
+                          style={isDark ? {
+                            background: '#151B2B',
+                            boxShadow: '-3px -3px 8px rgba(255,255,255,0.04), 4px 4px 10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)'
+                          } : {
+                            background: '#e8f0f7',
+                            boxShadow: '-4px -4px 8px rgba(255,255,255,0.9), 4px 4px 8px rgba(163,177,198,0.5)'
+                          }}
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           Verify Return
-                          <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
-                            isDark ? 'bg-emerald-500/30 text-emerald-200' : 'bg-emerald-200 text-emerald-800'
-                          }`}>{pending}</span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${isDark ? 'text-cyan-200' : 'text-cyan-800'}`}
+                            style={isDark
+                              ? { background: '#0B0F19', boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.6), inset -1px -1px 3px rgba(255,255,255,0.04)' }
+                              : { background: '#e8f0f7', boxShadow: 'inset 2px 2px 4px rgba(163,177,198,0.5), inset -2px -2px 4px rgba(255,255,255,0.9)' }
+                            }
+                          >{pending}</span>
                         </motion.button>
                       )}
                     </div>
@@ -501,16 +544,23 @@ export default function VerifyStock() {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`rounded-2xl shadow-2xl max-w-md w-full overflow-hidden ${
-              isDark ? 'bg-dark-card border border-white/10' : 'bg-white'
-            }`}
+            className="rounded-2xl max-w-md w-full overflow-hidden"
+            style={isDark ? {
+              background: '#151B2B',
+              border: '1px solid rgba(255,255,255,0.08)'
+            } : {
+              background: '#e8f0f7',
+              border: '1px solid rgba(163,177,198,0.4)'
+            }}
           >
             {/* Header */}
-            <div className={`px-6 py-4 border-b ${
-              isDark
-                ? 'bg-gradient-to-r from-emerald-500/20 to-green-500/20 border-white/10'
-                : 'bg-gradient-to-r from-emerald-50 to-green-50 border-gray-100'
-            }`}>
+            <div
+              className="px-6 py-4"
+              style={isDark
+                ? { background: '#0B0F19', boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }
+                : { background: '#dce6f0', boxShadow: '0 2px 6px rgba(163,177,198,0.4)' }
+              }
+            >
               <h3 className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 ✅ Verify Stock Return
               </h3>
@@ -522,9 +572,13 @@ export default function VerifyStock() {
             {/* Body */}
             <div className="p-6 space-y-4">
               {/* Stats */}
-              <div className={`rounded-xl p-4 ${
-                isDark ? 'bg-white/5' : 'bg-gray-50'
-              }`}>
+              <div
+                className="rounded-xl p-4"
+                style={isDark
+                  ? { background: '#151B2B', boxShadow: 'inset 3px 3px 7px rgba(0,0,0,0.7), inset -2px -2px 5px rgba(255,255,255,0.04)' }
+                  : { background: '#e8f0f7', boxShadow: 'inset 3px 3px 7px rgba(163,177,198,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)' }
+                }
+              >
                 <div className="grid grid-cols-2 gap-3 text-center">
                   <div>
                     <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
@@ -558,11 +612,11 @@ export default function VerifyStock() {
                   onChange={e => setReturnQuantity(e.target.value)}
                   min="1"
                   max={selectedStock.takenQuantity - selectedStock.usedQuantity - selectedStock.returnedQuantity - (selectedStock.damagedQuantity || 0)}
-                  className={`w-full border rounded-xl px-4 py-3 text-lg font-bold text-center focus:outline-none focus:ring-2 transition ${
-                    isDark
-                      ? 'bg-white/5 border-white/10 text-white focus:ring-emerald-500'
-                      : 'bg-white border-gray-200 text-gray-900 focus:ring-emerald-300'
-                  }`}
+                  className={`w-full rounded-xl px-4 py-3 text-lg font-bold text-center focus:outline-none transition ${isDark ? 'text-white' : 'text-gray-900'}`}
+                  style={isDark
+                    ? { background: '#151B2B', boxShadow: 'inset 3px 3px 7px rgba(0,0,0,0.7), inset -2px -2px 5px rgba(255,255,255,0.04)' }
+                    : { background: '#e8f0f7', boxShadow: 'inset 3px 3px 7px rgba(163,177,198,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)' }
+                  }
                   autoFocus
                 />
                 <p className={`text-xs mt-2 text-center ${
@@ -574,9 +628,13 @@ export default function VerifyStock() {
             </div>
 
             {/* Footer */}
-            <div className={`px-6 py-4 border-t flex gap-3 ${
-              isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-100'
-            }`}>
+            <div
+              className="px-6 py-4 flex gap-3"
+              style={isDark
+                ? { background: '#0B0F19', boxShadow: '0 -2px 6px rgba(0,0,0,0.4)' }
+                : { background: '#dce6f0', boxShadow: '0 -2px 6px rgba(163,177,198,0.3)' }
+              }
+            >
               <button
                 onClick={() => {
                   setShowReturnModal(false)
@@ -584,22 +642,25 @@ export default function VerifyStock() {
                   setSelectedStock(null)
                 }}
                 disabled={verifying}
-                className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition ${
-                  isDark
-                    ? 'bg-white/5 text-white/60 hover:bg-white/10'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                } disabled:opacity-50`}
+                className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition disabled:opacity-50 ${isDark ? 'text-white/60' : 'text-gray-600'}`}
+                style={isDark
+                  ? { background: '#151B2B', boxShadow: '-3px -3px 7px rgba(255,255,255,0.04), 3px 3px 7px rgba(0,0,0,0.6)' }
+                  : { background: '#e8f0f7', boxShadow: '-3px -3px 7px rgba(255,255,255,0.9), 3px 3px 7px rgba(163,177,198,0.5)' }
+                }
               >
                 Cancel
               </button>
               <button
                 onClick={handleVerifyReturn}
                 disabled={verifying || !returnQuantity}
-                className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition ${
-                  isDark
-                    ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600'
-                    : 'bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white transition disabled:opacity-50 disabled:cursor-not-allowed`}
+                style={isDark ? {
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  boxShadow: '-3px -3px 8px rgba(255,255,255,0.04), 4px 4px 10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)'
+                } : {
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  boxShadow: '-4px -4px 8px rgba(255,255,255,0.6), 4px 4px 8px rgba(5,150,105,0.4)'
+                }}
               >
                 {verifying ? 'Verifying...' : '✅ Verify Return'}
               </button>

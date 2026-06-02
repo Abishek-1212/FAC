@@ -258,16 +258,21 @@ export default function AdminHome() {
             <button
               key={action.label}
               onClick={() => navigate(action.path)}
-              className={`relative overflow-hidden rounded-xl p-4 text-left border transition-all ${
-                isDark ? 'bg-dark-card border-blue-500/35 hover:border-blue-500/50 shadow-[4px_0px_16px_rgba(0,0,0,0.4)]' : 'bg-white border-blue-200 hover:border-blue-300 shadow-[4px_0px_16px_rgba(0,0,0,0.1)]'
+              className={`relative rounded-2xl p-4 text-left transition-all duration-150 select-none ${
+                isDark
+                  ? 'bg-[#1a1f2e] shadow-[6px_6px_14px_rgba(0,0,0,0.5),-4px_-4px_10px_rgba(255,255,255,0.04)] active:shadow-[2px_2px_6px_rgba(0,0,0,0.5),-1px_-1px_4px_rgba(255,255,255,0.03)] active:translate-y-px'
+                  : 'bg-[#eef0f5] shadow-[6px_6px_14px_rgba(174,179,198,0.7),-6px_-6px_14px_rgba(255,255,255,0.9)] active:shadow-[2px_2px_6px_rgba(174,179,198,0.6),-2px_-2px_6px_rgba(255,255,255,0.8)] active:translate-y-px'
               }`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 hover:opacity-5 transition-opacity`} />
-              <div className="relative flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDark ? `${action.iconBg} ${action.iconColor}` : `${action.iconBgLight} ${action.iconColorLight}`}`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  isDark
+                    ? `${action.iconBg} ${action.iconColor} shadow-[inset_2px_2px_5px_rgba(0,0,0,0.4),inset_-2px_-2px_5px_rgba(255,255,255,0.04)]`
+                    : `${action.iconBgLight} ${action.iconColorLight} shadow-[inset_2px_2px_5px_rgba(174,179,198,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.8)]`
+                }`}>
                   {action.icon}
                 </div>
-                <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{action.label}</p>
+                <p className={`font-bold text-sm leading-tight ${isDark ? 'text-white/80' : 'text-gray-700'}`}>{action.label}</p>
               </div>
             </button>
           ))}
@@ -281,15 +286,15 @@ export default function AdminHome() {
           {STAT_CARDS.map((card) => (
             <div
               key={card.key}
-              className={`relative overflow-hidden rounded-2xl p-5 border group cursor-pointer ${
-                isDark ? 'glass-strong border-white/5 shadow-[4px_0px_16px_rgba(0,0,0,0.4)]' : 'bg-white border-sky-200 shadow-[4px_0px_16px_rgba(0,0,0,0.1)]'
+              className={`relative rounded-2xl p-5 transition-all duration-150 ${
+                isDark
+                  ? 'bg-[#1a1f2e] shadow-[6px_6px_14px_rgba(0,0,0,0.5),-4px_-4px_10px_rgba(255,255,255,0.04)]'
+                  : 'bg-[#eef0f5] shadow-[6px_6px_14px_rgba(174,179,198,0.7),-6px_-6px_14px_rgba(255,255,255,0.9)]'
               }`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-5 transition-opacity`} />
-              <div className="relative">
-                <p className={`text-3xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{getValue(card.key)}</p>
-                <p className={`text-xs font-semibold mt-2 ${isDark ? 'text-white/50' : 'text-gray-600'}`}>{card.label}</p>
-              </div>
+              <div className={`absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-gradient-to-br ${card.gradient}`} />
+              <p className={`text-3xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>{getValue(card.key)}</p>
+              <p className={`text-xs font-semibold mt-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>{card.label}</p>
             </div>
           ))}
         </div>

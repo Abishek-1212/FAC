@@ -25,13 +25,13 @@ body {
 
 /* Dark mode */
 .dark {
-  background-color: #0B0F19;
+  background-color: #151B2B;
   color: #E5E9F0;
 }
 
 /* Light mode */
 body:not(.dark) {
-  background-color: #F0F9FF;
+  background-color: #e8f0f7;
   color: #0C4A6E;
 }
 

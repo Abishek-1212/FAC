@@ -210,29 +210,37 @@ export default function GenerateInvoice() {
 
   const t = isDark ? 'text-white' : 'text-gray-900'
   const s = isDark ? 'text-white/40' : 'text-gray-400'
-  const cardBase = `rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`
-  const inputCls = `w-full px-4 py-3 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 ${isDark ? 'bg-white/5 border-white/10 text-white placeholder-white/30' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`
+  const nm = isDark
+    ? 'bg-[#151B2B] shadow-[6px_6px_16px_#0a0e1a,-6px_-6px_16px_#202a3c]'
+    : 'bg-[#e8f4f8] shadow-[6px_6px_16px_#c5d8e0,-6px_-6px_16px_#ffffff]'
+  const nmInset = isDark
+    ? 'bg-[#151B2B] shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+    : 'bg-[#e8f4f8] shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
+  const cardBase = `rounded-2xl ${nm}`
+  const inputCls = `w-full px-4 py-3 rounded-xl text-sm focus:outline-none ${nmInset} ${isDark ? 'text-white placeholder-white/30' : 'text-gray-900 placeholder-gray-400'}`
   const labelCls = `text-xs font-bold block mb-1.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`
 
   return (
-    <div className="space-y-6 pb-20 md:pb-0">
+    <div className="space-y-6 pb-32">
 
       {/* Pill Header */}
       <div className="flex justify-center pt-1">
-        <div className={`relative flex items-center justify-center w-full max-w-sm h-12 rounded-full border shadow-sm ${
-          isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-gray-100'
+        <div className={`relative flex items-center justify-center w-full max-w-sm h-12 rounded-full ${
+          isDark
+            ? 'bg-[#151B2B] shadow-[6px_6px_14px_#0a0e1a,-6px_-6px_14px_#202a3c]'
+            : 'bg-[#e8f4f8] shadow-[6px_6px_14px_#c5d8e0,-6px_-6px_14px_#ffffff]'
         }`}>
-          {/* Back button — left */}
           <button
             onClick={() => navigate('/admin')}
-            className={`absolute left-1.5 w-9 h-9 rounded-full flex items-center justify-center transition ${
-              isDark ? 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800'
+            className={`absolute left-1.5 w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+              isDark
+                ? 'text-white/70 hover:text-white shadow-[3px_3px_7px_#0a0e1a,-3px_-3px_7px_#202a3c] hover:shadow-[inset_3px_3px_7px_#0a0e1a,inset_-3px_-3px_7px_#202a3c]'
+                : 'text-gray-500 hover:text-gray-900 shadow-[3px_3px_7px_#c5d8e0,-3px_-3px_7px_#ffffff] hover:shadow-[inset_3px_3px_7px_#c5d8e0,inset_-3px_-3px_7px_#ffffff]'
             }`}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          {/* Title — centered */}
           <span className={`text-base font-black tracking-widest uppercase ${t}`}>Generate Invoice</span>
         </div>
       </div>
@@ -241,12 +249,21 @@ export default function GenerateInvoice() {
       <motion.button
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         onClick={() => setShowForm(v => !v)}
-        className={`w-full py-3.5 rounded-2xl border-2 border-dashed font-bold text-sm transition flex items-center justify-center gap-2 ${
+        whileTap={{ scale: 0.97 }}
+        className={`w-full py-3.5 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 border-2 ${
           showForm
-            ? isDark ? 'border-orange-500/50 bg-orange-500/10 text-orange-300' : 'border-orange-400 bg-orange-50 text-orange-600'
-            : isDark ? 'border-white/20 bg-white/5 text-white/60 hover:border-orange-500/40 hover:text-orange-300' : 'border-gray-300 bg-white text-gray-500 hover:border-orange-400 hover:text-orange-500'
+            ? isDark
+              ? 'bg-[#151B2B] text-orange-400 border-orange-500/60 shadow-[inset_5px_5px_12px_#0a0e1a,inset_-5px_-5px_12px_#202a3c]'
+              : 'bg-[#e8f4f8] text-orange-500 border-orange-400/70 shadow-[inset_5px_5px_12px_#c5d8e0,inset_-5px_-5px_12px_#ffffff]'
+            : isDark
+            ? 'bg-[#151B2B] text-white/60 border-orange-500/30 shadow-[5px_5px_12px_#0a0e1a,-5px_-5px_12px_#202a3c] hover:text-orange-400 hover:border-orange-500/60'
+            : 'bg-[#e8f4f8] text-gray-500 border-orange-300/50 shadow-[5px_5px_12px_#c5d8e0,-5px_-5px_12px_#ffffff] hover:text-orange-500 hover:border-orange-400/70'
         }`}>
-        <span className={`text-lg transition-transform duration-300 ${showForm ? 'rotate-45' : ''}`}>+</span>
+        <motion.span
+          animate={{ rotate: showForm ? 45 : 0 }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          className="text-lg"
+        >+</motion.span>
         {showForm ? 'Close Form' : 'Generate New Invoice'}
       </motion.button>
 
@@ -255,15 +272,16 @@ export default function GenerateInvoice() {
         {showForm && (
           <motion.div
             key="invoice-form"
-            initial={{ opacity: 0, y: -16, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -16, scale: 0.98 }}
-            transition={{ duration: 0.25 }}
+            initial={{ opacity: 0, y: -20, scaleY: 0.95 }}
+            animate={{ opacity: 1, y: 0, scaleY: 1 }}
+            exit={{ opacity: 0, y: -20, scaleY: 0.95 }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            style={{ transformOrigin: 'top' }}
             className={`${cardBase} p-6 space-y-6`}>
 
             {/* Customer Info */}
             <div className="space-y-4">
-              <p className={`text-xs font-bold uppercase tracking-wider ${s}`}>Customer Details</p>
+              <p className={`text-xs font-bold uppercase tracking-widest ${s}`}>Customer Details</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className={labelCls}>Company / Customer Name</label>
@@ -294,20 +312,20 @@ export default function GenerateInvoice() {
               <div className="md:col-span-2">
                 <label className={labelCls}>Discount <span className={`font-normal ${s}`}>(optional)</span></label>
                 <div className="flex gap-2">
-                  <div className={`flex rounded-xl border overflow-hidden text-sm font-bold ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+                  <div className={`flex rounded-xl overflow-hidden text-sm font-bold ${nmInset}`}>
                     <button type="button"
                       onClick={() => setDiscount(d => ({ ...d, type: 'percentage' }))}
                       className={`px-4 py-3 transition ${
                         discount.type === 'percentage'
-                          ? 'bg-orange-500 text-white'
-                          : isDark ? 'bg-white/5 text-white/50 hover:bg-white/10' : 'bg-white text-gray-500 hover:bg-gray-50'
+                          ? 'text-orange-400 font-black'
+                          : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-700'
                       }`}>%</button>
                     <button type="button"
                       onClick={() => setDiscount(d => ({ ...d, type: 'amount' }))}
                       className={`px-4 py-3 transition ${
                         discount.type === 'amount'
-                          ? 'bg-orange-500 text-white'
-                          : isDark ? 'bg-white/5 text-white/50 hover:bg-white/10' : 'bg-white text-gray-500 hover:bg-gray-50'
+                          ? 'text-orange-400 font-black'
+                          : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-700'
                       }`}>₹</button>
                   </div>
                   <input type="number" min="0" value={discount.value}
@@ -334,7 +352,7 @@ export default function GenerateInvoice() {
 
             {/* Products Section */}
             <div className="space-y-4">
-              <p className={`text-xs font-bold uppercase tracking-wider ${s}`}>Products</p>
+              <p className={`text-xs font-bold uppercase tracking-widest ${s}`}>Products</p>
 
         {/* Added Items List */}
         {items.length > 0 && (
@@ -342,10 +360,14 @@ export default function GenerateInvoice() {
             {items.map((it, idx) => (
               <motion.div key={idx} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
                 onClick={() => editIndex !== idx && startEdit(idx)}
-                className={`flex items-center justify-between px-4 py-3 rounded-xl border cursor-pointer transition ${
+                className={`flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition ${
                   editIndex === idx
-                    ? isDark ? 'bg-orange-500/10 border-orange-500/50' : 'bg-orange-50 border-orange-300'
-                    : isDark ? 'bg-white/5 border-white/10 hover:border-white/20' : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                    ? isDark
+                      ? 'bg-[#151B2B] text-orange-400 shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+                      : 'bg-[#e8f4f8] text-orange-500 shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
+                    : isDark
+                      ? 'bg-[#151B2B] shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] hover:shadow-[5px_5px_12px_#0a0e1a,-5px_-5px_12px_#202a3c]'
+                      : 'bg-[#e8f4f8] shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] hover:shadow-[5px_5px_12px_#c5d8e0,-5px_-5px_12px_#ffffff]'
                 }`}>
                 <div className="flex items-center gap-3">
                   <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-700'}`}>{idx + 1}</span>
@@ -371,7 +393,7 @@ export default function GenerateInvoice() {
         )}
 
         {/* Add / Edit Row */}
-        <div className={`rounded-xl border p-4 space-y-3 ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+        <div className={`rounded-xl p-4 space-y-3 ${nmInset}`}>
           <p className={`text-xs font-bold ${isDark ? 'text-orange-300' : 'text-orange-600'}`}>
             {editIndex !== null ? `Editing Product #${editIndex + 1}` : '+ Add Product'}
           </p>
@@ -410,12 +432,20 @@ export default function GenerateInvoice() {
           </div>
           <div className="flex gap-2">
             <button onClick={addOrUpdateItem} disabled={!draftValid}
-              className="flex-1 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition disabled:opacity-40">
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40 ${
+                isDark
+                  ? 'bg-[#151B2B] text-orange-400 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+                  : 'bg-[#e8f4f8] text-orange-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
+              }`}>
               {editIndex !== null ? '✓ Update Product' : '+ Add to List'}
             </button>
             {editIndex !== null && (
               <button onClick={cancelEdit}
-                className={`px-4 py-2.5 rounded-xl text-sm font-bold transition ${isDark ? 'bg-white/10 text-white/70 hover:bg-white/20' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>
+                className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                  isDark
+                    ? 'bg-[#151B2B] text-white/50 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+                    : 'bg-[#e8f4f8] text-gray-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
+                }`}>
                 Cancel
               </button>
             )}
@@ -424,8 +454,12 @@ export default function GenerateInvoice() {
 
               {/* Generate Button */}
               <button onClick={() => setShowPreview(true)} disabled={!customerValid}
-                className="w-full py-3.5 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                Preview & Generate Invoice
+                className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isDark
+                    ? 'bg-[#151B2B] text-orange-400 shadow-[5px_5px_12px_#0a0e1a,-5px_-5px_12px_#202a3c] active:shadow-[inset_5px_5px_12px_#0a0e1a,inset_-5px_-5px_12px_#202a3c]'
+                    : 'bg-[#e8f4f8] text-orange-500 shadow-[5px_5px_12px_#c5d8e0,-5px_-5px_12px_#ffffff] active:shadow-[inset_5px_5px_12px_#c5d8e0,inset_-5px_-5px_12px_#ffffff]'
+                }`}>
+                Preview &amp; Generate Invoice
               </button>
             </div>
 
@@ -435,27 +469,30 @@ export default function GenerateInvoice() {
 
       {/* Invoice History */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={`${cardBase} p-6 space-y-4`}>
-        <p className={`text-xs font-bold uppercase tracking-wider ${s}`}>Invoice History</p>
+        <p className={`text-xs font-bold uppercase tracking-widest ${s}`}>Invoice History</p>
 
         {/* Filter Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           {[
             ['today',  'Today'],
             ['week',   'This Week'],
             ['month',  'This Month'],
             ['custom', 'Custom Range'],
           ].map(([key, label]) => (
-            <button key={key}
+            <motion.button key={key}
+              whileTap={{ scale: 0.98 }}
               onClick={() => { setActiveFilter(key); if (key === 'custom') setShowCustomInputs(true) }}
-              className={`flex-shrink-0 inline-flex items-center px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 whitespace-nowrap border ${
+              className={`flex-shrink-0 inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
                 activeFilter === key
-                  ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/25'
+                  ? isDark
+                    ? 'bg-[#151B2B] text-orange-400 shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+                    : 'bg-[#e8f4f8] text-orange-500 shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
                   : isDark
-                    ? 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white hover:border-white/20'
-                    : 'bg-white text-gray-500 border-gray-200 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 shadow-sm'
+                    ? 'bg-[#151B2B] text-white/60 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] hover:text-white/90'
+                    : 'bg-[#e8f4f8] text-gray-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] hover:text-gray-800'
               }`}>
               {label}
-            </button>
+            </motion.button>
           ))}
         </div>
 
@@ -503,52 +540,46 @@ export default function GenerateInvoice() {
               groups[groups.length - 1].items.push({ inv, d })
             })
             return (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {groups.map(({ label, items }) => (
-                  <div key={label}>
-                    {/* Sticky date header */}
-                    <div className={`sticky top-0 z-10 flex items-center gap-3 py-2 ${
-                      isDark ? 'bg-white/5' : 'bg-white'
-                    }`} style={{ backdropFilter: 'blur(8px)' }}>
-                      <span className={`text-[11px] font-black uppercase tracking-widest ${
-                        isDark ? 'text-orange-300/80' : 'text-orange-500'
+                  <div key={label} className="space-y-3">
+                    {/* Date section header */}
+                    <div className="flex items-center gap-3 px-1">
+                      <span className={`text-xs font-black uppercase tracking-widest ${
+                        isDark ? 'text-orange-400' : 'text-orange-500'
                       }`}>{label}</span>
                       <div className={`flex-1 h-px ${isDark ? 'bg-white/10' : 'bg-orange-100'}`} />
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        isDark ? 'bg-white/10 text-white/40' : 'bg-orange-50 text-orange-400'
+                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                        isDark
+                          ? 'bg-[#151B2B] text-white/40 shadow-[inset_2px_2px_6px_#0a0e1a,inset_-2px_-2px_6px_#202a3c]'
+                          : 'bg-[#e8f4f8] text-gray-400 shadow-[inset_2px_2px_6px_#c5d8e0,inset_-2px_-2px_6px_#ffffff]'
                       }`}>{items.length} invoice{items.length > 1 ? 's' : ''}</span>
                     </div>
-                    <div className="space-y-2 mt-1">
+                    <div className="space-y-3">
                       {items.map(({ inv, d }) => {
                         const isOpen = expandedId === inv.id
                         const total = inv.grandTotal ?? inv.billAmount ?? 0
                         return (
                           <motion.div key={inv.id} layout
-                            className={`rounded-xl border overflow-hidden transition-shadow ${
+                            className={`rounded-xl overflow-hidden transition-all ${
                               isOpen
-                                ? isDark ? 'border-orange-500/40 shadow-lg shadow-orange-500/10' : 'border-orange-300 shadow-md shadow-orange-100'
-                                : isDark ? 'border-white/10' : 'border-gray-200'
+                                ? isDark
+                                  ? 'bg-[#151B2B] shadow-[inset_5px_5px_14px_#0a0e1a,inset_-5px_-5px_14px_#202a3c]'
+                                  : 'bg-[#e8f4f8] shadow-[inset_5px_5px_14px_#c5d8e0,inset_-5px_-5px_14px_#ffffff]'
+                                : isDark
+                                  ? 'bg-[#151B2B] shadow-[5px_5px_12px_#0a0e1a,-5px_-5px_12px_#202a3c]'
+                                  : 'bg-[#e8f4f8] shadow-[5px_5px_12px_#c5d8e0,-5px_-5px_12px_#ffffff]'
                             }`}>
-                            {/* Row header — always visible */}
+                            {/* Row header */}
                             <button onClick={() => setExpandedId(isOpen ? null : inv.id)}
-                              className={`w-full flex items-center justify-between px-4 py-3 text-left transition ${
-                                isOpen
-                                  ? isDark ? 'bg-orange-500/10' : 'bg-orange-50'
-                                  : isDark ? 'bg-white/5 hover:bg-white/8' : 'bg-gray-50 hover:bg-gray-100'
-                              }`}>
-                              <div className="flex items-center gap-3">
-                                <div>
-                                  <p className={`text-sm font-bold leading-tight ${t}`}>{inv.companyName}</p>
-                                  <p className={`text-xs mt-0.5 ${s}`}>{inv.invoiceNumber}</p>
-                                </div>
+                              className="w-full flex items-center justify-between px-4 py-3 text-left transition">
+                              <div>
+                                <p className={`text-sm font-bold leading-tight ${t}`}>{inv.companyName}</p>
+                                <p className={`text-xs mt-0.5 ${s}`}>{inv.invoiceNumber}</p>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <div className="text-right">
-                                  <p className={`text-sm font-black ${isDark ? 'text-orange-300' : 'text-orange-600'}`}>
-                                    ₹{total.toLocaleString('en-IN')}
-                                  </p>
-                                </div>
-                              </div>
+                              <p className={`text-sm font-black ${isDark ? 'text-orange-400' : 'text-orange-500'}`}>
+                                ₹{total.toLocaleString('en-IN')}
+                              </p>
                             </button>
 
                             {/* Expanded detail panel */}
@@ -562,7 +593,7 @@ export default function GenerateInvoice() {
                                   transition={{ duration: 0.22, ease: 'easeInOut' }}
                                   className="overflow-hidden">
                                   <div className={`px-4 pb-4 pt-3 space-y-3 border-t ${
-                                    isDark ? 'border-white/10' : 'border-orange-100'
+                                    isDark ? 'border-white/10' : 'border-white/40'
                                   }`}>
                                     {/* Info grid */}
                                     <div className="grid grid-cols-2 gap-2">
@@ -574,9 +605,7 @@ export default function GenerateInvoice() {
                                         ...(inv.discountAmount > 0 ? [['Discount', `−₹${inv.discountAmount.toLocaleString('en-IN')}`]] : []),
                                         ...(inv.discountAmount > 0 ? [['Grand Total', `₹${(inv.grandTotal ?? 0).toLocaleString('en-IN')}`]] : []),
                                       ].map(([label, value]) => (
-                                        <div key={label} className={`rounded-lg px-3 py-2 ${
-                                          isDark ? 'bg-white/5' : 'bg-gray-50'
-                                        }`}>
+                                        <div key={label} className={`rounded-lg px-3 py-2 ${nmInset}`}>
                                           <p className={`text-[10px] font-semibold mb-0.5 ${s}`}>{label}</p>
                                           <p className={`text-xs font-bold ${t}`}>{value}</p>
                                         </div>
@@ -584,12 +613,8 @@ export default function GenerateInvoice() {
                                     </div>
                                     {/* Products */}
                                     {inv.products?.length > 0 && (
-                                      <div className={`rounded-lg p-3 ${
-                                        isDark ? 'bg-white/5' : 'bg-gray-50'
-                                      }`}>
-                                        <p className={`text-[10px] font-black uppercase tracking-wider mb-2 ${
-                                          isDark ? 'text-white/40' : 'text-gray-400'
-                                        }`}>Products ({inv.products.length})</p>
+                                      <div className={`rounded-lg p-3 ${nmInset}`}>
+                                        <p className={`text-[10px] font-black uppercase tracking-wider mb-2 ${s}`}>Products ({inv.products.length})</p>
                                         <div className="space-y-1">
                                           {inv.products.map((p, i) => (
                                             <div key={i} className="flex justify-between items-center">
@@ -598,7 +623,7 @@ export default function GenerateInvoice() {
                                                 <span className={`ml-1 text-[10px] ${s}`}>({p.category})</span>
                                               </span>
                                               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                                                isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-700'
+                                                isDark ? 'bg-[#151B2B] text-cyan-400 shadow-[inset_2px_2px_5px_#0a0e1a,inset_-2px_-2px_5px_#202a3c]' : 'bg-[#e8f4f8] text-cyan-600 shadow-[inset_2px_2px_5px_#c5d8e0,inset_-2px_-2px_5px_#ffffff]'
                                               }`}>×{p.quantity}</span>
                                             </div>
                                           ))}
@@ -630,10 +655,10 @@ export default function GenerateInvoice() {
                                           setDownloadingId(null)
                                         }
                                       }}
-                                      className={`w-full py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 ${
-                                        downloadingId === inv.id
-                                          ? 'opacity-60 cursor-not-allowed bg-orange-500 text-white'
-                                          : 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm shadow-orange-500/30'
+                                      className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${
+                                        isDark
+                                          ? 'bg-[#151B2B] text-orange-400 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+                                          : 'bg-[#e8f4f8] text-orange-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
                                       }`}>
                                       {downloadingId === inv.id ? 'Generating…' : 'Download Invoice PDF'}
                                     </button>
@@ -659,16 +684,26 @@ export default function GenerateInvoice() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="absolute inset-0 bg-black/60" onClick={() => setShowPreview(false)} />
             <motion.div
-              className={`relative w-full max-w-md rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto ${isDark ? 'bg-gray-800 border border-white/10' : 'bg-white'}`}
+              className={`relative w-full max-w-md rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto ${
+                isDark
+                  ? 'bg-[#151B2B] shadow-[8px_8px_20px_#0a0e1a,-8px_-8px_20px_#202a3c]'
+                  : 'bg-[#e8f4f8] shadow-[8px_8px_20px_#c5d8e0,-8px_-8px_20px_#ffffff]'
+              }`}
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
-              <div className={`px-6 py-4 border-b flex items-center justify-between sticky top-0 ${isDark ? 'bg-gray-800 border-white/10' : 'bg-white border-gray-200'}`}>
+              <div className={`px-6 py-4 border-b flex items-center justify-between sticky top-0 ${
+                isDark ? 'bg-[#151B2B] border-white/10' : 'bg-[#e8f4f8] border-black/10'
+              }`}>
                 <h3 className={`text-base font-black ${t}`}>Invoice Preview</h3>
                 <button onClick={() => setShowPreview(false)}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition ${isDark ? 'bg-white/10 text-white/60 hover:bg-white/20' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>✕</button>
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition ${
+                    isDark
+                      ? 'shadow-[3px_3px_7px_#0a0e1a,-3px_-3px_7px_#202a3c] text-white/60 hover:text-white'
+                      : 'shadow-[3px_3px_7px_#c5d8e0,-3px_-3px_7px_#ffffff] text-gray-500 hover:text-gray-900'
+                  }`}>✕</button>
               </div>
               <div className="px-6 py-5 space-y-4">
                 {/* Customer summary */}
-                <div className={`rounded-xl p-4 space-y-2 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+                <div className={`rounded-xl p-4 space-y-2 ${nmInset}`}>
                   {[
                     ['Company / Customer', customer.companyName],
                     ['Phone', customer.phone],
@@ -691,15 +726,15 @@ export default function GenerateInvoice() {
                           −₹{discountAmount.toLocaleString('en-IN')}
                         </span>
                       </div>
-                      <div className={`flex justify-between items-center pt-1 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+                      <div className={`flex justify-between items-center pt-1 border-t ${isDark ? 'border-white/10' : 'border-black/10'}`}>
                         <span className={`text-xs font-bold ${t}`}>Grand Total</span>
-                        <span className={`text-sm font-black ${isDark ? 'text-orange-300' : 'text-orange-600'}`}>₹{grandTotal.toLocaleString('en-IN')}</span>
+                        <span className={`text-sm font-black ${isDark ? 'text-orange-400' : 'text-orange-500'}`}>₹{grandTotal.toLocaleString('en-IN')}</span>
                       </div>
                     </>
                   )}
                 </div>
                 {/* Products summary */}
-                <div className={`rounded-xl p-4 space-y-2 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+                <div className={`rounded-xl p-4 space-y-2 ${nmInset}`}>
                   <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${s}`}>Products ({items.length})</p>
                   {items.map((it, idx) => (
                     <div key={idx} className="flex justify-between items-center">
@@ -713,11 +748,19 @@ export default function GenerateInvoice() {
                 </p>
                 <div className="flex gap-3">
                   <button onClick={() => setShowPreview(false)}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${isDark ? 'bg-white/10 text-white/70 hover:bg-white/20' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                      isDark
+                        ? 'bg-[#151B2B] text-white/60 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+                        : 'bg-[#e8f4f8] text-gray-600 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
+                    }`}>
                     ← Back
                   </button>
                   <button onClick={handleDownload} disabled={generating}
-                    className="flex-1 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition disabled:opacity-60">
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-60 ${
+                      isDark
+                        ? 'bg-[#151B2B] text-orange-400 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+                        : 'bg-[#e8f4f8] text-orange-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
+                    }`}>
                     {generating ? 'Generating...' : 'Download PDF'}
                   </button>
                 </div>

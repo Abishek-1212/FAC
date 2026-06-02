@@ -36,10 +36,10 @@ export default function AddressInput({ value, onChange, disabled = false }) {
               placeholder={field.placeholder}
               disabled={disabled}
               required={field.required}
-              className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:bg-gray-50 ${
-                isDark 
-                  ? 'bg-white/5 border-white/10 text-white placeholder-white/30' 
-                  : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 shadow-[0_1px_4px_rgba(0,0,0,0.07)]'
+              className={`w-full mt-1 border-0 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/50 disabled:opacity-50 transition-shadow ${
+                isDark
+                  ? 'bg-[#151b2b] text-white placeholder-white/30 shadow-[inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.04)]'
+                  : 'bg-[#e8f4fb] text-gray-800 placeholder-gray-400 shadow-[inset_3px_3px_7px_rgba(163,196,215,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.9)]'
               }`}
             />
           </div>
@@ -57,10 +57,10 @@ export default function AddressInput({ value, onChange, disabled = false }) {
             onChange={e => handleChange('state', e.target.value)}
             disabled={disabled}
             required
-            className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:bg-gray-50 ${
-              isDark 
-                ? 'bg-white/5 border-white/10 text-white placeholder-white/30' 
-                : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 shadow-[0_1px_4px_rgba(0,0,0,0.07)]'
+            className={`w-full mt-1 border-0 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/50 disabled:opacity-50 transition-shadow ${
+              isDark
+                ? 'bg-[#151b2b] text-white placeholder-white/30 shadow-[inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.04)]'
+                : 'bg-[#e8f4fb] text-gray-800 placeholder-gray-400 shadow-[inset_3px_3px_7px_rgba(163,196,215,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.9)]'
             }`}
           />
         </div>
