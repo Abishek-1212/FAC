@@ -328,11 +328,17 @@ export default function Layout({ children, navItems, title }) {
 
       {/* View Profile Modal */}
       <Modal open={profileViewModal} onClose={() => setProfileViewModal(false)} title="Profile Details">
-        <div className="space-y-4">
+        <div className="space-y-4" style={isDark ? {} : { background: '#e8edf4', borderRadius: 20, padding: 4 }}>
           {/* Avatar with upload */}
           <div className="flex justify-center mb-2">
             <div className="relative">
-              <div className={`w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-white font-black text-3xl shadow-glow-cyan ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}>
+              <div
+                className={`w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-white font-black text-3xl ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}
+                style={isDark
+                  ? { boxShadow: '0 0 0 4px #1e3a4a, 0 0 20px rgba(6,182,212,0.4)' }
+                  : { boxShadow: '6px 6px 14px #b8c2cc, -6px -6px 14px #ffffff' }
+                }
+              >
                 {profile?.photoURL
                   ? <img src={profile.photoURL} alt="avatar" className="w-full h-full object-cover" />
                   : profile?.name?.[0]?.toUpperCase() || 'A'
@@ -358,15 +364,26 @@ export default function Layout({ children, navItems, title }) {
               { label: 'Phone', value: `+91 ${profile?.phone || '—'}` },
               { label: 'Role', value: profile?.role === 'admin' ? 'Administrator' : 'Technician' },
             ].map(item => (
-              <div key={item.label} className={`rounded-xl px-4 py-3 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
+              <div
+                key={item.label}
+                className="rounded-xl px-4 py-3"
+                style={isDark
+                  ? { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }
+                  : { background: '#e8edf4', boxShadow: 'inset 3px 3px 7px #b8c2cc, inset -3px -3px 7px #ffffff', border: 'none' }
+                }
+              >
                 <p className={`text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-500'}`}>{item.label}</p>
-                <p className={`text-sm font-bold mt-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.value}</p>
+                <p className={`text-sm font-bold mt-1 ${isDark ? 'text-white' : 'text-gray-800'}`}>{item.value}</p>
               </div>
             ))}
           </div>
           <button
             onClick={openEditProfile}
-            className={`w-full rounded-xl py-2.5 text-sm font-bold text-white ${isDark ? 'bg-gradient-to-r from-cyan-500 to-cyan-600' : 'bg-gradient-to-r from-light-primary to-cyan-500'}`}
+            className="w-full rounded-xl py-2.5 text-sm font-bold text-white"
+            style={isDark
+              ? { background: 'linear-gradient(135deg, #06b6d4, #0891b2)', boxShadow: '0 4px 15px rgba(6,182,212,0.4)' }
+              : { background: 'linear-gradient(145deg, #d1d9e6, #f0f4f8)', boxShadow: '4px 4px 10px #b8c2cc, -4px -4px 10px #ffffff', color: '#0891b2', fontWeight: 700 }
+            }
           >
             Edit Profile
           </button>
@@ -375,17 +392,23 @@ export default function Layout({ children, navItems, title }) {
 
       {/* Settings Modal */}
       <Modal open={settingsModal} onClose={() => setSettingsModal(false)} title="Settings">
-        <div className="space-y-4">
+        <div className="space-y-4" style={isDark ? {} : { background: '#e8edf4', borderRadius: 20, padding: 4 }}>
           <div>
-            <p className={`text-xs font-semibold mb-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Theme</p>
-            <div className="flex gap-3">
+            <p className={`text-xs font-semibold mb-3 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Theme</p>
+            <div
+              className="flex gap-3 p-2 rounded-2xl"
+              style={isDark
+                ? { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }
+                : { background: '#e8edf4', boxShadow: 'inset 3px 3px 7px #b8c2cc, inset -3px -3px 7px #ffffff' }
+              }
+            >
               <button
                 onClick={() => isDark && toggleTheme()}
-                className={`flex-1 rounded-xl py-3 px-4 text-sm font-bold transition-all border-2 flex flex-col items-center gap-2 ${
-                  !isDark
-                    ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-amber-500 shadow-lg'
-                    : isDark ? 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10' : 'bg-gray-100 text-gray-400 border-gray-200'
-                }`}
+                className="flex-1 rounded-xl py-3 px-4 text-sm font-bold transition-all flex flex-col items-center gap-2"
+                style={!isDark
+                  ? { background: 'linear-gradient(145deg, #fbbf24, #f97316)', color: '#fff', boxShadow: '4px 4px 10px #b8c2cc, -4px -4px 10px #ffffff' }
+                  : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.08)' }
+                }
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
@@ -394,11 +417,11 @@ export default function Layout({ children, navItems, title }) {
               </button>
               <button
                 onClick={() => !isDark && toggleTheme()}
-                className={`flex-1 rounded-xl py-3 px-4 text-sm font-bold transition-all border-2 flex flex-col items-center gap-2 ${
-                  isDark
-                    ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-indigo-500 shadow-lg'
-                    : 'bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-200'
-                }`}
+                className="flex-1 rounded-xl py-3 px-4 text-sm font-bold transition-all flex flex-col items-center gap-2"
+                style={isDark
+                  ? { background: 'linear-gradient(145deg, #6366f1, #9333ea)', color: '#fff', boxShadow: '4px 4px 12px rgba(0,0,0,0.4), -2px -2px 8px rgba(255,255,255,0.05)' }
+                  : { background: '#e8edf4', color: '#9ca3af', boxShadow: '3px 3px 7px #b8c2cc, -3px -3px 7px #ffffff' }
+                }
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
@@ -407,20 +430,32 @@ export default function Layout({ children, navItems, title }) {
               </button>
             </div>
           </div>
-          <div className={`rounded-xl px-4 py-3 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
+          <div
+            className="rounded-xl px-4 py-3"
+            style={isDark
+              ? { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }
+              : { background: '#e8edf4', boxShadow: 'inset 3px 3px 7px #b8c2cc, inset -3px -3px 7px #ffffff', border: 'none' }
+            }
+          >
             <p className={`text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-500'}`}>App Version</p>
-            <p className={`text-sm font-bold mt-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>v1.0.0</p>
+            <p className={`text-sm font-bold mt-1 ${isDark ? 'text-white' : 'text-gray-800'}`}>v1.0.0</p>
           </div>
         </div>
       </Modal>
 
       {/* Edit Profile Modal */}
       <Modal open={editMode} onClose={() => setEditMode(false)} title="Edit Profile">
-        <form onSubmit={handleSaveEdit} className="space-y-4">
+        <form onSubmit={handleSaveEdit} className="space-y-4" style={isDark ? {} : { background: '#e8edf4', borderRadius: 20, padding: 4 }}>
           {/* Avatar with upload */}
           <div className="flex justify-center mb-2">
             <div className="relative">
-              <div className={`w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-white font-black text-3xl shadow-glow-cyan ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}>
+              <div
+                className={`w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-white font-black text-3xl ${isDark ? 'bg-gradient-to-br from-cyan-400 to-cyan-600' : 'bg-gradient-to-br from-light-primary to-cyan-500'}`}
+                style={isDark
+                  ? { boxShadow: '0 0 0 4px #1e3a4a, 0 0 20px rgba(6,182,212,0.4)' }
+                  : { boxShadow: '6px 6px 14px #b8c2cc, -6px -6px 14px #ffffff' }
+                }
+              >
                 {profile?.photoURL
                   ? <img src={profile.photoURL} alt="avatar" className="w-full h-full object-cover" />
                   : profile?.name?.[0]?.toUpperCase() || 'A'
@@ -440,32 +475,47 @@ export default function Layout({ children, navItems, title }) {
             </div>
           </div>
           <div>
-            <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Full Name</label>
+            <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-500'}`}>Full Name</label>
             <input
               type="text"
               value={editForm.name}
               onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
               required
-              className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+              className={`w-full mt-1 rounded-xl px-3 py-2.5 text-sm focus:outline-none ${isDark ? 'bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500' : 'text-gray-800'}`}
+              style={!isDark ? { background: '#e8edf4', boxShadow: 'inset 3px 3px 7px #b8c2cc, inset -3px -3px 7px #ffffff', border: 'none' } : {}}
             />
           </div>
           <div>
-            <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Phone</label>
+            <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-500'}`}>Phone</label>
             <div className="flex mt-1 gap-2">
-              <span className={`border rounded-xl px-3 py-2.5 text-sm font-semibold ${isDark ? 'bg-white/5 border-white/10 text-white/60' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>+91</span>
+              <span
+                className={`rounded-xl px-3 py-2.5 text-sm font-semibold ${isDark ? 'bg-white/5 border border-white/10 text-white/60' : 'text-gray-500'}`}
+                style={!isDark ? { background: '#e8edf4', boxShadow: 'inset 3px 3px 7px #b8c2cc, inset -3px -3px 7px #ffffff' } : {}}
+              >+91</span>
               <input
                 type="tel"
                 value={editForm.phone}
                 onChange={e => setEditForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
                 maxLength={10}
                 required
-                className={`flex-1 border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                className={`flex-1 rounded-xl px-3 py-2.5 text-sm focus:outline-none ${isDark ? 'bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500' : 'text-gray-800'}`}
+                style={!isDark ? { background: '#e8edf4', boxShadow: 'inset 3px 3px 7px #b8c2cc, inset -3px -3px 7px #ffffff', border: 'none' } : {}}
               />
             </div>
           </div>
           <div className="flex gap-2 pt-2">
-            <button type="button" onClick={() => setEditMode(false)} className={`flex-1 border rounded-xl py-2.5 text-sm font-semibold ${isDark ? 'border-white/10 text-white/60 hover:bg-white/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>Cancel</button>
-            <button type="submit" disabled={saving} className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white disabled:opacity-60 ${isDark ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 shadow-glow-cyan-sm' : 'bg-gradient-to-r from-light-primary to-cyan-500'}`}>
+            <button
+              type="button"
+              onClick={() => setEditMode(false)}
+              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold ${isDark ? 'border border-white/10 text-white/60 hover:bg-white/5' : 'text-gray-600'}`}
+              style={!isDark ? { background: '#e8edf4', boxShadow: '4px 4px 10px #b8c2cc, -4px -4px 10px #ffffff' } : {}}
+            >Cancel</button>
+            <button
+              type="submit"
+              disabled={saving}
+              className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white disabled:opacity-60 ${isDark ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 shadow-glow-cyan-sm' : ''}`}
+              style={!isDark ? { background: 'linear-gradient(145deg, #06b6d4, #0891b2)', boxShadow: '4px 4px 10px #b8c2cc, -4px -4px 10px #ffffff' } : {}}
+            >
               {saving ? 'Saving...' : 'Save'}
             </button>
           </div>

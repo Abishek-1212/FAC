@@ -57,18 +57,40 @@ export default function Login() {
     }
   }
 
+  const nmCard = {
+    background: '#e0e5ec',
+    boxShadow: 'none'
+  }
+  const nmInput = {
+    background: '#e0e5ec',
+    boxShadow: 'inset 4px 4px 8px #b8bec7, inset -4px -4px 8px #ffffff',
+    border: 'none',
+    outline: 'none'
+  }
+  const nmBtn = {
+    background: 'linear-gradient(145deg, #d1d9e6, #f0f4f8)',
+    boxShadow: '5px 5px 12px #b8bec7, -5px -5px 12px #ffffff',
+    border: 'none'
+  }
+  const nmBtnActive = {
+    background: 'linear-gradient(145deg, #0ea5c5, #06b6d4)',
+    boxShadow: '5px 5px 12px #b8bec7, -5px -5px 12px #ffffff',
+    border: 'none'
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-aqua-600 to-aqua-900 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8"
+        className="rounded-3xl w-full max-w-sm p-8"
+        style={nmCard}
       >
         <div className="text-center mb-8">
           <div className="w-32 h-32 mx-auto mb-4">
             <img src={headerLogo} alt="Friends Aqua Care" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-3xl font-black text-gray-800" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.05em' }}>Friends Aqua Care</h1>
+          <h1 className="text-3xl font-black text-gray-700" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.05em' }}>Friends Aqua Care</h1>
           <p className="text-gray-500 text-sm mt-1">Service Management System</p>
         </div>
 
@@ -82,7 +104,8 @@ export default function Login() {
               placeholder="you@example.com"
               autoComplete="email"
               required
-              className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-400 bg-gray-50"
+              className="w-full mt-1 rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400"
+              style={nmInput}
             />
           </div>
           <div>
@@ -95,7 +118,8 @@ export default function Login() {
                 placeholder="••••••••"
                 autoComplete="current-password"
                 required
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-400 bg-gray-50 pr-10"
+                className="w-full rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400 pr-10"
+                style={nmInput}
               />
               <button
                 type="button"
@@ -118,22 +142,24 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-aqua-500 hover:bg-aqua-600 text-white font-bold py-3.5 rounded-xl transition disabled:opacity-60"
+            className="w-full text-white font-bold py-3.5 rounded-xl transition-all duration-200 disabled:opacity-60"
+            style={nmBtnActive}
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
         <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px bg-gray-200" />
+          <div className="flex-1 h-px" style={{ background: '#c8cfd8' }} />
           <span className="text-xs text-gray-400">or</span>
-          <div className="flex-1 h-px bg-gray-200" />
+          <div className="flex-1 h-px" style={{ background: '#c8cfd8' }} />
         </div>
 
         <button
           onClick={handleGoogleLogin}
           disabled={googleLoading}
-          className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-xl py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-60"
+          className="w-full flex items-center justify-center gap-3 rounded-xl py-3 text-sm font-semibold text-gray-600 transition-all duration-200 disabled:opacity-60"
+          style={nmBtn}
         >
           <svg width="18" height="18" viewBox="0 0 48 48">
             <path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/>
@@ -144,7 +170,7 @@ export default function Login() {
           {googleLoading ? 'Connecting...' : 'Continue with Google'}
         </button>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
+        <p className="text-center text-xs text-gray-500 mt-6">
           Don't have an account?{' '}
           <Link to="/register" className="text-aqua-600 font-semibold hover:underline">Create one</Link>
         </p>

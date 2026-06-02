@@ -119,28 +119,43 @@ export default function Register() {
     }
   }
 
+  const nmCard = { background: '#e0e5ec', boxShadow: 'none' }
+  const nmInput = {
+    background: '#e0e5ec',
+    boxShadow: 'inset 4px 4px 8px #b8bec7, inset -4px -4px 8px #ffffff',
+    border: 'none',
+    outline: 'none'
+  }
+  const nmBtn = {
+    background: 'linear-gradient(145deg, #d1d9e6, #f0f4f8)',
+    boxShadow: '5px 5px 12px #b8bec7, -5px -5px 12px #ffffff',
+    border: 'none'
+  }
+  const nmBtnActive = {
+    background: 'linear-gradient(145deg, #0ea5c5, #06b6d4)',
+    boxShadow: '5px 5px 12px #b8bec7, -5px -5px 12px #ffffff',
+    border: 'none'
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-aqua-600 to-aqua-900 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8"
+        className="rounded-3xl w-full max-w-sm p-8"
+        style={nmCard}
       >
         {/* header */}
         <div className="text-center mb-6">
           <div className="w-32 h-32 mx-auto mb-3">
             <img src={headerLogo} alt="Friends Aqua Care" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl font-black text-gray-800">Create Account</h1>
+          <h1 className="text-2xl font-black text-gray-700">Create Account</h1>
           <p className="text-gray-500 text-sm mt-1">Friends Aqua Care</p>
         </div>
 
         {/* step indicator */}
-        <div className="flex items-center gap-2 mb-6">
-          {[0, 1].map(i => (
-            <div key={i} className={`h-1.5 flex-1 rounded-full transition-all ${i <= step ? 'bg-aqua-500' : 'bg-gray-200'}`} />
-          ))}
-        </div>
+        
 
         <AnimatePresence mode="wait">
           {/* ── STEP 0: profile info ── */}
@@ -154,7 +169,7 @@ export default function Register() {
               onSubmit={handleStep0}
               className="space-y-4"
             >
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Step 1 — Your Details</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Your Details</p>
 
               {/* name */}
               <div>
@@ -166,7 +181,8 @@ export default function Register() {
                   onBlur={touch('name')}
                   placeholder="Abishek Kumar"
                   required
-                  className={`w-full mt-1 border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-400 bg-gray-50 ${touched.name && !nameValid ? 'border-red-300' : 'border-gray-200'}`}
+                  className="w-full mt-1 rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400"
+                  style={nmInput}
                 />
                 {touched.name && !nameValid && <p className="text-xs text-red-500 mt-1">Enter at least 2 characters</p>}
               </div>
@@ -181,7 +197,8 @@ export default function Register() {
                   onBlur={touch('email')}
                   placeholder="you@example.com"
                   required
-                  className={`w-full mt-1 border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-400 bg-gray-50 ${touched.email && !emailValid && !checkingEmail ? 'border-red-300' : 'border-gray-200'}`}
+                  className="w-full mt-1 rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400"
+                  style={nmInput}
                 />
                 <FieldStatus
                   checking={checkingEmail}
@@ -195,7 +212,7 @@ export default function Register() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone Number</label>
                 <div className="flex mt-1 gap-2">
-                  <span className="border border-gray-200 rounded-xl px-3 py-3 text-sm bg-gray-50 text-gray-500 font-semibold">+91</span>
+                  <span className="rounded-xl px-3 py-3 text-sm text-gray-500 font-semibold" style={nmInput}>+91</span>
                   <input
                     type="tel"
                     value={form.phone}
@@ -204,7 +221,8 @@ export default function Register() {
                     placeholder="9876543210"
                     maxLength={10}
                     required
-                    className={`flex-1 border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-400 bg-gray-50 ${touched.phone && !phoneValid ? 'border-red-300' : 'border-gray-200'}`}
+                    className="flex-1 rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400"
+                    style={nmInput}
                   />
                 </div>
                 {touched.phone && !phoneValid && <p className="text-xs text-red-500 mt-1">Enter a valid 10-digit mobile number</p>}
@@ -213,7 +231,8 @@ export default function Register() {
               <button
                 type="submit"
                 disabled={!step0Ready}
-                className="w-full bg-aqua-500 hover:bg-aqua-600 text-white font-bold py-3.5 rounded-xl transition disabled:opacity-40 mt-1"
+                className="w-full text-white font-bold py-3.5 rounded-xl transition-all duration-200 disabled:opacity-40 mt-1"
+                style={nmBtnActive}
               >
                 Continue →
               </button>
@@ -233,7 +252,7 @@ export default function Register() {
             >
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Step 2 — Set Password</p>
 
-              <div className="bg-aqua-50 rounded-xl px-4 py-3 text-sm text-aqua-700">
+              <div className="rounded-xl px-4 py-3 text-sm text-aqua-700" style={{ background: '#d4eef5', boxShadow: 'inset 2px 2px 5px #b8bec7, inset -2px -2px 5px #ffffff' }}>
                 <p className="font-semibold">{form.name}</p>
                 <p className="text-xs text-aqua-500">{form.email} · +91 {form.phone}</p>
               </div>
@@ -248,7 +267,8 @@ export default function Register() {
                     placeholder="Min. 6 characters"
                     required
                     minLength={6}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-aqua-400 bg-gray-50 pr-10"
+                    className="w-full rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400 pr-10"
+                    style={nmInput}
                   />
                   <button
                     type="button"
@@ -274,14 +294,16 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={() => setStep(0)}
-                  className="flex-1 border border-gray-200 rounded-xl py-3 text-sm text-gray-600 font-medium hover:bg-gray-50 transition"
+                  className="flex-1 rounded-xl py-3 text-sm text-gray-600 font-medium transition-all duration-200"
+                  style={nmBtn}
                 >
                   ← Back
                 </button>
                 <button
                   type="submit"
                   disabled={!step1Ready || saving}
-                  className="flex-1 bg-aqua-500 hover:bg-aqua-600 text-white font-bold py-3 rounded-xl transition disabled:opacity-40"
+                  className="flex-1 text-white font-bold py-3 rounded-xl transition-all duration-200 disabled:opacity-40"
+                  style={nmBtnActive}
                 >
                   {saving ? 'Creating...' : 'Create Account'}
                 </button>
@@ -290,7 +312,7 @@ export default function Register() {
           )}
         </AnimatePresence>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
+        <p className="text-center text-xs text-gray-500 mt-6">
           Already have an account?{' '}
           <Link to="/login" className="text-aqua-600 font-semibold hover:underline">Sign in</Link>
         </p>
