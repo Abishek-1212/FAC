@@ -170,12 +170,17 @@ export default function MyStock() {
       <div className="flex justify-center">
         <motion.button
           whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileTap={{ scale: 0.97 }}
           onClick={() => navigate('/technician/take-stock')}
-          className={`px-5 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 ${
-            isDark
-              ? 'bg-blue-600 text-white border border-blue-500 hover:bg-blue-700 shadow-lg shadow-blue-500/40'
-              : 'bg-blue-600 text-white border border-blue-700 hover:bg-blue-700 shadow-lg shadow-blue-400/50'
+          style={isDark ? {
+            background: 'linear-gradient(145deg, #1e3a5f, #162d4a)',
+            boxShadow: '4px 4px 10px #0d1b2e, -4px -4px 10px #2a5080',
+          } : {
+            background: 'linear-gradient(145deg, #dbeafe, #bfdbfe)',
+            boxShadow: '4px 4px 10px #b0c8f0, -4px -4px 10px #ffffff',
+          }}
+          className={`px-6 py-2.5 rounded-2xl text-sm font-bold transition flex items-center gap-2 ${
+            isDark ? 'text-blue-300' : 'text-blue-700'
           }`}
         >
           Take Stock
@@ -201,34 +206,47 @@ export default function MyStock() {
             { label: 'Used', value: directTotalUsed, color: 'green' },
             { label: 'Damaged', value: directTotalDamaged, color: 'red' },
             { label: 'Remaining', value: directRemaining, color: 'amber' },
-          ].map((stat, i) => (
-            <div
-              key={i}
-              className={`rounded-xl p-3 shadow-sm border ${
-                stat.color === 'blue' ? isDark ? 'bg-blue-500/20 border-blue-500/30' : 'bg-blue-100 border-blue-200' :
-                stat.color === 'green' ? isDark ? 'bg-green-500/20 border-green-500/30' : 'bg-green-100 border-green-200' :
-                stat.color === 'red' ? isDark ? 'bg-red-500/20 border-red-500/30' : 'bg-red-100 border-red-200' :
-                isDark ? 'bg-amber-500/20 border-amber-500/30' : 'bg-amber-100 border-amber-200'
-              }`}
-            >
-              <p className={`text-2xl font-black mb-1 ${
-                stat.color === 'blue' ? isDark ? 'text-blue-300' : 'text-blue-700' :
-                stat.color === 'green' ? isDark ? 'text-green-300' : 'text-green-700' :
-                stat.color === 'red' ? isDark ? 'text-red-300' : 'text-red-700' :
-                isDark ? 'text-amber-300' : 'text-amber-700'
-              }`}>
-                {stat.value}
-              </p>
-              <p className={`text-xs font-medium ${
-                stat.color === 'blue' ? isDark ? 'text-blue-400' : 'text-blue-600' :
-                stat.color === 'green' ? isDark ? 'text-green-400' : 'text-green-600' :
-                stat.color === 'red' ? isDark ? 'text-red-400' : 'text-red-600' :
-                isDark ? 'text-amber-400' : 'text-amber-600'
-              }`}>
-                {stat.label}
-              </p>
-            </div>
-          ))}
+          ].map((stat, i) => {
+            const neumoStyle = isDark ? {
+              background: stat.color === 'blue' ? 'linear-gradient(145deg, #162d4a, #1e3a5f)' :
+                stat.color === 'green' ? 'linear-gradient(145deg, #14321a, #1a3f22)' :
+                stat.color === 'red' ? 'linear-gradient(145deg, #3b1111, #4a1a1a)' :
+                'linear-gradient(145deg, #3b2e0d, #4a3a12)',
+              boxShadow: stat.color === 'blue' ? '4px 4px 10px #0a1a2e, -3px -3px 8px #2a5080' :
+                stat.color === 'green' ? '4px 4px 10px #091a0d, -3px -3px 8px #205530' :
+                stat.color === 'red' ? '4px 4px 10px #1a0808, -3px -3px 8px #5a2020' :
+                '4px 4px 10px #1a1205, -3px -3px 8px #604518',
+            } : {
+              background: stat.color === 'blue' ? 'linear-gradient(145deg, #dbeafe, #eff6ff)' :
+                stat.color === 'green' ? 'linear-gradient(145deg, #dcfce7, #f0fdf4)' :
+                stat.color === 'red' ? 'linear-gradient(145deg, #fee2e2, #fff5f5)' :
+                'linear-gradient(145deg, #fef3c7, #fffbeb)',
+              boxShadow: stat.color === 'blue' ? '4px 4px 10px #b0c8f0, -4px -4px 10px #ffffff' :
+                stat.color === 'green' ? '4px 4px 10px #a7d9b8, -4px -4px 10px #ffffff' :
+                stat.color === 'red' ? '4px 4px 10px #f0b8b8, -4px -4px 10px #ffffff' :
+                '4px 4px 10px #e8d49a, -4px -4px 10px #ffffff',
+            }
+            return (
+              <div key={i} style={neumoStyle} className="rounded-xl p-3">
+                <p className={`text-2xl font-black mb-1 ${
+                  stat.color === 'blue' ? isDark ? 'text-blue-300' : 'text-blue-700' :
+                  stat.color === 'green' ? isDark ? 'text-green-300' : 'text-green-700' :
+                  stat.color === 'red' ? isDark ? 'text-red-300' : 'text-red-700' :
+                  isDark ? 'text-amber-300' : 'text-amber-700'
+                }`}>
+                  {stat.value}
+                </p>
+                <p className={`text-xs font-medium ${
+                  stat.color === 'blue' ? isDark ? 'text-blue-400' : 'text-blue-600' :
+                  stat.color === 'green' ? isDark ? 'text-green-400' : 'text-green-600' :
+                  stat.color === 'red' ? isDark ? 'text-red-400' : 'text-red-600' :
+                  isDark ? 'text-amber-400' : 'text-amber-600'
+                }`}>
+                  {stat.label}
+                </p>
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -256,129 +274,81 @@ export default function MyStock() {
               const productPrice = product?.price || a.productPrice
               const productCategory = product?.category || 'Uncategorized'
               
+              const isEmpty = remaining === 0
+              const cardStyle = isDark ? {
+                background: isEmpty ? 'linear-gradient(145deg, #1a1a1a, #222222)' : 'linear-gradient(145deg, #1c2333, #232d42)',
+              } : {
+                background: isEmpty ? 'linear-gradient(145deg, #e8e8e8, #f5f5f5)' : 'linear-gradient(145deg, #e8edf5, #f5f8ff)',
+              }
+              const iconStyle = isDark ? {
+                background: isEmpty ? 'linear-gradient(145deg, #1e1e1e, #2a2a2a)' : 'linear-gradient(145deg, #162d4a, #1e3a5f)',
+                boxShadow: '3px 3px 7px rgba(0,0,0,0.5), -2px -2px 5px rgba(255,255,255,0.04)',
+              } : {
+                background: isEmpty ? 'linear-gradient(145deg, #d8d8d8, #eeeeee)' : 'linear-gradient(145deg, #dbeafe, #eff6ff)',
+                boxShadow: '3px 3px 7px #b8c4d4, -3px -3px 7px #ffffff',
+              }
+              const statBtnStyle = (color) => {
+                const colorMap = {
+                  blue:  isDark ? { bg: ['#162d4a','#1e3a5f'], shadow: 'rgba(0,0,0,0.5)', highlight: 'rgba(255,255,255,0.04)' } : { bg: ['#dbeafe','#eff6ff'], shadow: '#b0c8f0', highlight: '#ffffff' },
+                  green: isDark ? { bg: ['#14321a','#1a3f22'], shadow: 'rgba(0,0,0,0.5)', highlight: 'rgba(255,255,255,0.04)' } : { bg: ['#dcfce7','#f0fdf4'], shadow: '#a7d9b8', highlight: '#ffffff' },
+                  red:   isDark ? { bg: ['#3b1111','#4a1a1a'], shadow: 'rgba(0,0,0,0.5)', highlight: 'rgba(255,255,255,0.04)' } : { bg: ['#fee2e2','#fff5f5'], shadow: '#f0b8b8', highlight: '#ffffff' },
+                  amber: isDark ? { bg: ['#3b2e0d','#4a3a12'], shadow: 'rgba(0,0,0,0.5)', highlight: 'rgba(255,255,255,0.04)' } : { bg: ['#fef3c7','#fffbeb'], shadow: '#e8d49a', highlight: '#ffffff' },
+                  gray:  isDark ? { bg: ['#1e1e1e','#2a2a2a'], shadow: 'rgba(0,0,0,0.5)', highlight: 'rgba(255,255,255,0.03)' } : { bg: ['#e0e0e0','#f0f0f0'], shadow: '#c0c0c0', highlight: '#ffffff' },
+                }
+                const c = isEmpty ? colorMap.gray : colorMap[color]
+                return {
+                  background: `linear-gradient(145deg, ${c.bg[0]}, ${c.bg[1]})`,
+                  boxShadow: `3px 3px 7px ${c.shadow}, -2px -2px 5px ${c.highlight}`,
+                }
+              }
               return (
-                <div
-                  key={a.id}
-                  className={`rounded-2xl p-4 shadow-sm border ${
-                    remaining === 0
-                      ? isDark ? 'bg-gray-800/40 border-white/5' : 'bg-gray-100 border-gray-200'
-                      : isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'
-                  }`}
-                >
+                <div key={a.id} style={cardStyle} className="rounded-2xl p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      remaining === 0
-                        ? isDark ? 'bg-gray-500/20' : 'bg-gray-200'
-                        : isDark ? 'bg-blue-500/20' : 'bg-blue-100'
-                    }`}>
-                      <svg className={`w-4 h-4 ${
-                        remaining === 0
-                          ? isDark ? 'text-gray-500' : 'text-gray-400'
-                          : isDark ? 'text-blue-300' : 'text-blue-600'
-                      }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div style={iconStyle} className="w-9 h-9 rounded-xl flex items-center justify-center">
+                      <svg className={`w-4 h-4 ${isEmpty ? isDark ? 'text-gray-500' : 'text-gray-400' : isDark ? 'text-blue-300' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <p className={`font-bold text-base ${
-                        remaining === 0
-                          ? isDark ? 'text-gray-500' : 'text-gray-400'
-                          : isDark ? 'text-white' : 'text-gray-900'
-                      }`}>
+                      <p className={`font-bold text-base ${isEmpty ? isDark ? 'text-gray-500' : 'text-gray-400' : isDark ? 'text-white' : 'text-gray-800'}`}>
                         {productName}
                       </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`text-xs font-medium ${
-                          remaining === 0
-                            ? isDark ? 'text-gray-600' : 'text-gray-400'
-                            : isDark ? 'text-white/50' : 'text-gray-500'
-                        }`}>
-                          {productCategory}
-                        </span>
-                      </div>
+                      <span className={`text-xs font-medium ${isEmpty ? isDark ? 'text-gray-600' : 'text-gray-400' : isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                        {productCategory}
+                      </span>
                     </div>
                   </div>
                   <div className="grid grid-cols-4 gap-2 text-center">
-                    <button onClick={() => openDrill('Taken', a)} className={`rounded-xl p-2 cursor-pointer active:scale-95 transition-transform ${
-                      remaining === 0
-                        ? isDark ? 'bg-gray-500/10 hover:bg-gray-500/20' : 'bg-gray-100 hover:bg-gray-200'
-                        : isDark ? 'bg-blue-500/10 hover:bg-blue-500/20' : 'bg-blue-50 hover:bg-blue-100'
-                    }`}>
-                      <p className={`text-xl font-black mb-1 ${
-                        remaining === 0
-                          ? isDark ? 'text-gray-500' : 'text-gray-400'
-                          : isDark ? 'text-blue-300' : 'text-blue-600'
-                      }`}>
-                        {a.takenQuantity}
-                      </p>
-                      <p className={`text-xs font-medium ${
-                        remaining === 0
-                          ? isDark ? 'text-gray-600' : 'text-gray-400'
-                          : isDark ? 'text-blue-300/70' : 'text-blue-600/70'
-                      }`}>
-                        Taken
-                      </p>
-                    </button>
-                    <button onClick={() => openDrill('Used', a)} className={`rounded-xl p-2 cursor-pointer active:scale-95 transition-transform ${
-                      remaining === 0
-                        ? isDark ? 'bg-gray-500/10 hover:bg-gray-500/20' : 'bg-gray-100 hover:bg-gray-200'
-                        : isDark ? 'bg-green-500/10 hover:bg-green-500/20' : 'bg-green-50 hover:bg-green-100'
-                    }`}>
-                      <p className={`text-xl font-black mb-1 ${
-                        remaining === 0
-                          ? isDark ? 'text-gray-500' : 'text-gray-400'
-                          : isDark ? 'text-green-300' : 'text-green-600'
-                      }`}>
-                        {a.usedQuantity}
-                      </p>
-                      <p className={`text-xs font-medium ${
-                        remaining === 0
-                          ? isDark ? 'text-gray-600' : 'text-gray-400'
-                          : isDark ? 'text-green-300/70' : 'text-green-600/70'
-                      }`}>
-                        Used
-                      </p>
-                    </button>
-                    <button onClick={() => openDrill('Damaged', a)} className={`rounded-xl p-2 cursor-pointer active:scale-95 transition-transform ${
-                      remaining === 0
-                        ? isDark ? 'bg-gray-500/10 hover:bg-gray-500/20' : 'bg-gray-100 hover:bg-gray-200'
-                        : isDark ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-red-50 hover:bg-red-100'
-                    }`}>
-                      <p className={`text-xl font-black mb-1 ${
-                        remaining === 0
-                          ? isDark ? 'text-gray-500' : 'text-gray-400'
-                          : isDark ? 'text-red-300' : 'text-red-600'
-                      }`}>
-                        {a.damagedQuantity || 0}
-                      </p>
-                      <p className={`text-xs font-medium ${
-                        remaining === 0
-                          ? isDark ? 'text-gray-600' : 'text-gray-400'
-                          : isDark ? 'text-red-300/70' : 'text-red-600/70'
-                      }`}>
-                        Damaged
-                      </p>
-                    </button>
-                    <button onClick={() => openDrill('Remaining', a)} className={`rounded-xl p-2 cursor-pointer active:scale-95 transition-transform ${
-                      remaining > 0
-                        ? isDark ? 'bg-amber-500/10 hover:bg-amber-500/20' : 'bg-amber-50 hover:bg-amber-100'
-                        : isDark ? 'bg-gray-500/10 hover:bg-gray-500/20' : 'bg-gray-50 hover:bg-gray-100'
-                    }`}>
-                      <p className={`text-xl font-black mb-1 ${
-                        remaining > 0
-                          ? isDark ? 'text-amber-300' : 'text-amber-600'
-                          : isDark ? 'text-gray-400' : 'text-gray-400'
-                      }`}>
-                        {remaining}
-                      </p>
-                      <p className={`text-xs font-medium ${
-                        remaining > 0
-                          ? isDark ? 'text-amber-300/70' : 'text-amber-600/70'
-                          : isDark ? 'text-gray-400/70' : 'text-gray-400/70'
-                      }`}>
-                        Remaining
-                      </p>
-                    </button>
+                    {[
+                      { label: 'Taken',     value: a.takenQuantity,       color: 'blue',  type: 'Taken' },
+                      { label: 'Used',      value: a.usedQuantity,        color: 'green', type: 'Used' },
+                      { label: 'Damaged',   value: a.damagedQuantity || 0,color: 'red',   type: 'Damaged' },
+                      { label: 'Remaining', value: remaining,             color: remaining > 0 ? 'amber' : 'gray', type: 'Remaining' },
+                    ].map(({ label, value, color, type }) => {
+                      const textColor = isEmpty || color === 'gray'
+                        ? isDark ? 'text-gray-500' : 'text-gray-400'
+                        : color === 'blue'  ? isDark ? 'text-blue-300'  : 'text-blue-600'
+                        : color === 'green' ? isDark ? 'text-green-300' : 'text-green-600'
+                        : color === 'red'   ? isDark ? 'text-red-300'   : 'text-red-600'
+                        : isDark ? 'text-amber-300' : 'text-amber-600'
+                      const subColor = isEmpty || color === 'gray'
+                        ? isDark ? 'text-gray-600' : 'text-gray-400'
+                        : color === 'blue'  ? isDark ? 'text-blue-300/70'  : 'text-blue-600/70'
+                        : color === 'green' ? isDark ? 'text-green-300/70' : 'text-green-600/70'
+                        : color === 'red'   ? isDark ? 'text-red-300/70'   : 'text-red-600/70'
+                        : isDark ? 'text-amber-300/70' : 'text-amber-600/70'
+                      return (
+                        <button
+                          key={label}
+                          onClick={() => openDrill(type, a)}
+                          style={statBtnStyle(color)}
+                          className="rounded-xl p-2 cursor-pointer active:scale-95 transition-transform"
+                        >
+                          <p className={`text-xl font-black mb-1 ${textColor}`}>{value}</p>
+                          <p className={`text-xs font-medium ${subColor}`}>{label}</p>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )
@@ -478,14 +448,15 @@ export default function MyStock() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 40 }}
               onClick={e => e.stopPropagation()}
-              className={`relative w-full max-w-sm rounded-2xl shadow-xl border overflow-hidden ${
-                isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-100'
-              }`}
+              style={isDark ? {
+                background: 'linear-gradient(145deg, #1c2333, #232d42)',
+              } : {
+                background: 'linear-gradient(145deg, #e8edf5, #f5f8ff)',
+              }}
+              className="relative w-full max-w-sm rounded-2xl overflow-hidden"
             >
               {/* Modal Header */}
-              <div className={`flex items-center justify-between px-4 py-3 border-b ${
-                isDark ? 'border-white/10' : 'border-gray-100'
-              }`}>
+              <div className={`flex items-center justify-between px-4 py-3 ${isDark ? 'border-b border-white/5' : 'border-b border-black/5'}`}>
                 <div>
                   <p className={`font-black text-base ${
                     drillModal.type === 'Taken' ? isDark ? 'text-blue-300' : 'text-blue-600' :
@@ -495,9 +466,17 @@ export default function MyStock() {
                   }`}>{drillModal.type} History</p>
                   <p className={`text-xs mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{drillModal.productName}</p>
                 </div>
-                <button onClick={() => setDrillModal(null)} className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                  isDark ? 'bg-white/10 text-white/60 hover:bg-white/20' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                }`}>
+                <button
+                  onClick={() => setDrillModal(null)}
+                  style={isDark ? {
+                    background: 'linear-gradient(145deg, #1a2030, #222a3e)',
+                    boxShadow: '3px 3px 7px rgba(0,0,0,0.5), -2px -2px 5px rgba(255,255,255,0.04)',
+                  } : {
+                    background: 'linear-gradient(145deg, #dce3ee, #eef2f8)',
+                    boxShadow: '3px 3px 7px #b8c4d4, -3px -3px 7px #ffffff',
+                  }}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center ${isDark ? 'text-white/60' : 'text-gray-500'}`}
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -518,32 +497,47 @@ export default function MyStock() {
                 ) : drillData.length === 0 ? (
                   <p className={`text-center py-8 text-sm ${isDark ? 'text-white/30' : 'text-gray-400'}`}>No records found</p>
                 ) : (
-                  drillData.map((row, i) => (
-                    <div key={i} className={`rounded-xl px-3 py-3 ${
-                      isDark ? 'bg-white/5' : 'bg-gray-50'
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <div className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-lg ${
-                          drillModal.type === 'Taken' ? isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700' :
-                          drillModal.type === 'Used' ? isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700' :
-                          isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700'
-                        }`}>
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {fmtDate(row.ts)}
+                  drillData.map((row, i) => {
+                    const rowColor = drillModal.type === 'Taken' ? 'blue' : drillModal.type === 'Used' ? 'green' : 'red'
+                    const rowStyle = isDark ? {
+                      background: rowColor === 'blue' ? 'linear-gradient(145deg, #162d4a, #1e3a5f)' : rowColor === 'green' ? 'linear-gradient(145deg, #14321a, #1a3f22)' : 'linear-gradient(145deg, #3b1111, #4a1a1a)',
+                      boxShadow: '3px 3px 8px rgba(0,0,0,0.5), -2px -2px 5px rgba(255,255,255,0.04)',
+                    } : {
+                      background: rowColor === 'blue' ? 'linear-gradient(145deg, #dbeafe, #eff6ff)' : rowColor === 'green' ? 'linear-gradient(145deg, #dcfce7, #f0fdf4)' : 'linear-gradient(145deg, #fee2e2, #fff5f5)',
+                      boxShadow: rowColor === 'blue' ? '3px 3px 8px #b0c8f0, -3px -3px 8px #ffffff' : rowColor === 'green' ? '3px 3px 8px #a7d9b8, -3px -3px 8px #ffffff' : '3px 3px 8px #f0b8b8, -3px -3px 8px #ffffff',
+                    }
+                    const dateTagStyle = isDark ? {
+                      background: 'linear-gradient(145deg, #111827, #1a2235)',
+                      boxShadow: '2px 2px 5px rgba(0,0,0,0.4), -1px -1px 3px rgba(255,255,255,0.03)',
+                    } : {
+                      background: 'linear-gradient(145deg, #d0daea, #e8eef8)',
+                      boxShadow: '2px 2px 5px #b0beca, -2px -2px 5px #ffffff',
+                    }
+                    return (
+                      <div key={i} style={rowStyle} className="rounded-xl px-3 py-3">
+                        <div className="flex items-center justify-between">
+                          <div style={dateTagStyle} className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-lg ${
+                            rowColor === 'blue' ? isDark ? 'text-blue-300' : 'text-blue-700' :
+                            rowColor === 'green' ? isDark ? 'text-green-300' : 'text-green-700' :
+                            isDark ? 'text-red-300' : 'text-red-700'
+                          }`}>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {fmtDate(row.ts)}
+                          </div>
+                          <span className={`text-xl font-black ${
+                            rowColor === 'blue' ? isDark ? 'text-blue-300' : 'text-blue-600' :
+                            rowColor === 'green' ? isDark ? 'text-green-300' : 'text-green-600' :
+                            isDark ? 'text-red-300' : 'text-red-600'
+                          }`}>{row.qty} <span className="text-xs font-medium opacity-60">units</span></span>
                         </div>
-                        <span className={`text-xl font-black ${
-                          drillModal.type === 'Taken' ? isDark ? 'text-blue-300' : 'text-blue-600' :
-                          drillModal.type === 'Used' ? isDark ? 'text-green-300' : 'text-green-600' :
-                          isDark ? 'text-red-300' : 'text-red-600'
-                        }`}>{row.qty} <span className="text-xs font-medium opacity-60">units</span></span>
+                        {row.label && <p className={`text-xs mt-1.5 ${isDark ? 'text-white/30' : 'text-gray-500'}`}>Job: {row.label}</p>}
+                        {row.legacy && <p className={`text-xs mt-1.5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>Recorded before history tracking</p>}
+                        {row.charge > 0 && <p className={`text-xs mt-1 font-semibold ${isDark ? 'text-red-300/70' : 'text-red-500'}`}>Charge: ₹{row.charge}</p>}
                       </div>
-                      {row.label && <p className={`text-xs mt-1.5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>Job: {row.label}</p>}
-                      {row.legacy && <p className={`text-xs mt-1.5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>Recorded before history tracking</p>}
-                      {row.charge > 0 && <p className={`text-xs mt-1 font-semibold ${isDark ? 'text-red-300/70' : 'text-red-500'}`}>Charge: ₹{row.charge}</p>}
-                    </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
             </motion.div>

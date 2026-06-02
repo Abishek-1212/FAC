@@ -105,11 +105,12 @@ export default function TechnicianLayout({ children }) {
     <div className={`h-screen flex flex-col overflow-hidden ${isDark ? 'bg-dark-bg' : 'bg-slate-50'}`}>
 
       {/* Sticky Header */}
-      <header
-        className={`flex-shrink-0 sticky top-0 z-50 ${isDark ? 'bg-gradient-to-r from-cyan-800 to-blue-800' : 'bg-gradient-to-r from-cyan-400 to-blue-400'}`}
-        style={{ boxShadow: isDark ? '0 8px 40px 8px rgba(0,0,0,0.6)' : '0 8px 40px 8px rgba(103,232,249,0.6)' }}
-      >
-        <div className="px-4 h-16 flex items-center justify-between max-w-2xl mx-auto w-full">
+      <header className={`flex-shrink-0 sticky top-0 z-50 ${isDark ? 'bg-dark-bg' : 'bg-slate-50'}`}>
+        <div className="px-3 pt-3 pb-2 max-w-2xl mx-auto w-full">
+        <div
+          className={`h-14 flex items-center justify-between px-3 rounded-2xl ${isDark ? 'bg-gradient-to-r from-cyan-800 to-blue-800' : 'bg-gradient-to-r from-cyan-400 to-blue-400'}`}
+          style={{ boxShadow: isDark ? '0 4px 24px 4px rgba(0,0,0,0.5)' : '0 4px 24px 4px rgba(103,232,249,0.55)' }}
+        >
           {showBackButton ? (
             <>
               <button
@@ -197,6 +198,7 @@ export default function TechnicianLayout({ children }) {
               </AnimatePresence>
             </>
           )}
+        </div>
         </div>
       </header>
 

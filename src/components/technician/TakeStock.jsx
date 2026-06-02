@@ -20,7 +20,6 @@ export default function TakeStock() {
   const [technicianStock, setTechnicianStock] = useState([])
   const [stockFilter, setStockFilter] = useState('today')
   const [customRange, setCustomRange] = useState({ start: '', end: '' })
-  const [showCustomPicker, setShowCustomPicker] = useState(false)
   const MAX_PER_PRODUCT = 20
 
   // Prevent scroll on number inputs
@@ -298,7 +297,7 @@ export default function TakeStock() {
             <label className={`text-xs font-bold uppercase tracking-wider block mb-2 ${
               isDark ? 'text-white/60' : 'text-gray-500'
             }`}>
-              Step 1: Choose Category
+              Choose Category
             </label>
             <select
               value={selectedCategory}
@@ -306,10 +305,15 @@ export default function TakeStock() {
                 setSelectedCategory(e.target.value)
                 setCurrentProduct('')
               }}
-              className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition ${
-                isDark
-                  ? 'bg-white/5 border-white/10 text-white focus:ring-cyan-500'
-                  : 'bg-white border-gray-200 text-gray-900 focus:ring-aqua-300'
+              style={isDark ? {
+                background: 'linear-gradient(145deg, #161e2e, #1c2640)',
+                boxShadow: 'inset 3px 3px 7px #0d1420, inset -2px -2px 6px #253050',
+              } : {
+                background: 'linear-gradient(145deg, #e2e8f0, #f8faff)',
+                boxShadow: 'inset 3px 3px 7px #c8d0de, inset -2px -2px 6px #ffffff',
+              }}
+              className={`w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none border-0 transition ${
+                isDark ? 'text-white' : 'text-gray-900'
               }`}
             >
               <option value="" className="text-gray-900">Select a category...</option>
@@ -325,15 +329,20 @@ export default function TakeStock() {
               <label className={`text-xs font-bold uppercase tracking-wider block mb-2 ${
                 isDark ? 'text-white/60' : 'text-gray-500'
               }`}>
-                Step 2: Select Product
+                Select Product
               </label>
               <select
                 value={currentProduct}
                 onChange={e => setCurrentProduct(e.target.value)}
-                className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition ${
-                  isDark
-                    ? 'bg-white/5 border-white/10 text-white focus:ring-cyan-500'
-                    : 'bg-white border-gray-200 text-gray-900 focus:ring-aqua-300'
+                style={isDark ? {
+                  background: 'linear-gradient(145deg, #161e2e, #1c2640)',
+                  boxShadow: 'inset 3px 3px 7px #0d1420, inset -2px -2px 6px #253050',
+                } : {
+                  background: 'linear-gradient(145deg, #e2e8f0, #f8faff)',
+                  boxShadow: 'inset 3px 3px 7px #c8d0de, inset -2px -2px 6px #ffffff',
+                }}
+                className={`w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none border-0 transition ${
+                  isDark ? 'text-white' : 'text-gray-900'
                 }`}
               >
                 <option value="" className="text-gray-900">Select a product...</option>
@@ -370,7 +379,7 @@ export default function TakeStock() {
               <label className={`text-xs font-bold uppercase tracking-wider block mb-2 ${
                 isDark ? 'text-white/60' : 'text-gray-500'
               }`}>
-                Step 3: Enter Quantity
+                Enter Quantity
               </label>
               <input
                 type="number"
@@ -378,10 +387,15 @@ export default function TakeStock() {
                 value={currentQuantity}
                 onChange={e => setCurrentQuantity(e.target.value)}
                 placeholder="Enter quantity"
-                className={`w-full border rounded-xl px-3 py-2.5 text-sm text-center font-bold focus:outline-none focus:ring-2 transition ${
-                  isDark
-                    ? 'bg-white/5 border-white/10 text-white focus:ring-cyan-500'
-                    : 'bg-white border-gray-200 text-gray-900 focus:ring-aqua-300'
+                style={isDark ? {
+                  background: 'linear-gradient(145deg, #161e2e, #1c2640)',
+                  boxShadow: 'inset 3px 3px 7px #0d1420, inset -2px -2px 6px #253050',
+                } : {
+                  background: 'linear-gradient(145deg, #e2e8f0, #f8faff)',
+                  boxShadow: 'inset 3px 3px 7px #c8d0de, inset -2px -2px 6px #ffffff',
+                }}
+                className={`w-full rounded-xl px-3 py-2.5 text-sm text-center font-bold focus:outline-none border-0 transition ${
+                  isDark ? 'text-white' : 'text-gray-900'
                 }`}
               />
               {(() => {
@@ -391,39 +405,24 @@ export default function TakeStock() {
                 const existingStock = technicianStock.find(s => s.productId === currentProduct)
                 const currentHolding = existingStock ? (existingStock.takenQuantity - existingStock.usedQuantity - existingStock.returnedQuantity - existingStock.damagedQuantity) : 0
                 const totalAfterTaking = currentHolding + requestedQty
-                
                 if (requestedQty > 0) {
                   if (requestedQty > availableQty) {
                     return (
-                      <p className={`text-xs mt-2 px-3 py-2 rounded-lg flex items-center gap-2 ${
-                        isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-50 text-red-600'
-                      }`}>
-                        <span>❌</span>
-                        <span>Insufficient stock! Only {availableQty} units available in inventory.</span>
+                      <p style={isDark ? { background: 'linear-gradient(145deg, #3b1111, #4a1a1a)', boxShadow: 'inset 2px 2px 5px #1a0808, inset -1px -1px 4px #5a2020' } : { background: 'linear-gradient(145deg, #fee2e2, #fff5f5)', boxShadow: 'inset 2px 2px 5px #f0b8b8, inset -1px -1px 4px #ffffff' }} className={`text-xs mt-2 px-3 py-2 rounded-xl flex items-center gap-2 ${isDark ? 'text-red-300' : 'text-red-600'}`}>
+                        <span>❌</span><span>Insufficient stock! Only {availableQty} units available in inventory.</span>
                       </p>
                     )
                   }
                   if (totalAfterTaking > MAX_PER_PRODUCT) {
                     return (
-                      <p className={`text-xs mt-2 px-3 py-2 rounded-lg flex items-center gap-2 ${
-                        isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-50 text-amber-600'
-                      }`}>
-                        <span>⚠️</span>
-                        <span>Limit exceeded! You have {currentHolding} units. Max allowed: {MAX_PER_PRODUCT} per product.</span>
+                      <p style={isDark ? { background: 'linear-gradient(145deg, #3b2e0d, #4a3a12)', boxShadow: 'inset 2px 2px 5px #1a1205, inset -1px -1px 4px #604518' } : { background: 'linear-gradient(145deg, #fef3c7, #fffbeb)', boxShadow: 'inset 2px 2px 5px #e8d49a, inset -1px -1px 4px #ffffff' }} className={`text-xs mt-2 px-3 py-2 rounded-xl flex items-center gap-2 ${isDark ? 'text-amber-300' : 'text-amber-600'}`}>
+                        <span>⚠️</span><span>Limit exceeded! You have {currentHolding} units. Max allowed: {MAX_PER_PRODUCT} per product.</span>
                       </p>
                     )
                   }
                   return (
-                    <p className={`text-xs mt-2 px-3 py-2 rounded-lg flex items-center gap-2 ${
-                      isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-50 text-green-600'
-                    }`}>
-                      <span>✅</span>
-                      <span>
-                        {currentHolding > 0 
-                          ? `You'll have: ${totalAfterTaking}/${MAX_PER_PRODUCT} units`
-                          : `Available in inventory`
-                        }
-                      </span>
+                    <p style={isDark ? { background: 'linear-gradient(145deg, #14321a, #1a3f22)', boxShadow: 'inset 2px 2px 5px #091a0d, inset -1px -1px 4px #205530' } : { background: 'linear-gradient(145deg, #dcfce7, #f0fdf4)', boxShadow: 'inset 2px 2px 5px #a7d9b8, inset -1px -1px 4px #ffffff' }} className={`text-xs mt-2 px-3 py-2 rounded-xl flex items-center gap-2 ${isDark ? 'text-green-300' : 'text-green-600'}`}>
+                      <span>✅</span><span>{currentHolding > 0 ? `You'll have: ${totalAfterTaking}/${MAX_PER_PRODUCT} units` : `Available in inventory`}</span>
                     </p>
                   )
                 }
@@ -448,12 +447,18 @@ export default function TakeStock() {
                     type="button"
                     onClick={addProduct}
                     disabled={!isValid}
+                    style={isValid
+                      ? isDark
+                        ? { background: 'linear-gradient(145deg, #14321a, #1a3f22)', boxShadow: '4px 4px 10px #091a0d, -3px -3px 8px #205530' }
+                        : { background: 'linear-gradient(145deg, #dcfce7, #f0fdf4)', boxShadow: '4px 4px 10px #a7d9b8, -3px -3px 8px #ffffff' }
+                      : isDark
+                        ? { background: 'linear-gradient(145deg, #1e1e1e, #2a2a2a)', boxShadow: 'inset 2px 2px 5px #0d0d0d, inset -1px -1px 4px #333333' }
+                        : { background: 'linear-gradient(145deg, #e0e0e0, #f0f0f0)', boxShadow: 'inset 2px 2px 5px #c8c8c8, inset -1px -1px 4px #ffffff' }
+                    }
                     className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition ${
                       isValid
-                        ? isDark
-                          ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
-                          : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
+                        ? isDark ? 'text-emerald-300' : 'text-emerald-700'
+                        : 'text-gray-400 cursor-not-allowed'
                     }`}
                   >
                     {editingItemId ? '✓ Update Product' : '✓ Add Product'}
@@ -467,10 +472,12 @@ export default function TakeStock() {
                         setCurrentQuantity('')
                         setSelectedCategory('')
                       }}
+                      style={isDark
+                        ? { background: 'linear-gradient(145deg, #1e1e1e, #2a2a2a)', boxShadow: '4px 4px 10px #0d0d0d, -3px -3px 8px #333333' }
+                        : { background: 'linear-gradient(145deg, #e2e8f0, #f8faff)', boxShadow: '4px 4px 10px #c0c8d8, -3px -3px 8px #ffffff' }
+                      }
                       className={`px-4 rounded-xl py-2.5 text-sm font-bold transition ${
-                        isDark
-                          ? 'bg-gray-500/20 text-gray-300 hover:bg-gray-500/30'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        isDark ? 'text-gray-300' : 'text-gray-600'
                       }`}
                     >
                       Cancel
@@ -484,11 +491,16 @@ export default function TakeStock() {
 
           {/* Added Items List */}
           {addedItems.length > 0 && (
-            <div className={`rounded-xl p-4 border ${
-              isDark
-                ? 'bg-white/5 border-white/10'
-                : 'bg-gray-50 border-gray-200'
-            }`}>
+            <div
+              style={isDark ? {
+                background: 'linear-gradient(145deg, #161e2e, #1c2640)',
+                boxShadow: 'inset 3px 3px 8px #0d1420, inset -2px -2px 6px #253050',
+              } : {
+                background: 'linear-gradient(145deg, #e2e8f0, #f0f4fa)',
+                boxShadow: 'inset 3px 3px 8px #c8d0de, inset -2px -2px 6px #ffffff',
+              }}
+              className="rounded-2xl p-4"
+            >
               <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${
                 isDark ? 'text-white/60' : 'text-gray-500'
               }`}>
@@ -501,22 +513,22 @@ export default function TakeStock() {
                     <div
                       key={item.productId}
                       onClick={() => editItem(item)}
-                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition ${
-                        isEditing
-                          ? isDark
-                            ? 'bg-cyan-500/20 border-2 border-cyan-400'
-                            : 'bg-cyan-50 border-2 border-cyan-400'
-                          : isDark
-                          ? 'bg-white/5 hover:bg-white/10 border border-white/10'
-                          : 'bg-white hover:bg-gray-50 border border-gray-200'
-                      }`}
+                      style={isEditing
+                        ? isDark
+                          ? { background: 'linear-gradient(145deg, #0e3a4a, #114455)', boxShadow: '3px 3px 8px #071e25, -2px -2px 6px #1a5566' }
+                          : { background: 'linear-gradient(145deg, #cffafe, #e0f9ff)', boxShadow: '3px 3px 8px #a0d8e8, -2px -2px 6px #ffffff' }
+                        : isDark
+                          ? { background: 'linear-gradient(145deg, #1c2333, #232d42)', boxShadow: '3px 3px 8px #0d1420, -2px -2px 6px #2a3550' }
+                          : { background: 'linear-gradient(145deg, #eaf0fa, #f8fbff)', boxShadow: '3px 3px 8px #c8d4e8, -2px -2px 6px #ffffff' }
+                      }
+                      className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition"
                     >
                       <div className="flex-1">
                         <p className={`text-sm font-bold ${
                           isDark ? 'text-white' : 'text-gray-900'
                         }`}>
                           {item.productName}
-                          {isEditing && <span className="ml-2 text-xs text-cyan-500">(Editing...)</span>}
+                          {isEditing && <span className={`ml-2 text-xs ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>(Editing...)</span>}
                         </p>
                         <p className={`text-xs ${
                           isDark ? 'text-white/40' : 'text-gray-500'
@@ -526,14 +538,13 @@ export default function TakeStock() {
                       </div>
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          removeItem(item.productId)
-                        }}
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition ${
-                          isDark
-                            ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
-                            : 'bg-red-50 text-red-500 hover:bg-red-100'
+                        onClick={(e) => { e.stopPropagation(); removeItem(item.productId) }}
+                        style={isDark
+                          ? { background: 'linear-gradient(145deg, #3b1111, #4a1a1a)', boxShadow: '3px 3px 7px #1a0808, -2px -2px 5px #5a2020' }
+                          : { background: 'linear-gradient(145deg, #fee2e2, #fff5f5)', boxShadow: '3px 3px 7px #f0b8b8, -2px -2px 5px #ffffff' }
+                        }
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-lg ${
+                          isDark ? 'text-red-300' : 'text-red-500'
                         }`}
                       >
                         ×
@@ -547,18 +558,23 @@ export default function TakeStock() {
 
           {/* Submit Button */}
           {addedItems.length > 0 && (
-            <button
+            <motion.button
               type="button"
               onClick={handleTakeStock}
               disabled={saving}
-              className={`w-full rounded-xl py-3 text-sm font-bold transition disabled:opacity-60 ${
-                isDark
-                  ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/20'
-                  : 'bg-gradient-to-r from-aqua-500 to-aqua-600 text-white shadow-md'
-              }`}
+              whileHover={saving ? {} : { scale: 1.02 }}
+              whileTap={saving ? {} : { scale: 0.97 }}
+              style={isDark ? {
+                background: 'linear-gradient(145deg, #0e7490, #0891b2)',
+                boxShadow: saving ? 'inset 3px 3px 8px rgba(0,0,0,0.4), inset -2px -2px 6px rgba(255,255,255,0.05)' : '5px 5px 14px rgba(0,0,0,0.5), -3px -3px 10px rgba(6,182,212,0.15)',
+              } : {
+                background: 'linear-gradient(145deg, #06b6d4, #0891b2)',
+                boxShadow: saving ? 'inset 3px 3px 8px rgba(0,0,0,0.2), inset -2px -2px 6px rgba(255,255,255,0.3)' : '5px 5px 14px #7dd3e8, -4px -4px 12px #ffffff',
+              }}
+              className="w-full rounded-2xl py-3 text-sm font-bold text-white transition disabled:opacity-60"
             >
               {saving ? '⏳ Taking Stock...' : `📤 Add to My Stock (${addedItems.length} items)`}
-            </button>
+            </motion.button>
           )}
         </div>
       </motion.div>
@@ -577,7 +593,7 @@ export default function TakeStock() {
             isDark ? 'border-white/10' : 'border-gray-100'
           }`}>
             <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-400'}`}>History</p>
-            <h3 className={`text-lg font-black mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>Stock You've Taken</h3>
+            
           </div>
 
           {/* Filter Pills */}
@@ -585,11 +601,19 @@ export default function TakeStock() {
             {[['today', 'Today'], ['month', 'This Month'], ['custom', 'Custom']].map(([key, label]) => (
               <button
                 key={key}
-                onClick={() => { setStockFilter(key); if (key === 'custom') setShowCustomPicker(true) }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                onClick={() => { setStockFilter(key); }}
+                style={stockFilter === key
+                  ? isDark
+                    ? { background: 'linear-gradient(145deg, #1a3a6e, #1e4080)', boxShadow: '3px 3px 8px #0d1b35, -2px -2px 6px #2a5090' }
+                    : { background: 'linear-gradient(145deg, #2563eb, #1d4ed8)', boxShadow: '3px 3px 8px #93aee8, -2px -2px 6px #ffffff' }
+                  : isDark
+                    ? { background: 'linear-gradient(145deg, #161e2e, #1c2640)', boxShadow: '3px 3px 7px #0d1420, -2px -2px 5px #253050' }
+                    : { background: 'linear-gradient(145deg, #e2e8f0, #f8faff)', boxShadow: '3px 3px 7px #c0c8d8, -2px -2px 5px #ffffff' }
+                }
+                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition ${
                   stockFilter === key
-                    ? isDark ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white'
-                    : isDark ? 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10' : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                    ? 'text-white'
+                    : isDark ? 'text-white/60' : 'text-gray-600'
                 }`}
               >
                 {label}
@@ -598,65 +622,67 @@ export default function TakeStock() {
           </div>
 
           {/* Custom Date Picker */}
-          {stockFilter === 'custom' && showCustomPicker && (
-            <div className={`mx-5 mt-3 p-3 rounded-xl border ${
-              isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
-            }`}>
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <div>
-                  <label className={`text-xs font-bold block mb-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>From</label>
-                  <input type="date" value={customRange.start} max={customRange.end || undefined}
-                    onChange={e => setCustomRange(p => ({ ...p, start: e.target.value }))}
-                    className={`w-full px-2 py-1.5 rounded-lg text-xs border focus:outline-none ${
-                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className={`text-xs font-bold block mb-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>To</label>
-                  <input type="date" value={customRange.end} min={customRange.start || undefined}
-                    onChange={e => setCustomRange(p => ({ ...p, end: e.target.value }))}
-                    className={`w-full px-2 py-1.5 rounded-lg text-xs border focus:outline-none ${
-                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-                    }`}
-                  />
-                </div>
+          {stockFilter === 'custom' && (
+            <div className="mx-5 mt-3 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                {[['From', 'start', customRange.end], ['To', 'end', null]].map(([lbl, key, maxVal]) => (
+                  <div key={key}>
+                    <label className={`text-xs font-bold block mb-1.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>{lbl}</label>
+                    <input
+                      type="date"
+                      value={customRange[key]}
+                      max={key === 'start' && customRange.end ? customRange.end : undefined}
+                      min={key === 'end' && customRange.start ? customRange.start : undefined}
+                      onChange={e => setCustomRange(p => ({ ...p, [key]: e.target.value }))}
+                      style={isDark ? {
+                        background: 'linear-gradient(145deg, #161e2e, #1c2640)',
+                        boxShadow: 'inset 3px 3px 7px #0d1420, inset -2px -2px 6px #253050',
+                      } : {
+                        background: 'linear-gradient(145deg, #e2e8f0, #f8faff)',
+                        boxShadow: 'inset 3px 3px 7px #c8d0de, inset -2px -2px 6px #ffffff',
+                      }}
+                      className={`w-full px-2.5 py-2 rounded-xl text-xs font-semibold border-0 focus:outline-none ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}
+                    />
+                  </div>
+                ))}
               </div>
-              <button
-                onClick={() => { if (customRange.start && customRange.end) setShowCustomPicker(false) }}
-                disabled={!customRange.start || !customRange.end}
-                className={`w-full py-1.5 rounded-lg text-xs font-bold transition disabled:opacity-50 ${
-                  isDark ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white'
-                }`}
-              >
-                Apply
-              </button>
-            </div>
-          )}
 
-          {/* Applied custom range banner */}
-          {stockFilter === 'custom' && !showCustomPicker && customRange.start && customRange.end && (
-            <div className={`mx-5 mt-3 flex items-center justify-between px-3 py-2 rounded-xl border ${
-              isDark ? 'bg-white/5 border-white/10' : 'bg-blue-50 border-blue-200'
-            }`}>
-              <p className={`text-xs font-bold ${isDark ? 'text-white/70' : 'text-blue-700'}`}>
-                {(() => {
-                  const fmt = (str) => {
-                    const d = new Date(str + 'T00:00:00')
-                    const ord = (n) => { const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v-20)%10] || s[v] || s[0]) }
-                    return `${ord(d.getDate())} ${d.toLocaleString('en-IN', { month: 'long' })} ${d.getFullYear()}`
-                  }
-                  return `${fmt(customRange.start)} — ${fmt(customRange.end)}`
-                })()}
-              </p>
-              <button
-                onClick={() => { setCustomRange({ start: '', end: '' }); setShowCustomPicker(true) }}
-                className={`text-xs font-bold px-2 py-1 rounded-lg ml-3 ${
-                  isDark ? 'bg-white/10 text-white/60 hover:bg-white/20' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                }`}
-              >
-                ✕ Clear
-              </button>
+              {/* Active range banner — shown as soon as both dates are picked */}
+              {customRange.start && customRange.end && (
+                <div
+                  style={isDark ? {
+                    background: 'linear-gradient(145deg, #1a3a6e, #1e4080)',
+                    boxShadow: '4px 4px 10px #0d1b35, -3px -3px 8px #2a5090',
+                  } : {
+                    background: 'linear-gradient(145deg, #dbeafe, #eff6ff)',
+                    boxShadow: '4px 4px 10px #b0c8f0, -3px -3px 8px #ffffff',
+                  }}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                >
+                  <p className={`text-xs font-bold ${isDark ? 'text-blue-200' : 'text-blue-700'}`}>
+                    {(() => {
+                      const ord = (n) => { const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v-20)%10] || s[v] || s[0]) }
+                      const fmt = (str) => { const d = new Date(str + 'T00:00:00'); return `${ord(d.getDate())} ${d.toLocaleString('en-IN', { month: 'long' })} ${d.getFullYear()}` }
+                      return `${fmt(customRange.start)} — ${fmt(customRange.end)}`
+                    })()}
+                  </p>
+                  <button
+                    onClick={() => setCustomRange({ start: '', end: '' })}
+                    style={isDark ? {
+                      background: 'linear-gradient(145deg, #162d4a, #1e3a5f)',
+                      boxShadow: '2px 2px 5px #0a1a2e, -1px -1px 4px #2a5080',
+                    } : {
+                      background: 'linear-gradient(145deg, #c8daee, #ddeaf8)',
+                      boxShadow: '2px 2px 5px #a0b8d0, -2px -2px 4px #ffffff',
+                    }}
+                    className={`text-xs font-bold px-2.5 py-1 rounded-lg ml-3 ${isDark ? 'text-blue-300' : 'text-blue-600'}`}
+                  >
+                    ✕ Clear
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -675,9 +701,14 @@ export default function TakeStock() {
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: idx * 0.05 }}
-                      className={`rounded-xl p-4 border ${
-                        isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
-                      }`}
+                      style={isDark ? {
+                        background: 'linear-gradient(145deg, #1c2333, #232d42)',
+                        boxShadow: '5px 5px 12px #0d1420, -3px -3px 8px #2a3550',
+                      } : {
+                        background: 'linear-gradient(145deg, #e8edf5, #f5f8ff)',
+                        boxShadow: '5px 5px 12px #c8d0dc, -4px -4px 10px #ffffff',
+                      }}
+                      className="rounded-2xl p-4"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
@@ -685,13 +716,28 @@ export default function TakeStock() {
                           <span className={`text-xs font-medium ${isDark ? 'text-white/50' : 'text-gray-500'}`}>{productCategory}</span>
                         </div>
                       </div>
-                      <div className={`text-center p-2 rounded-lg ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
-                        <p className="text-base font-black">{stock.takenQuantity}</p>
-                        <p className="text-[9px] font-semibold opacity-70">Taken</p>
+                      <div style={isDark ? {
+                        background: 'linear-gradient(145deg, #162d4a, #1e3a5f)',
+                        boxShadow: '3px 3px 7px #0a1a2e, -2px -2px 5px #2a5080',
+                      } : {
+                        background: 'linear-gradient(145deg, #dbeafe, #eff6ff)',
+                        boxShadow: '3px 3px 7px #b0c8f0, -3px -3px 7px #ffffff',
+                      }} className="text-center p-2 rounded-xl">
+                        <p className={`text-base font-black ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>{stock.takenQuantity}</p>
+                        <p className={`text-[9px] font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-600/70'}`}>Taken</p>
                       </div>
                       {(stock.lastTakenAt || stock.takenAt) && (
-                        <div className={`mt-3 pt-3 border-t text-xs ${isDark ? 'border-white/10 text-white/40' : 'border-gray-200 text-gray-500'}`}>
-                          <p className="font-semibold">📅 {(() => { const ts = stock.lastTakenAt || stock.takenAt; const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000); return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) })()}</p>
+                        <div style={isDark ? {
+                          background: 'linear-gradient(145deg, #161e2e, #1c2640)',
+                          boxShadow: 'inset 2px 2px 5px #0d1420, inset -1px -1px 4px #253050',
+                        } : {
+                          background: 'linear-gradient(145deg, #dde3ee, #eef2f8)',
+                          boxShadow: 'inset 2px 2px 5px #c0c8d8, inset -1px -1px 4px #ffffff',
+                        }} className={`mt-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {(() => { const ts = stock.lastTakenAt || stock.takenAt; const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000); return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) })()} 
                         </div>
                       )}
                     </motion.div>

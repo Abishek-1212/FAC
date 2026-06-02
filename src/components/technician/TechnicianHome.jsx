@@ -268,10 +268,10 @@ export default function TechnicianHome() {
             transition={{ delay: 0.1 + i * 0.05 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => navigate(card.path)}
-            className={`rounded-2xl p-4 transition-all flex flex-col items-center gap-2 ${
+            className={`rounded-2xl p-4 transition-all flex flex-col items-center gap-2 border ${
               isDark
-                ? 'bg-[#151B2B] text-blue-400 shadow-[6px_6px_14px_#0a0e1a,-6px_-6px_14px_#202a3c] active:shadow-[inset_6px_6px_14px_#0a0e1a,inset_-6px_-6px_14px_#202a3c]'
-                : 'bg-[#e8f4f8] text-blue-600 shadow-[6px_6px_14px_#c5d8e0,-6px_-6px_14px_#ffffff] active:shadow-[inset_6px_6px_14px_#c5d8e0,inset_-6px_-6px_14px_#ffffff]'
+                ? 'bg-[#151B2B] text-blue-400 border-white/10 shadow-[6px_6px_14px_#0a0e1a,-6px_-6px_14px_#202a3c] active:shadow-[inset_6px_6px_14px_#0a0e1a,inset_-6px_-6px_14px_#202a3c]'
+                : 'bg-[#e8f4f8] text-blue-600 border-cyan-200/60 shadow-[6px_6px_14px_#c5d8e0,-6px_-6px_14px_#ffffff] active:shadow-[inset_6px_6px_14px_#c5d8e0,inset_-6px_-6px_14px_#ffffff]'
             }`}
           >
             <div className={isDark ? 'text-blue-400' : 'text-blue-600'}>{card.icon}</div>

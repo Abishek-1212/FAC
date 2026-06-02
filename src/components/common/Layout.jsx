@@ -153,8 +153,12 @@ export default function Layout({ children, navItems, title }) {
     <div className={`h-screen flex flex-col overflow-hidden ${isDark ? 'bg-[#151B2B]' : 'bg-[#e8f0f7]'}`}>
       {/* Top Nav - Hidden for specific pages */}
       {!hideHeader && (
-        <header className={`shrink-0 sticky top-0 z-50 ${isDark ? 'bg-gradient-to-r from-cyan-800 to-blue-800' : 'bg-gradient-to-r from-cyan-400 to-blue-400'}`} style={{ boxShadow: isDark ? '0 8px 40px 8px rgba(0,0,0,0.6)' : '0 8px 40px 8px rgba(103,232,249,0.6)' }}>
-        <div className="max-w-full mx-auto px-6 h-16 grid grid-cols-3 items-center">
+        <header className={`shrink-0 sticky top-0 z-50 ${isDark ? 'bg-[#151B2B]' : 'bg-[#e8f0f7]'}`}>
+        <div className="px-3 pt-3 pb-2">
+        <div
+          className={`h-14 grid grid-cols-3 items-center px-3 rounded-2xl ${isDark ? 'bg-gradient-to-r from-cyan-800 to-blue-800' : 'bg-gradient-to-r from-cyan-400 to-blue-400'}`}
+          style={{ boxShadow: isDark ? '0 4px 24px 4px rgba(0,0,0,0.5)' : '0 4px 24px 4px rgba(103,232,249,0.55)' }}
+        >
           {/* Left: Logo + back button */}
           <div className="flex items-center gap-3">
             {isInSection && (
@@ -263,6 +267,7 @@ export default function Layout({ children, navItems, title }) {
               </AnimatePresence>
             </div>
           </div>
+        </div>
         </div>
       </header>
       )}

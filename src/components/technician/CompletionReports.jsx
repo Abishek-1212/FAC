@@ -166,7 +166,11 @@ export default function CompletionReports() {
 
       {/* Period Filter Pills */}
       {reports.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className={`flex gap-2 overflow-x-auto pb-2 scrollbar-hide p-3 rounded-2xl ${
+          isDark
+            ? 'bg-[#1a1a2e]'
+            : 'bg-[#e8eaf0]'
+        }`}>
           {[
             { key: 'today', label: 'Today' },
             { key: 'week', label: 'This Week' },
@@ -175,19 +179,27 @@ export default function CompletionReports() {
           ].map(({ key, label }) => (
             <motion.button
               key={key}
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => {
                 setPeriodFilter(key)
                 if (key === 'custom') setShowDatePicker(true)
               }}
+              style={periodFilter === key
+                ? isDark
+                  ? { boxShadow: 'inset 3px 3px 7px #0d0d1a, inset -3px -3px 7px #27274a' }
+                  : { boxShadow: 'inset 3px 3px 7px #c5c7cc, inset -3px -3px 7px #ffffff' }
+                : isDark
+                  ? { boxShadow: '4px 4px 8px #0d0d1a, -4px -4px 8px #27274a' }
+                  : { boxShadow: '4px 4px 8px #c5c7cc, -4px -4px 8px #ffffff' }
+              }
               className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                 periodFilter === key
                   ? isDark
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-blue-600 text-white'
+                    ? 'bg-[#1a1a2e] text-blue-400'
+                    : 'bg-[#e8eaf0] text-blue-600'
                   : isDark
-                  ? 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  ? 'bg-[#1a1a2e] text-white/50 hover:text-white/70'
+                  : 'bg-[#e8eaf0] text-gray-500 hover:text-gray-700'
               }`}
             >
               {label}
@@ -201,7 +213,11 @@ export default function CompletionReports() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`rounded-2xl p-4 border ${isDark ? 'bg-dark-card border-white/10' : 'bg-white border-gray-200'}`}
+          style={isDark
+            ? { boxShadow: '6px 6px 14px #0d0d1a, -6px -6px 14px #27274a' }
+            : { boxShadow: '6px 6px 14px #c5c7cc, -6px -6px 14px #ffffff' }
+          }
+          className={`rounded-2xl p-4 ${isDark ? 'bg-[#1a1a2e]' : 'bg-[#e8eaf0]'}`}
         >
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
@@ -211,11 +227,13 @@ export default function CompletionReports() {
                 value={customDateRange.start}
                 max={customDateRange.end || undefined}
                 onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className={`w-full px-3 py-2 rounded-lg text-sm border transition-all ${
-                  isDark
-                    ? 'bg-white/5 border-white/10 text-white focus:border-blue-500'
-                    : 'bg-white border-gray-200 text-gray-900 focus:border-blue-500'
-                } focus:outline-none`}
+                style={isDark
+                  ? { boxShadow: 'inset 3px 3px 7px #0d0d1a, inset -3px -3px 7px #27274a' }
+                  : { boxShadow: 'inset 3px 3px 7px #c5c7cc, inset -3px -3px 7px #ffffff' }
+                }
+                className={`w-full px-3 py-2 rounded-xl text-sm transition-all focus:outline-none ${
+                  isDark ? 'bg-[#1a1a2e] text-white' : 'bg-[#e8eaf0] text-gray-900'
+                }`}
               />
             </div>
             <div>
@@ -225,22 +243,28 @@ export default function CompletionReports() {
                 value={customDateRange.end}
                 min={customDateRange.start || undefined}
                 onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className={`w-full px-3 py-2 rounded-lg text-sm border transition-all ${
-                  isDark
-                    ? 'bg-white/5 border-white/10 text-white focus:border-blue-500'
-                    : 'bg-white border-gray-200 text-gray-900 focus:border-blue-500'
-                } focus:outline-none`}
+                style={isDark
+                  ? { boxShadow: 'inset 3px 3px 7px #0d0d1a, inset -3px -3px 7px #27274a' }
+                  : { boxShadow: 'inset 3px 3px 7px #c5c7cc, inset -3px -3px 7px #ffffff' }
+                }
+                className={`w-full px-3 py-2 rounded-xl text-sm transition-all focus:outline-none ${
+                  isDark ? 'bg-[#1a1a2e] text-white' : 'bg-[#e8eaf0] text-gray-900'
+                }`}
               />
             </div>
           </div>
           <motion.button
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => { if (customDateRange.start && customDateRange.end) setShowDatePicker(false) }}
             disabled={!customDateRange.start || !customDateRange.end}
-            className={`w-full py-2 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+            style={(!customDateRange.start || !customDateRange.end) ? {} : isDark
+              ? { boxShadow: '4px 4px 8px #0d0d1a, -4px -4px 8px #27274a' }
+              : { boxShadow: '4px 4px 8px #c5c7cc, -4px -4px 8px #ffffff' }
+            }
+            className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
               isDark
-                ? 'bg-blue-500 text-white hover:bg-blue-600'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-[#1a1a2e] text-blue-400 hover:text-blue-300'
+                : 'bg-[#e8eaf0] text-blue-600 hover:text-blue-700'
             }`}
           >
             Apply Range
@@ -286,23 +310,33 @@ export default function CompletionReports() {
                 className="space-y-3"
               >
                 {/* Date Header */}
-                <div className={`sticky top-0 z-10 backdrop-blur-sm py-2 px-4 rounded-xl border ${
-                  isDark
-                    ? 'bg-dark-card/80 border-white/10'
-                    : 'bg-white/80 border-gray-200'
-                }`}>
+                <div
+                  style={isDark
+                    ? { boxShadow: '4px 4px 10px #0d0d1a, -4px -4px 10px #27274a' }
+                    : { boxShadow: '4px 4px 10px #c5c7cc, -4px -4px 10px #ffffff' }
+                  }
+                  className={`sticky top-0 z-10 py-2.5 px-4 rounded-xl ${
+                    isDark ? 'bg-[#1a1a2e]' : 'bg-[#e8eaf0]'
+                  }`}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
                         {date}
                       </h3>
                     </div>
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                      isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'
-                    }`}>
+                    <span
+                      style={isDark
+                        ? { boxShadow: 'inset 2px 2px 5px #0d0d1a, inset -2px -2px 5px #27274a' }
+                        : { boxShadow: 'inset 2px 2px 5px #c5c7cc, inset -2px -2px 5px #ffffff' }
+                      }
+                      className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                        isDark ? 'bg-[#1a1a2e] text-blue-400' : 'bg-[#e8eaf0] text-blue-600'
+                      }`}
+                    >
                       {dateReports.length} report{dateReports.length !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -318,10 +352,12 @@ export default function CompletionReports() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, scale: 0.97 }}
                       transition={{ delay: i * 0.03 }}
-                      className={`rounded-2xl p-4 shadow-sm border transition-all ${
-                        isDark
-                          ? 'bg-dark-card border-white/10 hover:border-cyan-500/30 hover:bg-white/5'
-                          : 'bg-white border-gray-100 hover:shadow-md hover:border-aqua-200'
+                      style={isDark
+                        ? { boxShadow: '6px 6px 14px #0d0d1a, -6px -6px 14px #27274a' }
+                        : { boxShadow: '6px 6px 14px #c5c7cc, -6px -6px 14px #ffffff' }
+                      }
+                      className={`rounded-2xl p-4 transition-all ${
+                        isDark ? 'bg-[#1a1a2e]' : 'bg-[#e8eaf0]'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -362,11 +398,15 @@ export default function CompletionReports() {
                         </div>
 
                         <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                          <span className={`text-xs font-bold px-3 py-1.5 rounded-lg border flex items-center gap-1.5 ${
-                            isDark
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                              : 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                          }`}>
+                          <span
+                            style={isDark
+                              ? { boxShadow: 'inset 3px 3px 7px #0d0d1a, inset -3px -3px 7px #27274a' }
+                              : { boxShadow: 'inset 3px 3px 7px #c5c7cc, inset -3px -3px 7px #ffffff' }
+                            }
+                            className={`w-32 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 ${
+                              isDark ? 'bg-[#1a1a2e] text-emerald-400' : 'bg-[#e8eaf0] text-emerald-600'
+                            }`}
+                          >
                             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
@@ -391,10 +431,12 @@ export default function CompletionReports() {
                                 setSelectedReportForInvoice(report)
                                 setInvoiceModal(true)
                               }}
-                              className={`w-full text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center justify-center gap-1.5 ${
-                                isDark
-                                  ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
-                                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                              style={isDark
+                                ? { boxShadow: '4px 4px 8px #0d0d1a, -4px -4px 8px #27274a' }
+                                : { boxShadow: '4px 4px 8px #c5c7cc, -4px -4px 8px #ffffff' }
+                              }
+                              className={`w-32 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                                isDark ? 'bg-[#1a1a2e] text-blue-400' : 'bg-[#e8eaf0] text-blue-600'
                               }`}
                             >
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -403,7 +445,7 @@ export default function CompletionReports() {
                               <span>Invoice</span>
                             </motion.button>
                           ) : (
-                            <div className="flex flex-col gap-2 w-full">
+                            <div className="flex flex-col gap-2 items-end">
                               <motion.button
                                 whileTap={{ scale: 0.95 }}
                                 onClick={async (e) => {
@@ -414,10 +456,12 @@ export default function CompletionReports() {
                                     setViewInvoiceModal(true)
                                   }
                                 }}
-                                className={`w-full text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center justify-center gap-1.5 ${
-                                  isDark
-                                    ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
-                                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                                style={isDark
+                                  ? { boxShadow: '4px 4px 8px #0d0d1a, -4px -4px 8px #27274a' }
+                                  : { boxShadow: '4px 4px 8px #c5c7cc, -4px -4px 8px #ffffff' }
+                                }
+                                className={`w-32 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                                  isDark ? 'bg-[#1a1a2e] text-purple-400' : 'bg-[#e8eaf0] text-purple-600'
                                 }`}
                               >
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -426,11 +470,15 @@ export default function CompletionReports() {
                                 </svg>
                                 <span>View Invoice</span>
                               </motion.button>
-                              <span className={`w-full text-xs font-bold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 ${
-                                isDark
-                                  ? 'bg-gray-500/20 text-gray-400'
-                                  : 'bg-gray-100 text-gray-600'
-                              }`}>
+                              <span
+                                style={isDark
+                                  ? { boxShadow: 'inset 3px 3px 7px #0d0d1a, inset -3px -3px 7px #27274a' }
+                                  : { boxShadow: 'inset 3px 3px 7px #c5c7cc, inset -3px -3px 7px #ffffff' }
+                                }
+                                className={`w-32 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 ${
+                                  isDark ? 'bg-[#1a1a2e] text-gray-400' : 'bg-[#e8eaf0] text-gray-500'
+                                }`}
+                              >
                                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                 </svg>
@@ -627,44 +675,66 @@ export default function CompletionReports() {
           <div className="space-y-4">
 
             {/* Header Banner */}
-            <div className={`relative overflow-hidden rounded-2xl p-5 ${
-              isDark ? 'bg-gradient-to-br from-slate-800 to-slate-700 border border-white/10' : 'bg-gradient-to-br from-slate-900 to-slate-700'
-            }`}>
-              <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/5" />
-              <div className="absolute -right-2 -bottom-8 w-20 h-20 rounded-full bg-white/5" />
-              <div className="relative flex items-start gap-4">
-                <div className="p-2.5 rounded-xl bg-white/10 flex-shrink-0">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div
+              style={isDark
+                ? { boxShadow: '6px 6px 14px #0d0d1a, -6px -6px 14px #27274a' }
+                : { boxShadow: '6px 6px 14px #c5c7cc, -6px -6px 14px #ffffff' }
+              }
+              className={`rounded-2xl p-5 ${
+                isDark ? 'bg-[#1a1a2e]' : 'bg-[#e8eaf0]'
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div
+                  style={isDark
+                    ? { boxShadow: 'inset 3px 3px 7px #0d0d1a, inset -3px -3px 7px #27274a' }
+                    : { boxShadow: 'inset 3px 3px 7px #c5c7cc, inset -3px -3px 7px #ffffff' }
+                  }
+                  className={`p-2.5 rounded-xl flex-shrink-0 ${
+                    isDark ? 'bg-[#1a1a2e]' : 'bg-[#e8eaf0]'
+                  }`}
+                >
+                  <svg className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-0.5">Invoice</p>
-                  <h2 className="text-white text-xl font-black truncate">#{selectedInvoiceData.invoice.billNo}</h2>
-                  <p className="text-white/70 text-sm font-medium mt-0.5 truncate">{selectedInvoiceData.report.customerName}</p>
+                  <p className={`text-xs font-semibold uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Invoice</p>
+                  <h2 className={`text-xl font-black truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>#{selectedInvoiceData.invoice.billNo}</h2>
+                  <p className={`text-sm font-medium mt-0.5 truncate ${isDark ? 'text-white/60' : 'text-gray-600'}`}>{selectedInvoiceData.report.customerName}</p>
                 </div>
-                <span className={`flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
-                  (selectedInvoiceData.invoice.paymentPending || 0) > 0
-                    ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
-                    : 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30'
-                }`}>
+                <span
+                  style={isDark
+                    ? { boxShadow: 'inset 2px 2px 5px #0d0d1a, inset -2px -2px 5px #27274a' }
+                    : { boxShadow: 'inset 2px 2px 5px #c5c7cc, inset -2px -2px 5px #ffffff' }
+                  }
+                  className={`flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
+                    (selectedInvoiceData.invoice.paymentPending || 0) > 0
+                      ? isDark ? 'bg-[#1a1a2e] text-amber-400' : 'bg-[#e8eaf0] text-amber-600'
+                      : isDark ? 'bg-[#1a1a2e] text-emerald-400' : 'bg-[#e8eaf0] text-emerald-600'
+                  }`}
+                >
                   {(selectedInvoiceData.invoice.paymentPending || 0) > 0 ? 'PARTIAL' : 'PAID'}
                 </span>
               </div>
             </div>
 
             {/* Grand Total Card */}
-            <div className={`rounded-2xl p-4 border flex items-center justify-between ${
-              isDark ? 'bg-gray-800/60 border-white/10' : 'bg-gray-50 border-gray-200'
-            }`}>
-              <div>
-                <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${
-                  isDark ? 'text-gray-400' : 'text-gray-500'
-                }`}>Grand Total</p>
-                <p className={`text-3xl font-black ${
-                  isDark ? 'text-white' : 'text-gray-900'
-                }`}>₹{(selectedInvoiceData.invoice.billAmount || 0).toLocaleString('en-IN')}</p>
-              </div>
+            <div
+              style={isDark
+                ? { boxShadow: 'inset 4px 4px 10px #0d0d1a, inset -4px -4px 10px #27274a' }
+                : { boxShadow: 'inset 4px 4px 10px #c5c7cc, inset -4px -4px 10px #ffffff' }
+              }
+              className={`rounded-2xl p-4 ${
+                isDark ? 'bg-[#1a1a2e]' : 'bg-[#e8eaf0]'
+              }`}
+            >
+              <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${
+                isDark ? 'text-white/40' : 'text-gray-500'
+              }`}>Grand Total</p>
+              <p className={`text-3xl font-black ${
+                isDark ? 'text-white' : 'text-gray-900'
+              }`}>₹{(selectedInvoiceData.invoice.billAmount || 0).toLocaleString('en-IN')}</p>
             </div>
 
             {/* Action Buttons */}
@@ -693,10 +763,12 @@ export default function CompletionReports() {
                   })
                   toast.success('Invoice downloaded!')
                 }}
-                className={`flex items-center justify-center gap-2.5 rounded-xl py-3.5 text-sm font-bold text-white transition-all ${
-                  isDark
-                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-lg shadow-blue-500/20'
-                    : 'bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 shadow-lg shadow-blue-500/25'
+                style={isDark
+                  ? { boxShadow: '4px 4px 10px #0d0d1a, -4px -4px 10px #27274a' }
+                  : { boxShadow: '4px 4px 10px #c5c7cc, -4px -4px 10px #ffffff' }
+                }
+                className={`flex items-center justify-center gap-2.5 rounded-xl py-3.5 text-sm font-bold transition-all ${
+                  isDark ? 'bg-[#1a1a2e] text-blue-400' : 'bg-[#e8eaf0] text-blue-600'
                 }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -713,10 +785,12 @@ export default function CompletionReports() {
                   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
                   toast.success('Invoice shared!')
                 }}
-                className={`flex items-center justify-center gap-2.5 rounded-xl py-3.5 text-sm font-bold text-white transition-all ${
-                  isDark
-                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 shadow-lg shadow-green-500/20'
-                    : 'bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 shadow-lg shadow-green-500/25'
+                style={isDark
+                  ? { boxShadow: '4px 4px 10px #0d0d1a, -4px -4px 10px #27274a' }
+                  : { boxShadow: '4px 4px 10px #c5c7cc, -4px -4px 10px #ffffff' }
+                }
+                className={`flex items-center justify-center gap-2.5 rounded-xl py-3.5 text-sm font-bold transition-all ${
+                  isDark ? 'bg-[#1a1a2e] text-emerald-400' : 'bg-[#e8eaf0] text-emerald-600'
                 }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
