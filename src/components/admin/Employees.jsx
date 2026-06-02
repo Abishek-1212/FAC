@@ -184,7 +184,7 @@ export default function Employees() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className={`text-xl font-bold tracking-widest ${
+        <h1 className={`text-base font-bold tracking-wider whitespace-nowrap px-12 ${
           isDark ? 'text-white/90' : 'text-gray-700'
         }`}>
           MY TECHNICIANS
@@ -192,21 +192,6 @@ export default function Employees() {
       </div>
 
       <div className="space-y-4">
-      {/* Add Technician Button */}
-      <div className="flex justify-center">
-        <motion.button
-          onClick={() => setModal(true)}
-          whileTap={{ scale: 0.97 }}
-          className={`px-6 py-3 rounded-xl text-sm font-bold transition-all ${
-            isDark
-              ? 'bg-[#151B2B] text-cyan-400 shadow-[5px_5px_12px_#0a0e1a,-5px_-5px_12px_#202a3c] active:shadow-[inset_5px_5px_12px_#0a0e1a,inset_-5px_-5px_12px_#202a3c]'
-              : 'bg-[#e8f4f8] text-cyan-600 shadow-[5px_5px_12px_#c5d8e0,-5px_-5px_12px_#ffffff] active:shadow-[inset_5px_5px_12px_#c5d8e0,inset_-5px_-5px_12px_#ffffff]'
-          }`}
-        >
-          + Add Technician
-        </motion.button>
-      </div>
-
       <div className="flex justify-center">
         <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-hide">
           {([['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive'], ...(newTechs.length > 0 ? [['new', 'New Technicians']] : [])]).map(([val, label]) => (
