@@ -142,19 +142,27 @@ export default function ManageStock({ searchQuery = '' }) {
     grouped[cat].push(p)
   })
 
-  // Check if any product has had stock reduced (quantity < totalStock)
-  const stockHasBeenReduced = invProducts.some(inv => (inv.quantity || 0) < (inv.totalStock || 0))
+  // Sort categories by total shortage (sum of threshold - qty for all low-stock products)
+  const sortedGroupEntries = Object.entries(grouped).sort(([, prodsA], [, prodsB]) => {
+    const shortage = (prods) => prods.reduce((sum, p) => {
+      const inv = invProducts.find(inv => inv.productName === p.name || inv.name === p.name)
+      const qty = inv?.quantity ?? 0
+      const thresh = p.threshold || 0
+      return thresh > 0 && qty < thresh ? sum + (thresh - qty) : sum
+    }, 0)
+    return shortage(prodsB) - shortage(prodsA)
+  })
 
-  // Sort: alphabetically initially, then by quantity ascending once stock is reduced
+  // Sort products within each category: low stock first, then alphabetically
   Object.keys(grouped).forEach(cat => {
     grouped[cat].sort((a, b) => {
-      if (stockHasBeenReduced) {
-        const invA = invProducts.find(inv => inv.productName === a.name || inv.name === a.name)
-        const invB = invProducts.find(inv => inv.productName === b.name || inv.name === b.name)
-        const qtyA = invA?.quantity ?? 0
-        const qtyB = invB?.quantity ?? 0
-        return qtyA !== qtyB ? qtyA - qtyB : a.name.localeCompare(b.name)
-      }
+      const invA = invProducts.find(inv => inv.productName === a.name || inv.name === a.name)
+      const invB = invProducts.find(inv => inv.productName === b.name || inv.name === b.name)
+      const qtyA = invA?.quantity ?? 0
+      const qtyB = invB?.quantity ?? 0
+      const isLowA = (a.threshold || 0) > 0 && qtyA <= (a.threshold || 0)
+      const isLowB = (b.threshold || 0) > 0 && qtyB <= (b.threshold || 0)
+      if (isLowA !== isLowB) return isLowA ? -1 : 1
       return a.name.localeCompare(b.name)
     })
   })
@@ -174,7 +182,7 @@ export default function ManageStock({ searchQuery = '' }) {
         </div>
       ) : (
         <div className="space-y-6">
-          {Object.entries(grouped).map(([category, categoryProducts]) => (
+          {sortedGroupEntries.map(([category, categoryProducts]) => (
             <div key={category}>
               <div className="flex items-center gap-3 mb-3">
                 <div className={`w-1 h-5 rounded-full ${isDark ? 'bg-purple-400' : 'bg-purple-500'}`} />
@@ -207,7 +215,11 @@ export default function ManageStock({ searchQuery = '' }) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: i * 0.03 }}
-                        className={`grid grid-cols-12 gap-3 items-center px-4 py-3.5 transition ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
+                        className={`grid grid-cols-12 gap-3 items-center px-4 py-3.5 transition ${
+                          isLowStock
+                            ? isDark ? 'bg-red-500/10 hover:bg-red-500/15 border-l-2 border-red-500/50' : 'bg-red-50 hover:bg-red-100 border-l-2 border-red-400'
+                            : isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'
+                        }`}
                       >
                         {/* Product Name */}
                         <div className="col-span-4 min-w-0">

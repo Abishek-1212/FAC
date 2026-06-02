@@ -383,7 +383,9 @@ export default function Inventory() {
           placeholder="Search by product name..."
           className={`w-full px-4 py-3 pl-12 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-white/5 border-white/10 text-white placeholder-white/30' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`}
         />
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg">🔍</span>
+        <svg className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-white/30' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+        </svg>
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}

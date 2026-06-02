@@ -425,9 +425,7 @@ export default function ServiceJobs() {
                   <p className={`text-xs font-semibold ${
                     isDark ? 'text-white/40' : 'text-gray-400'
                   }`}>📍 Address</p>
-                  <p className={`font-bold text-sm mt-0.5 ${
-                    isDark ? 'text-white' : 'text-gray-900'
-                  }`}>{formatAddressForDisplay(form.customerAddress)}</p>
+                  <p className={`font-bold text-sm mt-0.5 whitespace-pre-line ${isDark ? 'text-white' : 'text-gray-900'}`}>{formatAddressForDisplay(form.customerAddress)}</p>
                 </div>
                 <div className={`col-span-2 rounded-xl p-3 ${
                   isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'

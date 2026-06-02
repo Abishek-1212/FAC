@@ -209,18 +209,40 @@ export const generateReport = (data) => {
     doc.text(`INVOICE DETAILS (${invoices.length} invoices)`, 105, yPos, { align: 'center' })
     yPos += 8
 
+  const fmtDate = (val) => {
+    if (!val) return 'N/A'
+    // Already in dd/mm/yyyy string format — return as-is
+    if (typeof val === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(val)) return val
+    let d
+    if (val?.toDate) d = val.toDate()
+    else d = new Date(val)
+    if (isNaN(d)) return String(val)
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const yyyy = d.getFullYear()
+    return `${dd}/${mm}/${yyyy}`
+  }
+
     // Prepare table data
-    const tableData = invoices.map(inv => [
-      inv.billNo || 'N/A',
-      inv.customerName || 'N/A',
-      inv.customerPhone || 'N/A',
-      inv.technicianName || 'N/A',
-      inv.serviceType || 'N/A',
-      `Rs. ${(inv.billAmount || 0).toLocaleString('en-IN')}`,
-      `Rs. ${(inv.amountReceived || 0).toLocaleString('en-IN')}`,
-      inv.paymentStatus || 'N/A',
-      inv.invoiceDate || 'N/A'
-    ])
+    const tableData = invoices.map(inv => {
+      const isSale = inv.type === 'sale'
+      const total = isSale ? (inv.grandTotal ?? inv.billAmount ?? 0) : (inv.billAmount || 0)
+      const received = isSale ? total : (inv.amountReceived || 0)
+      const pending = isSale ? 0 : (inv.paymentPending || 0)
+      const dateVal = isSale ? fmtDate(inv.createdAt) : fmtDate(inv.invoiceDate)
+      const invoiceNo = (inv.invoiceNumber || inv.billNo || 'N/A')
+      return [
+        invoiceNo,
+        isSale ? (inv.companyName || 'N/A') : (inv.customerName || 'N/A'),
+        inv.phone || inv.customerPhone || 'N/A',
+        isSale ? 'Direct Sale' : (inv.technicianName || 'N/A'),
+        isSale ? 'Sale' : (inv.serviceType || 'N/A'),
+        `Rs. ${total.toLocaleString('en-IN')}`,
+        `Rs. ${received.toLocaleString('en-IN')}`,
+        pending > 0 ? 'Pending' : 'Paid',
+        dateVal
+      ]
+    })
 
     autoTable(doc, {
       startY: yPos,
@@ -228,26 +250,30 @@ export const generateReport = (data) => {
       body: tableData,
       theme: 'grid',
       headStyles: {
-        fillColor: [6, 182, 212], // Cyan
+        fillColor: [6, 182, 212],
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 8,
-        halign: 'center'
+        fontSize: 7,
+        halign: 'center',
+        valign: 'middle',
+        cellPadding: 2,
       },
       bodyStyles: {
         fontSize: 7,
-        cellPadding: 3
+        cellPadding: 2,
+        valign: 'middle',
+        overflow: 'linebreak',
       },
       columnStyles: {
-        0: { cellWidth: 25, fontSize: 6 }, // Invoice #
-        1: { cellWidth: 22 }, // Customer
-        2: { cellWidth: 20 }, // Phone
-        3: { cellWidth: 20 }, // Technician
-        4: { cellWidth: 20 }, // Service
-        5: { cellWidth: 18, halign: 'right' }, // Total
-        6: { cellWidth: 18, halign: 'right' }, // Received
-        7: { cellWidth: 15, halign: 'center' }, // Status
-        8: { cellWidth: 18, halign: 'center' } // Date
+        0: { cellWidth: 30, halign: 'left' },
+        1: { cellWidth: 22, halign: 'left' },
+        2: { cellWidth: 22, halign: 'left' },
+        3: { cellWidth: 22, halign: 'left' },
+        4: { cellWidth: 18, halign: 'left' },
+        5: { cellWidth: 18, halign: 'right' },
+        6: { cellWidth: 18, halign: 'right' },
+        7: { cellWidth: 14, halign: 'center' },
+        8: { cellWidth: 20, halign: 'center' },
       },
       alternateRowStyles: {
         fillColor: [249, 250, 251]

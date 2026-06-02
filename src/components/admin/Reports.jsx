@@ -119,8 +119,13 @@ export default function Reports() {
   }
 
   // Filter jobs and invoices by date
+  // Service invoices use generatedDate, sale invoices use createdAt
   const filteredJobs = filterByDateRange(jobs)
-  const filteredInvoices = filterByDateRange(invoices, 'generatedDate')
+  const serviceInvoices = invoices.filter(i => i.type !== 'sale')
+  const saleInvoices = invoices.filter(i => i.type === 'sale')
+  const filteredServiceInvoices = filterByDateRange(serviceInvoices, 'generatedDate')
+  const filteredSaleInvoices = filterByDateRange(saleInvoices, 'createdAt')
+  const filteredInvoices = [...filteredServiceInvoices, ...filteredSaleInvoices]
 
   // Jobs stats
   const totalJobs = filteredJobs.length
@@ -130,10 +135,15 @@ export default function Reports() {
   const inProgressJobs = filteredJobs.filter(j => j.status === 'in_progress').length
   const completionRate = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0
 
-  // Revenue stats
-  const totalBilled = filteredInvoices.reduce((s, i) => s + (i.billAmount || 0), 0)
-  const totalReceived = filteredInvoices.reduce((s, i) => s + (i.amountReceived || 0), 0)
-  const totalPending = filteredInvoices.reduce((s, i) => s + (i.paymentPending || 0), 0)
+  // Revenue stats — service invoices have billAmount/amountReceived/paymentPending
+  // sale invoices have grandTotal (fully paid, no pending)
+  const totalBilled = 
+    filteredServiceInvoices.reduce((s, i) => s + (i.billAmount || 0), 0) +
+    filteredSaleInvoices.reduce((s, i) => s + (i.grandTotal ?? i.billAmount ?? 0), 0)
+  const totalReceived =
+    filteredServiceInvoices.reduce((s, i) => s + (i.amountReceived || 0), 0) +
+    filteredSaleInvoices.reduce((s, i) => s + (i.grandTotal ?? i.billAmount ?? 0), 0)
+  const totalPending = filteredServiceInvoices.reduce((s, i) => s + (i.paymentPending || 0), 0)
   const collectionRate = totalBilled > 0 ? Math.round((totalReceived / totalBilled) * 100) : 0
 
   // Service type

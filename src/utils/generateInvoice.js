@@ -47,8 +47,9 @@ export const generateInvoice = (invoiceData) => {
     discountAmount = 0,
     grandTotal = 0,
     amountReceived = 0,
-    products = [], // Array of { name, qty }
-    inventoryMetrics = { assigned: 0, used: 0, returned: 0 }
+    products = [],
+    inventoryMetrics = { assigned: 0, used: 0, returned: 0 },
+    isSalesInvoice = false
   } = invoiceData
 
   const primaryColor = [6, 182, 212]     // #06B6D4 Cyan/Teal Accent
@@ -178,98 +179,148 @@ export const generateInvoice = (invoiceData) => {
     : (customerAddress || 'N/A').toString()
   
   // Calculate dynamic height based on address lines
-  const splitCustAddress = doc.splitTextToSize(`Address: ${cleanAddress}`, cardWidth - 6)
-  const addressLinesCount = splitCustAddress.length
+  const addressLabel = 'Address: '
+  const addressLabelWidth = doc.getStringUnitWidth(addressLabel) * 8.5 / doc.internal.scaleFactor
+  const addressIndentWidth = cardWidth - 6 - addressLabelWidth
+  const splitCustAddress = doc.splitTextToSize(cleanAddress, addressIndentWidth)
+  const addressLinesCount = splitCustAddress.length + 1
   const baseHeight = 22
   const addressHeight = addressLinesCount * 3.5
   const dynamicCardHeight = Math.max(36, baseHeight + addressHeight + 4)
   
-  // Left Column: Customer Card
+  const salesCardHeight = 28
+  const cardHeight = isSalesInvoice ? salesCardHeight : dynamicCardHeight
+  const cardW = cardWidth
+
+  // Customer Card
   doc.setFillColor(255, 255, 255)
-  doc.rect(margin, currentY, cardWidth, dynamicCardHeight, 'S')
+  doc.rect(margin, currentY, cardW, cardHeight, 'S')
   doc.setFillColor(...primaryColor)
-  doc.rect(margin, currentY, cardWidth, 5, 'F')
+  doc.rect(margin, currentY, cardW, 5, 'F')
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)
   doc.setTextColor(255, 255, 255)
   doc.text('CUSTOMER INFORMATION', margin + 3, currentY + 3.5)
-  
+
   doc.setTextColor(...darkText)
   doc.setFontSize(8.5)
-  doc.text(`Name: ${customerName}`, margin + 3, currentY + 9)
-  doc.text(`Phone: ${customerPhone}`, margin + 3, currentY + 13.5)
-  doc.text(`Payment: ${paymentMode}`, margin + 3, currentY + 18)
-  doc.text(splitCustAddress, margin + 3, currentY + 22.5)
-
-  // Right Column: Service Card (same height as customer card)
-  const rightColumnX = margin + cardWidth + 6
-  doc.rect(rightColumnX, currentY, cardWidth, dynamicCardHeight, 'S')
-  doc.setFillColor(...primaryColor)
-  doc.rect(rightColumnX, currentY, cardWidth, 5, 'F')
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(255, 255, 255)
-  doc.text('SERVICE INFORMATION', rightColumnX + 3, currentY + 3.5)
+  doc.text('Name: ', margin + 3, currentY + 9)
+  doc.setFont('helvetica', 'normal')
+  doc.text(customerName, margin + 3 + doc.getStringUnitWidth('Name: ') * 8.5 / doc.internal.scaleFactor + 1, currentY + 9)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Phone: ', margin + 3, currentY + 13.5)
+  doc.setFont('helvetica', 'normal')
+  doc.text(customerPhone, margin + 3 + doc.getStringUnitWidth('Phone: ') * 8.5 / doc.internal.scaleFactor + 1, currentY + 13.5)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Payment: ', margin + 3, currentY + 18)
+  doc.setFont('helvetica', 'normal')
+  doc.text(paymentMode, margin + 3 + doc.getStringUnitWidth('Payment: ') * 8.5 / doc.internal.scaleFactor + 1, currentY + 18)
+  if (!isSalesInvoice) {
+    const addrStartX = margin + 3
+    const addrStartY = currentY + 22.5
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8.5)
+    doc.text('Address:', addrStartX, addrStartY)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.5)
+    const addrValueX = addrStartX + doc.getStringUnitWidth('Address: ') * 8.5 / doc.internal.scaleFactor + 3
+    splitCustAddress.forEach((line, i) => {
+      doc.text(line, addrValueX, addrStartY + (i * 3.5))
+    })
+  }
 
-  doc.setTextColor(...darkText)
-  doc.text(`Invoice No: ${invoiceNumber}`, rightColumnX + 3, currentY + 9)
-  doc.text(`Technician: ${technicianName || 'Unassigned'}`, rightColumnX + 3, currentY + 13.5)
-  doc.text(`Service Type: ${serviceType}`, rightColumnX + 3, currentY + 18)
-  
-  const cleanProblem = (problemDescription || '').replace(/\n/g, ' ')
-  const splitProblem = doc.splitTextToSize(`Problem: ${cleanProblem}`, cardWidth - 6)
-  doc.text(splitProblem, rightColumnX + 3, currentY + 22.5)
+  // Service Card — only for technician invoices
+  if (!isSalesInvoice) {
+    const rightColumnX = margin + cardWidth + 6
+    doc.rect(rightColumnX, currentY, cardWidth, cardHeight, 'S')
+    doc.setFillColor(...primaryColor)
+    doc.rect(rightColumnX, currentY, cardWidth, 5, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(255, 255, 255)
+    doc.text('SERVICE INFORMATION', rightColumnX + 3, currentY + 3.5)
+    doc.setTextColor(...darkText)
+    doc.setFontSize(8.5)
+    const svcLabelX = rightColumnX + 3
+    const svcFields = [
+      { label: 'Invoice No: ', value: invoiceNumber, y: currentY + 9 },
+      { label: 'Technician: ', value: technicianName || 'Unassigned', y: currentY + 13.5 },
+      { label: 'Service Type: ', value: serviceType, y: currentY + 18 },
+    ]
+    svcFields.forEach(({ label, value, y }) => {
+      doc.setFont('helvetica', 'bold')
+      doc.text(label, svcLabelX, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(String(value), svcLabelX + doc.getStringUnitWidth(label) * 8.5 / doc.internal.scaleFactor + 1, y)
+    })
+    doc.setFont('helvetica', 'bold')
+    doc.text('Problem: ', svcLabelX, currentY + 22.5)
+    doc.setFont('helvetica', 'normal')
+    const cleanProblem = (problemDescription || '').replace(/\n/g, ' ')
+    const probValueX = svcLabelX + doc.getStringUnitWidth('Problem: ') * 8.5 / doc.internal.scaleFactor + 1
+    const splitProblem = doc.splitTextToSize(cleanProblem, cardWidth - 6 - (probValueX - svcLabelX))
+    doc.text(splitProblem, probValueX, currentY + 22.5)
+  }
 
-  currentY += dynamicCardHeight + 8
+  currentY += cardHeight + 8
 
   // ========================================================
-  // LINE ITEMS TABLE (Products with S.No and Quantity only)
+  // LINE ITEMS TABLE
   // ========================================================
   const formattedTableData = []
   let serialCounter = 1
 
-  products.forEach((product) => {
-    formattedTableData.push([
-      serialCounter.toString(),
-      product.name || 'Service Item',
-      product.qty ? product.qty.toString() : '0'
-    ])
-    serialCounter++
-  })
-
-  autoTable(doc, {
-    startY: currentY,
-    head: [['S.No', 'Product', 'Quantity']],
-    body: formattedTableData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: primaryColor,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 9,
-      halign: 'center',
-      valign: 'middle',
-      cellPadding: 4,
-      lineColor: primaryColor,
-      lineWidth: 0.1
-    },
-    bodyStyles: {
-      fontSize: 8.5,
-      textColor: darkText,
-      cellPadding: 4,
-      lineColor: tableBorder,
-      lineWidth: 0.1,
-      valign: 'middle'
-    },
-    columnStyles: {
-      0: { cellWidth: 20, halign: 'center' },
-      1: { cellWidth: 130, halign: 'left' },
-      2: { cellWidth: 44, halign: 'center' }
-    },
-    margin: { left: margin, right: margin },
-    alternateRowStyles: {
-      fillColor: rowHighlight
-    }
-  })
+  if (isSalesInvoice) {
+    products.forEach((product) => {
+      formattedTableData.push([
+        serialCounter.toString(),
+        product.category || '',
+        product.name || 'Item',
+        product.qty ? product.qty.toString() : '0'
+      ])
+      serialCounter++
+    })
+    autoTable(doc, {
+      startY: currentY,
+      head: [['S.No', 'Category', 'Product', 'Quantity']],
+      body: formattedTableData,
+      theme: 'grid',
+      headStyles: { fillColor: primaryColor, textColor: [255,255,255], fontStyle: 'bold', fontSize: 9, halign: 'center', valign: 'middle', cellPadding: 4, lineColor: primaryColor, lineWidth: 0.1 },
+      bodyStyles: { fontSize: 8.5, textColor: darkText, cellPadding: 4, lineColor: tableBorder, lineWidth: 0.1, valign: 'middle' },
+      columnStyles: {
+        0: { cellWidth: 15, halign: 'center' },
+        1: { cellWidth: 55, halign: 'left' },
+        2: { cellWidth: 94, halign: 'left' },
+        3: { cellWidth: 30, halign: 'center' }
+      },
+      margin: { left: margin, right: margin },
+      alternateRowStyles: { fillColor: rowHighlight }
+    })
+  } else {
+    products.forEach((product) => {
+      formattedTableData.push([
+        serialCounter.toString(),
+        product.name || 'Service Item',
+        product.qty ? product.qty.toString() : '0'
+      ])
+      serialCounter++
+    })
+    autoTable(doc, {
+      startY: currentY,
+      head: [['S.No', 'Product', 'Quantity']],
+      body: formattedTableData,
+      theme: 'grid',
+      headStyles: { fillColor: primaryColor, textColor: [255,255,255], fontStyle: 'bold', fontSize: 9, halign: 'center', valign: 'middle', cellPadding: 4, lineColor: primaryColor, lineWidth: 0.1 },
+      bodyStyles: { fontSize: 8.5, textColor: darkText, cellPadding: 4, lineColor: tableBorder, lineWidth: 0.1, valign: 'middle' },
+      columnStyles: {
+        0: { cellWidth: 20, halign: 'center' },
+        1: { cellWidth: 130, halign: 'left' },
+        2: { cellWidth: 44, halign: 'center' }
+      },
+      margin: { left: margin, right: margin },
+      alternateRowStyles: { fillColor: rowHighlight }
+    })
+  }
 
   currentY = doc.lastAutoTable.finalY + margin
 
@@ -310,18 +361,26 @@ export const generateInvoice = (invoiceData) => {
   // ========================================================
   // SUMMARY CALCULATIONS SECTION (Right Aligned Card)
   // ========================================================
-  const summaryLabels = ['Total Amount:', 'Discount:', 'GRAND TOTAL:', 'Amount Received:']
-  const summaryValues = [
-    formatCurrency(totalAmount),
-    formatCurrency(discountAmount),
-    formatCurrency(grandTotal),
-    formatCurrency(amountReceived)
-  ]
+  const summaryLabels = isSalesInvoice
+    ? ['Total Amount:', 'Discount:', 'GRAND TOTAL:']
+    : ['Total Amount:', 'Discount:', 'GRAND TOTAL:', 'Amount Received:']
+  const summaryValues = isSalesInvoice
+    ? [
+        formatCurrency(totalAmount),
+        formatCurrency(discountAmount),
+        formatCurrency(grandTotal),
+      ]
+    : [
+        formatCurrency(totalAmount),
+        formatCurrency(discountAmount),
+        formatCurrency(grandTotal),
+        formatCurrency(amountReceived),
+      ]
 
   summaryLabels.forEach((label, idx) => {
     const rowY = currentY + (idx * 5)
     const isGrandTotal = idx === 2
-    const isAmountReceived = idx === 3
+    const isAmountReceived = !isSalesInvoice && idx === 3
     const isDiscount = idx === 1
     
     if (isGrandTotal) {

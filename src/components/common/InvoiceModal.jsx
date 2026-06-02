@@ -525,19 +525,19 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
               <div className="space-y-3 md:space-y-4">
                 <div>
                   <p className="text-white/80 text-xs md:text-sm font-medium">Invoice Generation</p>
-                  <h2 className="text-xl md:text-3xl font-black mt-1 break-words">📄 {job.customerName}</h2>
+                  <h2 className="text-xl md:text-3xl font-black mt-1 break-words flex items-center gap-2"><svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>{job.customerName}</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm">
                   <div>
-                    <p className="text-white/60 text-xs">📞 Phone</p>
+                    <p className="text-white/60 text-xs flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg> Phone</p>
                     <p className="font-semibold mt-1 break-words">{job.customerPhone}</p>
                   </div>
                   <div>
-                    <p className="text-white/60 text-xs">🛠️ Service</p>
+                    <p className="text-white/60 text-xs flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> Service</p>
                     <p className="font-semibold mt-1">{job.serviceType}</p>
                   </div>
                   <div className="md:col-span-2">
-                    <p className="text-white/60 text-xs">📍 Address</p>
+                    <p className="text-white/60 text-xs flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg> Address</p>
                     <p className="font-semibold mt-1 break-words text-xs md:text-sm whitespace-pre-line">{formatAddressForDisplay(job.customerAddress)}</p>
                   </div>
                 </div>
@@ -549,7 +549,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
               <div className={`rounded-xl md:rounded-2xl p-4 md:p-6 border ${
                 isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
               }`}>
-                <h3 className={`text-base md:text-lg font-bold mb-3 md:mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>📦 Products Used</h3>
+                <h3 className={`text-base md:text-lg font-bold mb-3 md:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>Products Used</h3>
                 
                 <div className="space-y-2 md:space-y-3 overflow-x-auto">
                   {/* Mobile Card View */}
@@ -611,7 +611,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                 isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
               }`}>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className={`text-sm md:text-base font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>🔧 Personal Stock Usage</h3>
+                  <h3 className={`text-sm md:text-base font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>Personal Stock Usage</h3>
                   <button
                     onClick={addPersonalStockItem}
                     className={`text-xs font-bold px-2.5 py-1.5 rounded-lg transition ${
@@ -842,7 +842,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                   <div className={`text-center py-6 rounded-lg border-2 border-dashed ${
                     isDark ? 'border-gray-600' : 'border-gray-300'
                   }`}>
-                    <p className="text-2xl mb-1">📦</p>
+                    <svg className="w-8 h-8 mx-auto mb-1 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
                     <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No items added</p>
                   </div>
                 )}
@@ -854,12 +854,12 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
               <div className={`rounded-xl md:rounded-2xl p-4 md:p-6 border ${
                 isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
               }`}>
-                <label className={`text-sm font-bold block mb-2 md:mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>💵 Total Amount (₹)</label>
+                <label className={`text-sm font-bold flex items-center gap-2 mb-2 md:mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Total Amount (₹)</label>
                 <input
                   type="number"
                   value={totalAmount}
                   onChange={(e) => setTotalAmount(e.target.value)}
-                  placeholder="Enter total amount"
+                  placeholder="Enter amount"
                   disabled={invoiceSaved}
                   className={`w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl text-base md:text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-500 transition ${
                     isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
@@ -869,7 +869,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
               <div className={`rounded-xl md:rounded-2xl p-4 md:p-6 border ${
                 isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
               }`}>
-                <label className={`text-sm font-bold block mb-2 md:mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>💳 Payment Type</label>
+                <label className={`text-sm font-bold flex items-center gap-2 mb-2 md:mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>Payment Type</label>
                 <select
                   value={paymentType}
                   onChange={(e) => setPaymentType(e.target.value)}
@@ -891,7 +891,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
             <div className={`rounded-xl md:rounded-2xl p-4 md:p-6 border ${
               isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
             }`}>
-              <label className={`text-sm font-bold block mb-2 md:mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>🏷️ Discount</label>
+              <label className={`text-sm font-bold flex items-center gap-2 mb-2 md:mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 10V5a2 2 0 012-2z" /></svg>Discount</label>
               
               {/* Discount Type Toggle */}
               <div className="flex gap-2 mb-3">
@@ -987,14 +987,12 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
               <div className={`rounded-xl md:rounded-2xl p-4 md:p-6 border ${
                 isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
               }`}>
-                <label className={`text-sm font-bold block mb-2 md:mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  💵 Amount Received from Customer (₹)
-                </label>
+                <label className={`text-sm font-bold flex items-center gap-2 mb-2 md:mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Amount Received from Customer (₹)</label>
                 <input
                   type="number"
                   value={amountReceived}
                   onChange={(e) => setAmountReceived(e.target.value)}
-                  placeholder="0"
+                  placeholder="Enter amount"
                   className={`w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl text-base md:text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-500 transition border ${
                     isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
                   }`}
@@ -1032,7 +1030,10 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                   isDark ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                ✕ Close
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  Close
+                </span>
               </motion.button>
               
               {/* Download Invoice Button - Disabled if amount not received */}
@@ -1062,7 +1063,9 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                     discountValue: parseFloat(discountValue) || 0,
                     discountAmount,
                     grandTotal,
-                    amountReceived: savedInvoiceData?.amountReceived !== undefined ? savedInvoiceData.amountReceived : (amountReceived ? parseFloat(amountReceived) : grandTotal),
+                    amountReceived: invoiceSaved && savedInvoiceData?.amountReceived !== undefined
+                      ? savedInvoiceData.amountReceived
+                      : parseFloat(amountReceived) || 0,
                     products: allInvoiceProducts,
                     paymentMode: paymentType,
                   })
@@ -1073,7 +1076,10 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                   isDark ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
                 }`}
               >
-                📥 Download Invoice
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Download Invoice
+                </span>
               </motion.button>
               
               {/* Save Invoice Button - Only visible if not saved, disabled if amount not received */}
@@ -1086,7 +1092,10 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                     isDark ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
                   }`}
                 >
-                  💾 Save Invoice
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                    Save Invoice
+                  </span>
                 </motion.button>
               )}
             </div>
@@ -1153,7 +1162,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                   isDark ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
                 }`}
               >
-                {saving ? '⏳ Saving...' : '✓ Confirm Save'}
+                {saving ? 'Saving...' : '✓ Confirm Save'}
               </motion.button>
             </div>
           </div>

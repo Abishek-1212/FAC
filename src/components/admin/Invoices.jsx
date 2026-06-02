@@ -56,6 +56,7 @@ export default function Invoices() {
     return onSnapshot(collection(db, 'invoices'), snap => {
       const data = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
+        .filter(d => d.type !== 'sale' && (d.submittedByTechnician || d.billNo))
         .sort((a, b) => (b.generatedDate?.seconds || 0) - (a.generatedDate?.seconds || 0))
       setInvoices(data)
       // Mark all unread invoices as viewed when admin opens the invoices page
@@ -531,6 +532,9 @@ export default function Invoices() {
                     discountValue: viewInvoice.discountValue || 0,
                     discountAmount: viewInvoice.discountAmount || 0,
                     grandTotal: viewInvoice.billAmount || 0,
+                    amountReceived: viewInvoice.amountReceived || 0,
+                    paymentMode: viewInvoice.modeOfPayment || 'N/A',
+                    serviceDate: viewInvoice.invoiceDate || null,
                     products: (viewInvoice.components || []).map(c => ({
                       name: c.name || 'N/A',
                       qty: c.quantity || 0

@@ -479,19 +479,7 @@ export default function TakeStock() {
                 </>
               )
             })()}
-            {addedItems.length > 0 && !editingItemId && (
-              <button
-                type="button"
-                onClick={addCategory}
-                className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition ${
-                  isDark
-                    ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
-                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                }`}
-              >
-                + Add Category
-              </button>
-            )}
+
           </div>
 
           {/* Added Items List */}

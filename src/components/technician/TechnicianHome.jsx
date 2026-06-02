@@ -289,8 +289,11 @@ export default function TechnicianHome() {
         >
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className={`text-sm font-bold ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
-                📢 {availableJobs.length} Job{availableJobs.length !== 1 ? 's' : ''} Available
+              <p className={`text-sm font-bold flex items-center gap-1.5 ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {availableJobs.length} Job{availableJobs.length !== 1 ? 's' : ''} Available
               </p>
               <p className={`text-xs ${isDark ? 'text-blue-300/70' : 'text-blue-600'}`}>
                 Tap to view and accept available jobs
@@ -324,16 +327,26 @@ export default function TechnicianHome() {
                       <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
                         {job.customerName}
                       </p>
-                      <p className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                        📞 {job.customerPhone}
+                      <p className={`text-xs flex items-center gap-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        {job.customerPhone}
                       </p>
-                      <p className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                        📍 {formatAddress(job.customerAddress).join('\n')}
-                      </p>
+                      <div className={`flex items-start gap-1 text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                        <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <AddressDisplay address={job.customerAddress} />
+                      </div>
                     </div>
                     {job.priority === 'urgent' && (
-                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-red-500/20 text-red-300">
-                        🔴 Urgent
+                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-red-500/20 text-red-300 flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        Urgent
                       </span>
                     )}
                   </div>
@@ -343,12 +356,15 @@ export default function TechnicianHome() {
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => handleAcceptJob(job.id)}
-                    className={`w-full py-2 rounded-lg text-xs font-bold transition-all ${
+                    className={`w-full py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                       isDark
                         ? 'bg-green-500 text-white hover:bg-green-600'
                         : 'bg-green-500 text-white hover:bg-green-600'
                     }`}
                   >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
                     Accept Job
                   </motion.button>
                 </motion.div>
