@@ -225,27 +225,43 @@ export default function AdminHome() {
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
           onClick={() => navigate('/admin/invoices')}
-          className={`relative overflow-hidden rounded-2xl p-5 flex items-center justify-between cursor-pointer border transition group ${
-            isDark
-              ? 'glass-strong border-rose-500/30 hover:border-rose-400/50'
-              : 'bg-white border-rose-300 hover:border-rose-400 shadow-lg'
-          }`}
+          className="relative rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+          style={isDark
+            ? { background: '#2d1a1a', boxShadow: '6px 6px 14px rgba(0,0,0,0.5), -4px -4px 10px rgba(255,255,255,0.04)' }
+            : { background: '#fff1f2', boxShadow: '6px 6px 14px #f5c0c6, -6px -6px 14px #ffffff' }
+          }
         >
-          <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-r from-rose-500/10 to-pink-600/10' : 'bg-gradient-to-r from-rose-50 to-pink-50'}`} />
-          <div className="relative flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${isDark ? 'bg-rose-500/20' : 'bg-rose-100'}`}>🔔</div>
+          {/* Bell icon */}
+          <div className="flex items-center gap-3">
+            <div
+              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={isDark
+                ? { background: '#2d1a1a', boxShadow: 'inset 3px 3px 7px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.04)' }
+                : { background: '#fff1f2', boxShadow: 'inset 3px 3px 7px #f5c0c6, inset -2px -2px 5px #ffffff' }
+              }
+            >
+              <svg className="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </div>
             <div>
-              <p className={`font-black text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>New Invoice Notifications</p>
-              <p className={`text-xs mt-0.5 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+              <p className={`font-black text-sm ${isDark ? 'text-white' : 'text-gray-800'}`}>New Invoice Notifications</p>
+              <p className={`text-xs mt-0.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
                 {stats.unreadInvoices} invoice{stats.unreadInvoices > 1 ? 's' : ''} awaiting review
               </p>
             </div>
           </div>
-          <div className="relative flex items-center gap-3">
-            <span className="w-10 h-10 text-sm font-black rounded-xl flex items-center justify-center shadow-lg bg-rose-500 text-white">
+          {/* Badge + arrow */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span
+              className="w-9 h-9 text-sm font-black rounded-xl flex items-center justify-center text-white"
+              style={{ background: 'linear-gradient(145deg, #f43f5e, #e11d48)', boxShadow: isDark ? '3px 3px 8px rgba(0,0,0,0.4), -2px -2px 5px rgba(255,255,255,0.04)' : '3px 3px 8px #c5d8e8, -2px -2px 5px #ffffff' }}
+            >
               {stats.unreadInvoices}
             </span>
-            <span className={`text-xl group-hover:translate-x-1 transition-transform ${isDark ? 'text-white/40' : 'text-gray-400'}`}>›</span>
+            <svg className={`w-4 h-4 ${isDark ? 'text-white/30' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </div>
         </motion.div>
       )}

@@ -393,62 +393,110 @@ export default function ServiceJobs() {
         {showConfirm ? (
           <div className="space-y-4">
             {/* Preview Card */}
-            <div className={`rounded-2xl border p-4 space-y-3 ${
-              isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
-            }`}>
-              <p className={`text-xs font-bold uppercase tracking-widest ${
-                isDark ? 'text-white/40' : 'text-gray-400'
-              }`}>Review before creating</p>
+            <div
+              className="rounded-2xl p-4 space-y-3"
+              style={{
+                background: isDark ? '#151b2b' : '#e8f4fb',
+                boxShadow: isDark
+                  ? 'inset 4px 4px 10px rgba(0,0,0,0.5), inset -3px -3px 8px rgba(255,255,255,0.04)'
+                  : 'inset 4px 4px 10px rgba(163,196,215,0.6), inset -3px -3px 8px rgba(255,255,255,0.9)'
+              }}
+            >
+              <p className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                Review before creating
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  ['👤 Customer', form.customerName],
-                  ['📞 Phone', form.customerPhone],
-                  ['🛠️ Service Type', form.serviceType],
-                  ['⚡ Priority', form.priority === 'urgent' ? '🔴 Urgent' : '🟢 Normal'],
-                  ['📢 Assignment', form.assignmentMode === 'broadcast' ? '📢 Broadcast' : `👤 ${technicians.find(t => t.id === form.technicianId)?.name || '—'}`],
-                ].map(([label, value]) => (
-                  <div key={label} className={`rounded-xl p-3 ${
-                    isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'
-                  }`}>
-                    <p className={`text-xs font-semibold ${
-                      isDark ? 'text-white/40' : 'text-gray-400'
-                    }`}>{label}</p>
-                    <p className={`font-bold text-sm mt-0.5 ${
-                      isDark ? 'text-white' : 'text-gray-900'
-                    }`}>{value}</p>
+                  {
+                    label: 'Customer',
+                    value: form.customerName,
+                    icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  },
+                  {
+                    label: 'Phone',
+                    value: form.customerPhone,
+                    icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                  },
+                  {
+                    label: 'Service Type',
+                    value: form.serviceType,
+                    icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth={2} /></svg>
+                  },
+                  {
+                    label: 'Priority',
+                    value: form.priority === 'urgent' ? 'Urgent' : 'Normal',
+                    icon: form.priority === 'urgent'
+                      ? <svg className="w-3.5 h-3.5 text-red-400" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                      : <svg className="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                  },
+                  {
+                    label: 'Assignment',
+                    value: form.assignmentMode === 'broadcast' ? 'Broadcast' : (technicians.find(t => t.id === form.technicianId)?.name || '—'),
+                    icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                  },
+                ].map(({ label, value, icon }) => (
+                  <div
+                    key={label}
+                    className="rounded-xl p-3"
+                    style={{
+                      background: isDark ? '#1a2235' : '#e8f4fb',
+                      boxShadow: isDark
+                        ? '4px 4px 8px rgba(0,0,0,0.5), -2px -2px 6px rgba(255,255,255,0.04)'
+                        : '4px 4px 8px rgba(163,196,215,0.6), -2px -2px 6px rgba(255,255,255,0.95)'
+                    }}
+                  >
+                    <div className={`flex items-center gap-1.5 text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                      {icon}
+                      <span>{label}</span>
+                    </div>
+                    <p className={`font-bold text-sm mt-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{value}</p>
                   </div>
                 ))}
-                <div className={`col-span-2 rounded-xl p-3 ${
-                  isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'
-                }`}>
-                  <p className={`text-xs font-semibold ${
-                    isDark ? 'text-white/40' : 'text-gray-400'
-                  }`}>📍 Address</p>
-                  <p className={`font-bold text-sm mt-0.5 whitespace-pre-line ${isDark ? 'text-white' : 'text-gray-900'}`}>{formatAddressForDisplay(form.customerAddress)}</p>
+                <div
+                  className="col-span-2 rounded-xl p-3"
+                  style={{
+                    background: isDark ? '#1a2235' : '#e8f4fb',
+                    boxShadow: isDark
+                      ? '4px 4px 8px rgba(0,0,0,0.5), -2px -2px 6px rgba(255,255,255,0.04)'
+                      : '4px 4px 8px rgba(163,196,215,0.6), -2px -2px 6px rgba(255,255,255,0.95)'
+                  }}
+                >
+                  <div className={`flex items-center gap-1.5 text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <span>Address</span>
+                  </div>
+                  <p className={`font-bold text-sm mt-1 whitespace-pre-line ${isDark ? 'text-white' : 'text-gray-900'}`}>{formatAddressForDisplay(form.customerAddress)}</p>
                 </div>
-                <div className={`col-span-2 rounded-xl p-3 ${
-                  isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'
-                }`}>
-                  <p className={`text-xs font-semibold ${
-                    isDark ? 'text-white/40' : 'text-gray-400'
-                  }`}>📝 Problem</p>
-                  <p className={`font-bold text-sm mt-0.5 ${
-                    isDark ? 'text-white' : 'text-gray-900'
-                  }`}>{form.problemDescription}</p>
+                <div
+                  className="col-span-2 rounded-xl p-3"
+                  style={{
+                    background: isDark ? '#1a2235' : '#e8f4fb',
+                    boxShadow: isDark
+                      ? '4px 4px 8px rgba(0,0,0,0.5), -2px -2px 6px rgba(255,255,255,0.04)'
+                      : '4px 4px 8px rgba(163,196,215,0.6), -2px -2px 6px rgba(255,255,255,0.95)'
+                  }}
+                >
+                  <div className={`flex items-center gap-1.5 text-xs font-semibold ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    <span>Problem</span>
+                  </div>
+                  <p className={`font-bold text-sm mt-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{form.problemDescription}</p>
                 </div>
               </div>
             </div>
             <div className="flex gap-3 pt-2">
               <motion.button
                 type="button"
-                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setShowConfirm(false)}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all ${
-                  isDark
-                    ? 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                }`}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold border-0 transition-shadow"
+                style={{
+                  background: isDark ? '#1a2235' : '#e8f4fb',
+                  color: isDark ? 'rgba(255,255,255,0.7)' : '#4b5563',
+                  boxShadow: isDark
+                    ? '4px 4px 10px rgba(0,0,0,0.5), -3px -3px 8px rgba(255,255,255,0.04)'
+                    : '4px 4px 10px rgba(163,196,215,0.6), -3px -3px 8px rgba(255,255,255,0.9)'
+                }}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -457,15 +505,16 @@ export default function ServiceJobs() {
               </motion.button>
               <motion.button
                 type="button"
-                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={handleCreate}
                 disabled={saving}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white shadow-lg disabled:opacity-60 disabled:cursor-not-allowed transition-all ${
-                  isDark
-                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/25 hover:shadow-emerald-500/40'
-                    : 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-200 hover:shadow-emerald-300'
-                }`}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white border-0 disabled:opacity-60 disabled:cursor-not-allowed transition-shadow"
+                style={{
+                  background: 'linear-gradient(145deg, #10b981, #059669)',
+                  boxShadow: isDark
+                    ? '4px 4px 12px rgba(16,185,129,0.4), -2px -2px 8px rgba(255,255,255,0.05)'
+                    : '4px 4px 12px rgba(16,185,129,0.35), -2px -2px 8px rgba(255,255,255,0.8)'
+                }}
               >
                 {saving ? (
                   <>
@@ -476,7 +525,12 @@ export default function ServiceJobs() {
                     Creating Job...
                   </>
                 ) : (
-                  'Confirm & Create'
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Confirm & Create
+                  </>
                 )}
               </motion.button>
             </div>

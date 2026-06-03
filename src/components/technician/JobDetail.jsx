@@ -19,7 +19,7 @@ export default function JobDetail() {
   const [saving, setSaving] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [completionModal, setCompletionModal] = useState(false)
-  const [completionNotes, setCompletionNotes] = useState('')
+  const [completionNotes, setCompletionNotes] = useState('Job Completed')
   const [trackingSaved, setTrackingSaved] = useState(false)
   const [technicianStock, setTechnicianStock] = useState([])
   const [loading, setLoading] = useState(true)
@@ -306,126 +306,154 @@ export default function JobDetail() {
   const totalDamaged = Object.values(itemTracking).reduce((sum, t) => sum + (Number(t.damaged) || 0), 0)
   const totalUnaccounted = totalAssigned - totalUsed - totalDamaged
 
+  const nm = {
+    base: { background: '#e8f4fb', boxShadow: '6px 6px 14px #c5d8e8, -6px -6px 14px #ffffff' },
+    inset: { background: '#e8f4fb', boxShadow: 'inset 4px 4px 10px #c5d8e8, inset -3px -3px 8px #ffffff' },
+    raised: { background: '#e8f4fb', boxShadow: '4px 4px 10px #c5d8e8, -3px -3px 8px #ffffff' },
+  }
+
   return (
     <div className="space-y-4 pb-20 md:pb-0">
-      <button onClick={() => navigate('/technician')} className="flex items-center gap-2 text-aqua-600 text-sm font-semibold hover:text-aqua-700 transition">
-        ← Back to Jobs
+      {/* Back Button */}
+      <button
+        onClick={() => navigate('/technician')}
+        className="flex items-center gap-2 text-sm font-semibold text-gray-600 px-4 py-2 rounded-xl transition-all"
+        style={nm.raised}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Jobs
       </button>
 
       {/* Job Header Card */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-br from-aqua-50 to-cyan-50 rounded-2xl p-5 shadow-sm border border-aqua-100">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl p-5"
+        style={nm.base}
+      >
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-black text-gray-900 mb-3">{job.customerName}</h2>
+            <h2 className="text-2xl font-black text-gray-800 mb-3">{job.customerName}</h2>
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-gray-700">
-                <svg className="w-4 h-4 flex-shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {/* Phone */}
+              <div
+                className="flex items-center gap-2 text-sm text-gray-700 px-3 py-2 rounded-xl"
+                style={nm.inset}
+              >
+                <svg className="w-4 h-4 flex-shrink-0 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
-                <span className="font-medium">{job.customerPhone}</span>
+                <span className="font-semibold">{job.customerPhone}</span>
               </div>
-            <div className="flex items-start gap-2 text-sm text-gray-700">
-                <svg className="w-4 h-4 flex-shrink-0 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {/* Address */}
+              <div
+                className="flex items-start gap-2 text-sm text-gray-700 px-3 py-2 rounded-xl"
+                style={nm.inset}
+              >
+                <svg className="w-4 h-4 flex-shrink-0 text-cyan-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <div className="flex-1">
-                  <p className="font-bold mb-1">Address:</p>
-                  <div className="whitespace-pre-line text-left font-medium ml-2">{formatAddressForDisplay(job.customerAddress)}</div>
+                  <p className="font-bold text-gray-500 text-xs uppercase tracking-wider mb-1">Address:</p>
+                  <div className="whitespace-pre-line font-medium text-gray-700">{formatAddressForDisplay(job.customerAddress)}</div>
                 </div>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-          <button
-            onClick={() => {
-              const a = job.customerAddress
-              const query = typeof a === 'string'
-                ? a
-                : [a?.street, a?.locality, a?.city, a?.state, a?.pinCode].filter(Boolean).join(', ')
-              window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank')
-            }}
-            className="w-9 h-9 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 transition-all"
-          >
-            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            </svg>
-          </button>
-          <span className={`text-xs font-bold px-4 py-2 rounded-lg border whitespace-nowrap flex items-center gap-1.5 ${
-            isCompleted ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-            isInProgress ? 'bg-violet-100 text-violet-700 border-violet-200' :
-            'bg-amber-100 text-amber-700 border-amber-200'
-          }`}>
-            {isCompleted ? (
-              <>
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>Completed</span>
-              </>
-            ) : isInProgress ? (
-              <>
-                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>In Progress</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Pending</span>
-              </>
-            )}
-          </span>
+
+          {/* Right: map + status */}
+          <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-3">
+            <button
+              onClick={() => {
+                const a = job.customerAddress
+                const q = typeof a === 'string'
+                  ? a
+                  : [a?.street, a?.locality, a?.city, a?.state, a?.pinCode].filter(Boolean).join(', ')
+                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`, '_blank')
+              }}
+              className="w-9 h-9 rounded-xl text-blue-600 flex items-center justify-center transition-all"
+              style={nm.raised}
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+            </button>
+            <span
+              className={`text-xs font-bold px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 ${
+                isCompleted ? 'text-emerald-600' : isInProgress ? 'text-violet-600' : 'text-amber-600'
+              }`}
+              style={nm.raised}
+            >
+              {isCompleted ? (
+                <><svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>Completed</>
+              ) : isInProgress ? (
+                <><svg className="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>In Progress</>
+              ) : (
+                <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Pending</>
+              )}
+            </span>
           </div>
         </div>
 
+        {/* Tags: service type + priority */}
         {job.serviceType && (
           <div className="flex gap-2 mb-3">
-            <span className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 ${
-              job.serviceType === 'New Fitting' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
-            }`}>
+            <span
+              className={`text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 ${
+                job.serviceType === 'New Fitting' ? 'text-blue-600' : 'text-orange-600'
+              }`}
+              style={nm.raised}
+            >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span>{job.serviceType}</span>
+              {job.serviceType}
             </span>
             {job.priority === 'urgent' && (
-              <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-100 text-red-700 flex items-center gap-1.5">
+              <span className="text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-red-500" style={nm.raised}>
                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
-                <span>Urgent</span>
+                Urgent
               </span>
             )}
           </div>
         )}
 
-        <div className="bg-white/60 rounded-xl px-4 py-3 backdrop-blur-sm">
-          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1.5">Problem Description</p>
+        {/* Problem Description */}
+        <div className="rounded-xl px-4 py-3" style={nm.inset}>
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1.5">Problem Description</p>
           <p className="text-sm text-gray-700 font-medium leading-relaxed">{job.problemDescription}</p>
         </div>
       </motion.div>
 
-      {/* Action Buttons */}
+      {/* Start Work Button */}
       {canStart && (
-        <div className="space-y-3">
-          <motion.button
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={startJob}
-            disabled={toggling}
-            className="w-full bg-gradient-to-r from-violet-500 to-violet-600 text-white py-3.5 rounded-xl text-sm font-bold shadow-lg shadow-violet-200 disabled:opacity-60 hover:shadow-xl transition-all"
-          >
-            {toggling ? '⏳ Starting...' : '▶ Start Work'}
-          </motion.button>
-        </div>
+        <motion.button
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={startJob}
+          disabled={toggling}
+          className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-bold text-white border-0 disabled:opacity-60 transition-all"
+          style={{
+            background: 'linear-gradient(145deg, #8b5cf6, #7c3aed)',
+            boxShadow: toggling
+              ? 'inset 4px 4px 10px rgba(0,0,0,0.3), inset -3px -3px 8px rgba(255,255,255,0.1)'
+              : '5px 5px 14px #c5d8e8, -4px -4px 10px #ffffff, 0 4px 20px rgba(124,58,237,0.35)'
+          }}
+        >
+          {toggling ? (
+            <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Starting...</>
+          ) : (
+            <><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>Start Work</>
+          )}
+        </motion.button>
       )}
 
       {isInProgress && (
@@ -440,17 +468,25 @@ export default function JobDetail() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08 }}
-            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => setCompletionModal(true)}
             disabled={hasAssignedStock && !trackingSaved}
-            className={`w-full py-3.5 rounded-xl text-sm font-bold shadow-lg transition-all ${
-              (!hasAssignedStock || trackingSaved)
-                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-emerald-200 hover:shadow-xl'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            className={`w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-bold text-white border-0 transition-all ${
+              (!hasAssignedStock || trackingSaved) ? 'opacity-100 cursor-pointer' : 'opacity-40 cursor-not-allowed'
             }`}
+            style={{
+              background: (!hasAssignedStock || trackingSaved)
+                ? 'linear-gradient(145deg, #10b981, #059669)'
+                : '#9ca3af',
+              boxShadow: (!hasAssignedStock || trackingSaved)
+                ? '5px 5px 14px #c5d8e8, -4px -4px 10px #ffffff, 0 4px 20px rgba(16,185,129,0.35)'
+                : 'none'
+            }}
           >
-            ✅ Mark as Complete
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            Mark as Complete
           </motion.button>
         </div>
       )}
@@ -559,21 +595,33 @@ export default function JobDetail() {
       {/* Completion Modal */}
       <Modal open={completionModal} onClose={() => setCompletionModal(false)} title="Complete Job" size="lg">
         <div className="space-y-4">
-          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
-            <p className="text-sm font-bold text-emerald-900">✅ Ready to complete this job?</p>
-            <p className="text-xs text-emerald-700 mt-1">A completion report will be generated automatically.</p>
+          {/* Ready banner */}
+          <div
+            className="rounded-xl p-4 flex items-start gap-3"
+            style={{ background: '#e8f4fb', boxShadow: 'inset 4px 4px 10px #c5d8e8, inset -3px -3px 8px #ffffff' }}
+          >
+            <svg className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="text-sm font-bold text-gray-800">Ready to complete this job?</p>
+              <p className="text-xs text-gray-500 mt-0.5">A completion report will be generated automatically.</p>
+            </div>
           </div>
 
           {/* Summary */}
           {hasAssignedStock && (
-            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-              <p className="text-xs font-bold text-gray-600 uppercase tracking-wider">Admin-Assigned Stock Summary</p>
+            <div
+              className="rounded-xl p-4 space-y-2"
+              style={{ background: '#e8f4fb', boxShadow: 'inset 4px 4px 10px #c5d8e8, inset -3px -3px 8px #ffffff' }}
+            >
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Admin-Assigned Stock Summary</p>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div><span className="text-gray-600">Total Assigned:</span> <span className="font-bold">{totalAssigned}</span></div>
-                <div><span className="text-gray-600">Total Used:</span> <span className="font-bold text-emerald-600">{totalUsed}</span></div>
-                <div><span className="text-gray-600">Total Damaged:</span> <span className="font-bold text-red-600">{totalDamaged}</span></div>
+                <div><span className="text-gray-500">Total Assigned:</span> <span className="font-bold text-gray-800">{totalAssigned}</span></div>
+                <div><span className="text-gray-500">Total Used:</span> <span className="font-bold text-emerald-600">{totalUsed}</span></div>
+                <div><span className="text-gray-500">Total Damaged:</span> <span className="font-bold text-red-500">{totalDamaged}</span></div>
                 {totalUnaccounted > 0 && (
-                  <div className="col-span-2"><span className="text-gray-600">Unaccounted Items:</span> <span className="font-bold text-amber-600">{totalUnaccounted}</span></div>
+                  <div className="col-span-2"><span className="text-gray-500">Unaccounted Items:</span> <span className="font-bold text-amber-500">{totalUnaccounted}</span></div>
                 )}
               </div>
             </div>
@@ -581,13 +629,14 @@ export default function JobDetail() {
 
           {/* Notes */}
           <div>
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-2">Completion Notes (Optional)</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Completion Notes (Optional)</label>
             <textarea
               value={completionNotes}
               onChange={e => setCompletionNotes(e.target.value)}
-              placeholder="Add any notes about the job completion, issues encountered, etc."
+              placeholder="Job Completed"
               rows={4}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 resize-none"
+              className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none resize-none border-0 text-gray-700"
+              style={{ background: '#e8f4fb', boxShadow: 'inset 4px 4px 10px #c5d8e8, inset -3px -3px 8px #ffffff' }}
             />
           </div>
 
@@ -595,16 +644,27 @@ export default function JobDetail() {
           <div className="flex gap-3 pt-2">
             <button
               onClick={() => setCompletionModal(false)}
-              className="flex-1 bg-gray-100 text-gray-700 rounded-xl py-2.5 text-sm font-bold hover:bg-gray-200 transition"
+              className="flex-1 rounded-xl py-2.5 text-sm font-bold text-gray-600 border-0 transition-all"
+              style={{ background: '#e8f4fb', boxShadow: '4px 4px 10px #c5d8e8, -3px -3px 8px #ffffff' }}
             >
               Cancel
             </button>
             <button
               onClick={completeJob}
               disabled={saving}
-              className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl py-2.5 text-sm font-bold shadow-lg shadow-emerald-200 disabled:opacity-60 hover:shadow-xl transition-all"
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white border-0 disabled:opacity-60 transition-all"
+              style={{
+                background: 'linear-gradient(145deg, #10b981, #059669)',
+                boxShadow: saving
+                  ? 'inset 4px 4px 10px rgba(0,0,0,0.25), inset -3px -3px 8px rgba(255,255,255,0.1)'
+                  : '4px 4px 12px #c5d8e8, -3px -3px 8px #ffffff, 0 4px 16px rgba(16,185,129,0.35)'
+              }}
             >
-              {saving ? '⏳ Completing...' : '✅ Complete Job'}
+              {saving ? (
+                <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Completing...</>
+              ) : (
+                <><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>Complete Job</>
+              )}
             </button>
           </div>
         </div>
@@ -621,34 +681,49 @@ export default function JobDetail() {
         size="md"
       >
         <div className="space-y-4">
-          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200 text-center">
-            <p className="text-4xl mb-2">✅</p>
-            <p className="text-lg font-bold text-emerald-900">Job Completed!</p>
-            <p className="text-sm text-emerald-700 mt-1">Completion report has been generated.</p>
+          <div
+            className="rounded-xl p-4 flex flex-col items-center text-center gap-2"
+            style={{ background: '#e8f4fb', boxShadow: 'inset 4px 4px 10px #c5d8e8, inset -3px -3px 8px #ffffff' }}
+          >
+            <svg className="w-10 h-10 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <p className="text-base font-bold text-gray-800">Job Completed!</p>
+            <p className="text-xs text-gray-500">Completion report has been generated.</p>
           </div>
 
-          <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-            <p className="text-sm font-bold text-blue-900 mb-2">📄 Generate Invoice</p>
-            <p className="text-xs text-blue-700">Would you like to generate an invoice for this job now?</p>
+          <div
+            className="rounded-xl p-4 flex items-start gap-3"
+            style={{ background: '#e8f4fb', boxShadow: 'inset 4px 4px 10px #c5d8e8, inset -3px -3px 8px #ffffff' }}
+          >
+            <svg className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <div>
+              <p className="text-sm font-bold text-gray-700">Generate Invoice</p>
+              <p className="text-xs text-gray-500 mt-0.5">Would you like to generate an invoice for this job now?</p>
+            </div>
           </div>
 
           <div className="flex gap-3">
             <button
-              onClick={() => {
-                setShowInvoicePrompt(false)
-                navigate('/technician')
-              }}
-              className="flex-1 bg-gray-100 text-gray-700 rounded-xl py-2.5 text-sm font-bold hover:bg-gray-200 transition"
+              onClick={() => { setShowInvoicePrompt(false); navigate('/technician') }}
+              className="flex-1 rounded-xl py-2.5 text-sm font-bold text-gray-600 border-0 transition-all"
+              style={{ background: '#e8f4fb', boxShadow: '4px 4px 10px #c5d8e8, -3px -3px 8px #ffffff' }}
             >
               Skip for Now
             </button>
             <button
-              onClick={() => {
-                setShowInvoicePrompt(false)
-                setInvoiceModal(true)
+              onClick={() => { setShowInvoicePrompt(false); setInvoiceModal(true) }}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white border-0 transition-all"
+              style={{
+                background: 'linear-gradient(145deg, #06b6d4, #0891b2)',
+                boxShadow: '4px 4px 12px #c5d8e8, -3px -3px 8px #ffffff, 0 4px 16px rgba(6,182,212,0.35)'
               }}
-              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl py-2.5 text-sm font-bold shadow-lg shadow-blue-200 hover:shadow-xl transition-all"
             >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
               Generate Invoice
             </button>
           </div>
