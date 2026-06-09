@@ -60,7 +60,7 @@ const QUICK_ACTIONS = [
     ),
   },
   {
-    label: 'Verify Stock',
+    label: 'Technician Stock',
     path: '/admin/verify-stock',
     gradient: 'from-blue-500 to-indigo-600',
     iconBg: 'bg-blue-500/20',
@@ -157,7 +157,11 @@ export default function AdminHome() {
       }),
       onSnapshot(collection(db, 'products'), snap => flush({ products: snap.size })),
       onSnapshot(collection(db, 'invoices'), snap => {
-        const revenue = snap.docs.reduce((sum, d) => sum + (d.data().amountReceived || 0), 0)
+        const revenue = snap.docs.reduce((sum, d) => {
+          const data = d.data()
+          if (data.type === 'sale') return sum + (data.grandTotal ?? data.billAmount ?? 0)
+          return sum + (data.amountReceived || 0)
+        }, 0)
         const unreadInvoices = snap.docs.filter(d => d.data().submittedByTechnician && !d.data().adminViewed).length
         flush({ revenue, unreadInvoices })
       }),
@@ -203,7 +207,12 @@ export default function AdminHome() {
   const missing     = useCounter(stats.missing)
 
   const counted = { jobs, pending, technicians, products, revenue, missing }
-  const getValue = (key) => key === 'revenue' ? `₹${counted.revenue.toLocaleString('en-IN')}` : counted[key]
+  const getValue = (key) => {
+    if (key === 'revenue') {
+      return <span className="text-2xl font-black"><span className="text-lg font-black">₹ </span>{counted.revenue.toLocaleString('en-IN')}</span>
+    }
+    return counted[key]
+  }
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
@@ -309,7 +318,7 @@ export default function AdminHome() {
               }`}
             >
               <div className={`absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-gradient-to-br ${card.gradient}`} />
-              <p className={`text-3xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>{getValue(card.key)}</p>
+              <p className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>{getValue(card.key)}</p>
               <p className={`text-xs font-semibold mt-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>{card.label}</p>
             </div>
           ))}

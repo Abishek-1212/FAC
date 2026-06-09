@@ -61,6 +61,9 @@ export default function ServiceJobs() {
   const [invoiceModal, setInvoiceModal] = useState(false)
   const [selectedJobForInvoice, setSelectedJobForInvoice] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [editJob, setEditJob] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [editSaving, setEditSaving] = useState(false)
 
   const STATUS_META = isDark ? STATUS_META_DARK : STATUS_META_LIGHT
 
@@ -101,6 +104,26 @@ export default function ServiceJobs() {
       return
     }
     setShowConfirm(true)
+  }
+
+  const handleEdit = async () => {
+    setEditSaving(true)
+    try {
+      await updateDoc(doc(db, 'service_jobs', editJob.id), {
+        customerName: editForm.customerName,
+        customerPhone: editForm.customerPhone,
+        customerAddress: editForm.customerAddress,
+        problemDescription: editForm.problemDescription,
+        serviceType: editForm.serviceType,
+        priority: editForm.priority,
+      })
+      toast.success('✅ Job updated successfully')
+      setEditJob(null)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setEditSaving(false)
+    }
   }
 
   const handleDelete = async (job) => {
@@ -755,19 +778,43 @@ export default function ServiceJobs() {
                 </div>
               </div>
 
-              {/* Delete button — only before technician starts work */}
+              {/* Delete + Edit buttons — only before technician starts work */}
               {['pending', 'assigned'].includes(detailJob.status) && (
-                <button
-                  onClick={() => { setDeleteConfirm(detailJob); setDetailJob(null) }}
-                  className={`w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-all ${
-                    isDark ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30' : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  Delete Job
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setEditForm({
+                        customerName: detailJob.customerName,
+                        customerPhone: detailJob.customerPhone,
+                        customerAddress: detailJob.customerAddress || { houseNo: '', building: '', street: '', city: '', state: 'Tamil Nadu', pinCode: '', landmark: '' },
+                        problemDescription: detailJob.problemDescription,
+                        serviceType: detailJob.serviceType,
+                        priority: detailJob.priority,
+                      })
+                      setEditJob(detailJob)
+                      setDetailJob(null)
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-all ${
+                      isDark ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30' : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit Job
+                  </button>
+                  <button
+                    onClick={() => { setDeleteConfirm(detailJob); setDetailJob(null) }}
+                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-all ${
+                      isDark ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30' : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete Job
+                  </button>
+                </div>
               )}
 
               {/* Info grid */}
@@ -809,6 +856,74 @@ export default function ServiceJobs() {
             </div>
           )
         })()}
+      </Modal>
+
+      {/* Edit Job Modal */}
+      <Modal open={!!editJob} onClose={() => setEditJob(null)} title="Edit Job" size="lg">
+        {editJob && (
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto scrollbar-hide">
+            <div>
+              <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Customer Name</label>
+              <input type="text" value={editForm.customerName} onChange={e => setEditForm(f => ({ ...f, customerName: e.target.value }))} className={inputCls(isDark)} />
+            </div>
+            <div>
+              <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Phone Number</label>
+              <input type="tel" value={editForm.customerPhone} onChange={e => { const v = e.target.value.replace(/\D/g, ''); if (v.length <= 10) setEditForm(f => ({ ...f, customerPhone: v })) }} maxLength="10" className={inputCls(isDark)} />
+            </div>
+            <div>
+              <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Address Details</p>
+              <AddressInput value={editForm.customerAddress} onChange={addr => setEditForm(f => ({ ...f, customerAddress: addr }))} />
+            </div>
+            <div>
+              <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Service Type</label>
+              <div className="flex gap-2 mt-2">
+                {SERVICE_TYPES.map(t => (
+                  <button key={t} type="button" onClick={() => setEditForm(f => ({ ...f, serviceType: t }))}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-shadow ${
+                      editForm.serviceType === t
+                        ? isDark ? 'bg-[#151b2b] text-white border-2 border-white/40 shadow-[inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.04)]'
+                                 : 'bg-[#e8f4fb] text-gray-800 border-2 border-gray-400 shadow-[inset_3px_3px_7px_rgba(163,196,215,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.9)]'
+                        : isDark ? 'border border-white/10 bg-[#1a2235] text-white/60 shadow-[4px_4px_10px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)]'
+                                 : 'border border-gray-200 bg-[#e8f4fb] text-gray-500 shadow-[4px_4px_10px_rgba(163,196,215,0.6),-3px_-3px_8px_rgba(255,255,255,0.9)]'
+                    }`}>
+                    {t === 'New Fitting' ? '🔧 New Fitting' : '🛠️ Service / Repair'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Priority</label>
+              <select value={editForm.priority} onChange={e => setEditForm(f => ({ ...f, priority: e.target.value }))} className={inputCls(isDark)}>
+                <option value="normal" className="text-gray-900">Normal</option>
+                <option value="urgent" className="text-gray-900">Urgent</option>
+              </select>
+            </div>
+            <div>
+              <label className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Problem Description</label>
+              <textarea value={editForm.problemDescription} onChange={e => setEditForm(f => ({ ...f, problemDescription: e.target.value }))} rows={3}
+                className={`w-full mt-1 border-0 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/50 resize-none transition-shadow ${
+                  isDark ? 'bg-[#151b2b] text-white shadow-[inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.04)]'
+                          : 'bg-[#e8f4fb] text-gray-800 shadow-[inset_3px_3px_7px_rgba(163,196,215,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.9)]'
+                }`} />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setEditJob(null)} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+                isDark ? 'text-red-400/60' : 'text-red-400'
+              }`} style={isDark
+                ? { background: '#1a2235', boxShadow: '4px 4px 10px rgba(0,0,0,0.5), -3px -3px 8px rgba(255,255,255,0.04)' }
+                : { background: '#e8f4fb', boxShadow: '4px 4px 10px rgba(163,196,215,0.6), -3px -3px 8px rgba(255,255,255,0.9)' }
+              }>Cancel</button>
+              <button onClick={handleEdit} disabled={editSaving} className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition-all disabled:opacity-60 ${
+                isDark ? 'text-blue-300/70' : 'text-blue-400'
+              }`} style={isDark
+                ? { background: '#1a2235', boxShadow: '4px 4px 10px rgba(0,0,0,0.5), -3px -3px 8px rgba(255,255,255,0.04)' }
+                : { background: '#e8f4fb', boxShadow: '4px 4px 10px rgba(163,196,215,0.6), -3px -3px 8px rgba(255,255,255,0.9)' }
+              }>
+                {editSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Delete Confirmation Modal */}

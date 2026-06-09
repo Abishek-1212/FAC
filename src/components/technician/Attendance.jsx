@@ -23,6 +23,35 @@ export default function Attendance() {
     }
   }, [user, filter, customRange])
 
+  useEffect(() => {
+    if (!user) return
+    const autoCheckout = async () => {
+      const now = new Date()
+      if (now.getHours() < 21) return
+      const today = new Date(now)
+      today.setHours(0, 0, 0, 0)
+      const q = query(collection(db, 'attendance'), where('technicianId', '==', user.uid))
+      const snap = await getDocs(q)
+      const todayRec = snap.docs.find(d => {
+        const rec = d.data()
+        const recDate = rec.date?.toDate ? rec.date.toDate() : new Date(rec.date?.seconds * 1000 || 0)
+        recDate.setHours(0, 0, 0, 0)
+        return recDate.getTime() === today.getTime() && rec.checkIn && !rec.checkOut
+      })
+      if (todayRec) {
+        const checkoutTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 21, 0, 0)
+        await updateDoc(doc(db, 'attendance', todayRec.id), {
+          checkOut: Timestamp.fromDate(checkoutTime),
+          autoCheckedOut: true,
+          updatedAt: Timestamp.fromDate(now)
+        })
+        toast('🕘 Auto checked-out at 9:00 PM', { icon: '⏰' })
+        fetchRecords()
+      }
+    }
+    autoCheckout()
+  }, [user])
+
   const fetchRecords = async () => {
     if (!user) return
     setLoading(true)
