@@ -20,7 +20,7 @@ export default function CompletionReports() {
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [invoiceModal, setInvoiceModal] = useState(false)
   const [selectedReportForInvoice, setSelectedReportForInvoice] = useState(null)
-  const [invoiceStatus, setInvoiceStatus] = useState({}) // Track which jobs have invoices
+  const [invoiceStatus, setInvoiceStatus] = useState({})
   const [viewInvoiceModal, setViewInvoiceModal] = useState(false)
   const [selectedInvoiceData, setSelectedInvoiceData] = useState(null)
 
@@ -32,7 +32,6 @@ export default function CompletionReports() {
     )
   }, [user])
 
-  // Check invoice status for all reports
   useEffect(() => {
     if (reports.length === 0) return
     const checkInvoices = async () => {
@@ -422,7 +421,6 @@ export default function CompletionReports() {
                               <span>{report.totalUnaccounted} Unaccounted</span>
                             </span>
                           )}
-                          {/* Show Invoice button if no invoice exists, or View Invoice + Updated text if invoice exists */}
                           {!invoiceStatus[report.jobId]?.exists ? (
                             <motion.button
                               whileTap={{ scale: 0.95 }}
@@ -514,7 +512,6 @@ export default function CompletionReports() {
       <Modal open={!!selectedReport} onClose={() => setSelectedReport(null)} title="Job Completion Report" size="lg">
         {selectedReport && (
           <div className="space-y-4">
-            {/* Job Info */}
             <div className={`rounded-xl p-4 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
               <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Customer</p>
               <p className={`text-lg font-bold mt-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedReport.customerName}</p>
@@ -522,7 +519,6 @@ export default function CompletionReports() {
               <p className={`text-sm mt-2 whitespace-pre-line ${isDark ? 'text-white/60' : 'text-gray-600'}`}>📍 {formatAddressForDisplay(selectedReport.customerAddress)}</p>
             </div>
 
-            {/* Service Details */}
             <div className={`rounded-xl p-4 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
               <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Service Details</p>
               <div className="mt-2 space-y-1">
@@ -535,13 +531,11 @@ export default function CompletionReports() {
               </div>
             </div>
 
-            {/* Problem Description */}
             <div className={`rounded-xl p-4 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
               <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Problem Description</p>
               <p className={`text-sm mt-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedReport.problemDescription}</p>
             </div>
 
-            {/* Items Summary */}
             {selectedReport.itemsSummary && selectedReport.itemsSummary.length > 0 && (
               <div className={`rounded-xl p-4 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
                 <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Items Summary</p>
@@ -569,7 +563,6 @@ export default function CompletionReports() {
               </div>
             )}
 
-            {/* Personal Stock Usage */}
             {selectedReport.personalStockUsage && selectedReport.personalStockUsage.length > 0 && (
               <div className={`rounded-xl p-4 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
                 <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Personal Stock Used</p>
@@ -593,7 +586,6 @@ export default function CompletionReports() {
               </div>
             )}
 
-            {/* Completion Notes */}
             {selectedReport.completionNotes && (
               <div className={`rounded-xl p-4 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
                 <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Notes</p>
@@ -601,7 +593,6 @@ export default function CompletionReports() {
               </div>
             )}
 
-            {/* Unaccounted Items Warning */}
             {selectedReport.totalUnaccounted > 0 && (
               <div className={`rounded-xl p-4 border ${
                 isDark
@@ -641,7 +632,6 @@ export default function CompletionReports() {
           }}
           isDark={isDark}
           onInvoiceSaved={() => {
-            // Refresh invoice status after save
             const checkInvoice = async () => {
               const invoicesSnap = await getDocs(query(collection(db, 'invoices'), where('jobId', '==', selectedReportForInvoice.jobId)))
               if (invoicesSnap.docs.length > 0) {
@@ -660,7 +650,6 @@ export default function CompletionReports() {
         />
       )}
 
-
       {/* View Invoice Modal */}
       <Modal
         open={viewInvoiceModal}
@@ -673,8 +662,6 @@ export default function CompletionReports() {
       >
         {selectedInvoiceData && (
           <div className="space-y-4">
-
-            {/* Header Banner */}
             <div
               style={isDark
                 ? { boxShadow: '6px 6px 14px #0d0d1a, -6px -6px 14px #27274a' }
@@ -719,7 +706,6 @@ export default function CompletionReports() {
               </div>
             </div>
 
-            {/* Grand Total Card */}
             <div
               style={isDark
                 ? { boxShadow: 'inset 4px 4px 10px #0d0d1a, inset -4px -4px 10px #27274a' }
@@ -737,7 +723,6 @@ export default function CompletionReports() {
               }`}>₹{(selectedInvoiceData.invoice.billAmount || 0).toLocaleString('en-IN')}</p>
             </div>
 
-            {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-3">
               <motion.button
                 whileTap={{ scale: 0.97 }}
@@ -750,16 +735,20 @@ export default function CompletionReports() {
                     technicianName: selectedInvoiceData.report.technicianName || 'N/A',
                     serviceType: selectedInvoiceData.report.serviceType || 'N/A',
                     problemDescription: selectedInvoiceData.report.problemDescription || 'N/A',
+                    serviceDate: selectedInvoiceData.report.completedAt,
                     totalAmount: selectedInvoiceData.invoice.totalAmount || 0,
                     discountType: selectedInvoiceData.invoice.discountType || 'percentage',
                     discountValue: selectedInvoiceData.invoice.discountValue || 0,
                     discountAmount: selectedInvoiceData.invoice.discountAmount || 0,
                     grandTotal: selectedInvoiceData.invoice.billAmount || 0,
-                    products: (selectedInvoiceData.invoice.components || []).map(c => ({
-                      name: c.name || 'N/A',
-                      qty: c.quantity || 0
+                    amountReceived: selectedInvoiceData.invoice.amountReceived || 0,
+                    products: (selectedInvoiceData.invoice.products || []).map(p => ({
+                      name: p.name || 'N/A',
+                      qty: Number(p.qty) || 0,
+                      price: Number(p.price) || 0
                     })),
                     paymentMode: selectedInvoiceData.invoice.modeOfPayment || 'Cash',
+                    isSalesInvoice: false
                   })
                   toast.success('Invoice downloaded!')
                 }}
@@ -799,7 +788,6 @@ export default function CompletionReports() {
                 Share
               </motion.button>
             </div>
-
           </div>
         )}
       </Modal>

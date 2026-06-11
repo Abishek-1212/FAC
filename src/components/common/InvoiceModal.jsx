@@ -6,6 +6,7 @@ import Modal from './Modal'
 import toast from 'react-hot-toast'
 import { generateInvoice } from '../../utils/generateInvoice'
 import { formatAddressForDisplay } from '../../utils/addressFormatter'
+import { logDownloadFlow } from '../../utils/downloadDebugLogs'
 
 export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSaved }) {
   const [completionReport, setCompletionReport] = useState(null)
@@ -231,31 +232,39 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
               const productsSnapshot = await getDocs(collection(db, 'products'))
               const productsMap = {}
               productsSnapshot.docs.forEach(doc => {
-                productsMap[doc.data().name] = doc.data().price
+                const data = doc.data()
+                productsMap[data.name] = data.price
               })
               
               const itemsWithPrices = report.itemsSummary?.map(item => ({
                 name: item.productName,
-                qty: item.used,
+                qty: Number(item.used) || 0,
+                price: Number(productsMap[item.productName]) || Number(item.price) || 0,
               })) || []
               
               // Also check for personal stock usage
               const personalStockItems = report.personalStockUsage?.map(item => ({
                 name: item.productName,
                 qty: item.used,
+                price: Number(productsMap[item.productName]) || Number(item.price) || 0,
               })) || []
               
-              setProducts([...itemsWithPrices, ...personalStockItems])
+              const allItems = [...itemsWithPrices, ...personalStockItems]
+              setProducts(allItems)
+              const autoTotal = allItems.reduce((sum, p) => sum + (Number(p.qty) || 0) * (Number(p.price) || 0), 0)
+              if (autoTotal > 0) setTotalAmount(autoTotal)
             } catch (err) {
               console.warn('Could not fetch product prices:', err.message)
               const itemsWithoutPrices = report.itemsSummary?.map(item => ({
                 name: item.productName,
-                qty: item.used,
+                qty: Number(item.used) || 0,
+                price: Number(item.price) || 0,
               })) || []
               
               const personalStockItems = report.personalStockUsage?.map(item => ({
                 name: item.productName,
                 qty: item.used,
+                price: Number(item.price) || 0,
               })) || []
               
               setProducts([...itemsWithoutPrices, ...personalStockItems])
@@ -294,7 +303,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
 
   const addPersonalStockItem = () => {
     const newIndex = personalStockUsage.length
-    setPersonalStockUsage([...personalStockUsage, { productId: '', productName: '', currentUnits: 0, used: '', damaged: '' }])
+    setPersonalStockUsage([...personalStockUsage, { productId: '', productName: '', currentUnits: 0, used: '', damaged: '', price: '' }])
     // Auto-expand new items
     setExpandedStockItems(prev => new Set([...prev, newIndex]))
   }
@@ -319,12 +328,19 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
         ...updated[index],
         productId: value,
         productName: product?.name || stock?.productName || '',
-        currentUnits: stock?.currentUnits || 0
+        currentUnits: stock?.currentUnits || 0,
+        price: product?.price ?? stock?.price ?? updated[index].price ?? ''
       }
     } else {
-      updated[index][field] = value
+      updated[index] = { ...updated[index], [field]: value }
     }
     setPersonalStockUsage(updated)
+    const personalTotal = updated.reduce((sum, item) => sum + (Number(item.used) || 0) * (Number(item.price) || 0), 0)
+    const completionTotal = products.reduce((sum, p) => {
+      const matched = allProducts.find(ap => ap.name === p.name)
+      return sum + (Number(p.qty) || 0) * (Number(p.price ?? matched?.price ?? 0))
+    }, 0)
+    setTotalAmount(personalTotal + completionTotal)
   }
 
   const toggleStockItem = (index) => {
@@ -387,10 +403,17 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
       
       // Combine products from completion report and personal stock usage (only used items for invoice)
       const allUsedProducts = [
-        ...products,
-        ...personalStockUsage.map(item => ({ name: item.productName, qty: Number(item.used) || 0 }))
+        ...products.filter(p => Number(p.qty) > 0),
+        ...personalStockUsage.filter(item => item.productId && Number(item.used) > 0).map(item => ({ name: item.productName, qty: Number(item.used) || 0, price: Number(item.price) || 0 }))
       ]
-      
+
+      // If no products, show error
+      if (allUsedProducts.length === 0) {
+        toast.error('Please add at least one product (either from job or personal stock)')
+        setSaving(false)
+        return
+      }
+
       const invoiceData = {
         billNo,
         jobId: job.id || '',
@@ -400,7 +423,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
         technicianId: job.technicianId || '',
         technicianName: job.technicianName || 'N/A',
         serviceType: job.serviceType || 'N/A',
-        components: allUsedProducts.map(p => ({ name: p.name || 'N/A', quantity: p.qty || 0 })),
+        problemDescription: job.problemDescription || '',
         totalAmount: parseFloat(totalAmount) || 0,
         discountType,
         discountValue: parseFloat(discountValue) || 0,
@@ -410,6 +433,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
         paymentPending: pendingAmount,
         paymentStatus: paymentStatus,
         modeOfPayment: paymentType,
+        products: allUsedProducts,
         invoiceDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
         submittedByTechnician: true,
         adminViewed: false,
@@ -613,11 +637,14 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                                 <div className="flex items-center gap-2">
                                   {hasProduct && (
                                     <div className="flex items-center gap-1.5 text-xs">
+                                      {(Number(item.price) || 0) > 0 && (
+                                        <span className="px-2 py-0.5 rounded-lg font-bold text-cyan-600" style={nm.inset}>₹{Number(item.price).toLocaleString('en-IN')}</span>
+                                      )}
                                       {(Number(item.used) || 0) > 0 && (
-                                        <span className="px-2 py-0.5 rounded-lg font-bold text-emerald-600" style={nm.inset}>{item.used}</span>
+                                        <span className="px-2 py-0.5 rounded-lg font-bold text-emerald-600" style={nm.inset}>×{item.used}</span>
                                       )}
                                       {(Number(item.damaged) || 0) > 0 && (
-                                        <span className="px-2 py-0.5 rounded-lg font-bold text-red-500" style={nm.inset}>{item.damaged}</span>
+                                        <span className="px-2 py-0.5 rounded-lg font-bold text-red-500" style={nm.inset}>{item.damaged} dmg</span>
                                       )}
                                     </div>
                                   )}
@@ -683,7 +710,7 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                                     <div className="rounded-xl p-2 text-center" style={nm.inset}>
                                       <p className="text-xs font-semibold text-cyan-600">Available: <span className="text-base font-black">{item.currentUnits}</span></p>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-3 gap-2">
                                       <div>
                                         <label className="text-xs font-semibold text-emerald-600 block mb-1">Used</label>
                                         <input type="number" min={0} max={item.currentUnits} placeholder="0" value={item.used}
@@ -696,6 +723,13 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                                         <input type="number" min={0} max={item.currentUnits} placeholder="0" value={item.damaged}
                                           onChange={(e) => updatePersonalStockItem(index, 'damaged', e.target.value)}
                                           className="w-full px-2.5 py-2 rounded-xl text-xs text-center font-bold focus:outline-none border-0 text-red-500"
+                                          style={nm.inset} />
+                                      </div>
+                                      <div>
+                                        <label className="text-xs font-semibold text-cyan-600 block mb-1">Price (Rs.)</label>
+                                        <input type="number" min={0} placeholder="0" value={item.price}
+                                          onChange={(e) => updatePersonalStockItem(index, 'price', e.target.value)}
+                                          className="w-full px-2.5 py-2 rounded-xl text-xs text-center font-bold focus:outline-none border-0 text-cyan-700"
                                           style={nm.inset} />
                                       </div>
                                     </div>
@@ -731,15 +765,9 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
                   <svg className="w-3.5 h-3.5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   Total Amount (₹)
                 </label>
-                <input
-                  type="number"
-                  value={totalAmount}
-                  onChange={(e) => setTotalAmount(e.target.value)}
-                  placeholder="0"
-                  disabled={invoiceSaved}
-                  className="w-full px-3 py-2.5 rounded-xl text-base font-bold focus:outline-none border-0 text-gray-800 disabled:opacity-50"
-                  style={nm.inset}
-                />
+                <div className="w-full px-3 py-2.5 rounded-xl text-base font-bold text-gray-800" style={nm.inset}>
+                  ₹{(parseFloat(totalAmount) || 0).toLocaleString('en-IN')}
+                </div>
               </div>
               <div className="rounded-2xl p-4" style={nm.base}>
                 <label className="text-xs font-bold text-gray-500 flex items-center gap-1.5 mb-2">
@@ -876,31 +904,68 @@ export default function InvoiceModal({ open, onClose, job, isDark, onInvoiceSave
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => {
-                  const billNo = savedInvoiceData?.billNo || `FAC-${Date.now()}`
-                  const allInvoiceProducts = [
-                    ...products,
-                    ...personalStockUsage.filter(i => i.productId && (Number(i.used) || 0) > 0).map(i => ({ name: i.productName, qty: Number(i.used) || 0 }))
-                  ]
-                  generateInvoice({
-                    invoiceNumber: billNo,
-                    customerName: job.customerName || 'N/A',
-                    customerPhone: job.customerPhone || 'N/A',
-                    customerAddress: job.customerAddress || 'N/A',
-                    technicianName: job.technicianName || 'N/A',
-                    serviceType: job.serviceType || 'N/A',
-                    problemDescription: job.problemDescription || 'N/A',
-                    totalAmount: parseFloat(totalAmount) || 0,
-                    discountType,
-                    discountValue: parseFloat(discountValue) || 0,
-                    discountAmount,
-                    grandTotal,
-                    amountReceived: invoiceSaved && savedInvoiceData?.amountReceived !== undefined ? savedInvoiceData.amountReceived : parseFloat(amountReceived) || 0,
-                    products: allInvoiceProducts,
-                    paymentMode: paymentType,
-                  })
+                  alert('Download button clicked!')
+                  console.log('DOWNLOAD CLICKED')
+                  logDownloadFlow(invoiceSaved, savedInvoiceData, products, personalStockUsage, totalAmount, discountValue, discountAmount, grandTotal, amountReceived, discountType, paymentType, job)
+                  
+                  if (invoiceSaved && savedInvoiceData) {
+                    // Invoice already saved - use saved data directly
+                    generateInvoice({
+                      invoiceNumber: savedInvoiceData.billNo,
+                      customerName: savedInvoiceData.customerName || 'N/A',
+                      customerPhone: savedInvoiceData.customerPhone || 'N/A',
+                      customerAddress: savedInvoiceData.customerAddress || 'N/A',
+                      technicianName: savedInvoiceData.technicianName || 'N/A',
+                      serviceType: savedInvoiceData.serviceType || 'N/A',
+                      problemDescription: savedInvoiceData.problemDescription || '',
+                      totalAmount: savedInvoiceData.totalAmount,
+                      discountType: savedInvoiceData.discountType,
+                      discountValue: savedInvoiceData.discountValue,
+                      discountAmount: savedInvoiceData.discountAmount,
+                      grandTotal: savedInvoiceData.billAmount,
+                      amountReceived: savedInvoiceData.amountReceived,
+                      products: (savedInvoiceData.products || []).map(p => ({
+                        name: p.name,
+                        qty: Number(p.qty),
+                        price: Number(p.price)
+                      })),
+                      paymentMode: savedInvoiceData.modeOfPayment,
+                      serviceDate: savedInvoiceData.invoiceDate,
+                    })
+                  } else {
+                    // Invoice not saved yet - use form state
+                    const downloadProducts = [
+                      ...products.filter(p => Number(p.qty) > 0).map(p => ({ name: p.name, qty: Number(p.qty) || 0, price: Number(p.price) || 0 })),
+                      ...personalStockUsage.filter(i => i.productId && (Number(i.used) || 0) > 0).map(i => ({ name: i.productName, qty: Number(i.used) || 0, price: Number(i.price) || 0 }))
+                    ]
+                    
+                    if (downloadProducts.length === 0) {
+                      toast.error('No products to download. Please add at least one product.')
+                      return
+                    }
+                    
+                    generateInvoice({
+                      invoiceNumber: `FAC-${Date.now()}`,
+                      customerName: job.customerName || 'N/A',
+                      customerPhone: job.customerPhone || 'N/A',
+                      customerAddress: job.customerAddress || 'N/A',
+                      technicianName: job.technicianName || 'N/A',
+                      serviceType: job.serviceType || 'N/A',
+                      problemDescription: job.problemDescription || '',
+                      totalAmount: parseFloat(totalAmount) || 0,
+                      discountType: discountType,
+                      discountValue: parseFloat(discountValue) || 0,
+                      discountAmount: discountAmount,
+                      grandTotal: grandTotal,
+                      amountReceived: amountReceived !== '' ? parseFloat(amountReceived) : 0,
+                      products: downloadProducts,
+                      paymentMode: paymentType,
+                      serviceDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                    })
+                  }
                   toast.success('Invoice downloaded!')
                 }}
-                disabled={amountReceived === '' || amountReceived === null || parseFloat(amountReceived) > grandTotal}
+                disabled={!invoiceSaved && (amountReceived === '' || amountReceived === null || parseFloat(amountReceived) > grandTotal)}
                 className="w-full md:flex-1 rounded-xl py-3 text-sm font-bold text-white border-0 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 style={{ background: 'linear-gradient(145deg, #8b5cf6, #7c3aed)', borderRadius: '18px', boxShadow: '4px 4px 12px #c5d8e8, -3px -3px 8px #ffffff, 0 4px 16px rgba(124,58,237,0.3)' }}
               >

@@ -612,7 +612,7 @@ export default function Invoices() {
                     customerAddress: viewInvoice.customerAddress || 'N/A',
                     technicianName: viewInvoice.technicianName || 'N/A',
                     serviceType: viewInvoice.serviceType || 'N/A',
-                    problemDescription: viewInvoice.problemDescription || 'N/A',
+                    problemDescription: viewInvoice.problemDescription || '',
                     totalAmount: viewInvoice.totalAmount || 0,
                     discountType: viewInvoice.discountType || 'percentage',
                     discountValue: viewInvoice.discountValue || 0,
@@ -621,9 +621,10 @@ export default function Invoices() {
                     amountReceived: viewInvoice.amountReceived || 0,
                     paymentMode: viewInvoice.modeOfPayment || 'N/A',
                     serviceDate: viewInvoice.invoiceDate || null,
-                    products: (viewInvoice.components || []).map(c => ({
-                      name: c.name || 'N/A',
-                      qty: c.quantity || 0
+                    products: (viewInvoice.products || []).map(p => ({
+                      name: p.name || 'N/A',
+                      qty: Number(p.qty) || 0,
+                      price: Number(p.price) || 0
                     })),
                   })
                   toast.success('Invoice downloaded!')

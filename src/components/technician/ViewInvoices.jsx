@@ -1,24 +1,12 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
-import InvoicePDF from '../common/InvoicePDF'
 import Modal from '../common/Modal'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
-
-async function buildPDF(element, inv) {
-  const canvas = await html2canvas(element, {
-    scale: 2, backgroundColor: '#ffffff', windowWidth: 794, windowHeight: 1123
-  })
-  const pdf = new jsPDF('p', 'mm', 'a4')
-  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0,
-    pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight())
-  return { pdf, fileName: `FAC_Invoice_${inv.billNo}_${inv.customerName.replace(/\s+/g, '_')}.pdf` }
-}
+import { generateInvoice } from '../../utils/generateInvoice'
 
 function whatsappMsg(inv) {
   let phone = (inv.customerPhone || '').replace(/[\s-]/g, '')
@@ -34,10 +22,7 @@ export default function ViewInvoices() {
   const [filter, setFilter] = useState('all')
   const [viewInvoice, setViewInvoice] = useState(null)
   const [busy, setBusy] = useState(false)
-  // one hidden ref per action (download/share from card)
-  const hiddenRef = useRef(null)
-  // ref inside modal
-  const modalRef = useRef(null)
+
 
   useEffect(() => {
     if (!user) return
@@ -64,44 +49,110 @@ export default function ViewInvoices() {
     })
   })()
 
-  // Download from card (uses hidden element)
+  // Download from card
   const cardDownload = async (inv) => {
+    console.log('='.repeat(60))
+    console.log('VIEWINVOICES CARD DOWNLOAD CLICKED')
+    console.log('Full invoice object:', JSON.stringify(inv, null, 2))
+    console.log('products field:', inv.products)
+    console.log('products type:', typeof inv.products)
+    console.log('products length:', inv.products?.length)
+    console.log('='.repeat(60))
     setBusy(true)
-    // set invoice so hidden element renders
-    setViewInvoice(inv)
-    await new Promise(r => setTimeout(r, 400)) // wait for render
     try {
-      const { pdf, fileName } = await buildPDF(hiddenRef.current, inv)
-      pdf.save(fileName)
+      generateInvoice({
+        invoiceNumber: inv.billNo,
+        customerName: inv.customerName || 'N/A',
+        customerPhone: inv.customerPhone || 'N/A',
+        customerAddress: inv.customerAddress || 'N/A',
+        technicianName: inv.technicianName || 'N/A',
+        serviceType: inv.serviceType || 'N/A',
+        problemDescription: inv.problemDescription || '',
+        totalAmount: inv.totalAmount || 0,
+        discountType: inv.discountType || 'percentage',
+        discountValue: inv.discountValue || 0,
+        discountAmount: inv.discountAmount || 0,
+        grandTotal: inv.billAmount || 0,
+        amountReceived: inv.amountReceived || 0,
+        paymentMode: inv.modeOfPayment || 'Cash',
+        serviceDate: inv.invoiceDate || null,
+        products: (inv.products || []).map(p => ({
+          name: p.name || 'N/A',
+          qty: Number(p.qty) || 0,
+          price: Number(p.price) || 0
+        })),
+      })
       toast.success('📥 Downloaded!')
-    } catch { toast.error('Failed to generate PDF') }
+    } catch (err) {
+      toast.error('Failed to generate PDF')
+    }
     setBusy(false)
-    setViewInvoice(null)
   }
 
   // Share from card
   const cardShare = async (inv) => {
     setBusy(true)
-    setViewInvoice(inv)
-    await new Promise(r => setTimeout(r, 400))
     try {
-      const { pdf, fileName } = await buildPDF(hiddenRef.current, inv)
-      pdf.save(fileName)
+      generateInvoice({
+        invoiceNumber: inv.billNo,
+        customerName: inv.customerName || 'N/A',
+        customerPhone: inv.customerPhone || 'N/A',
+        customerAddress: inv.customerAddress || 'N/A',
+        technicianName: inv.technicianName || 'N/A',
+        serviceType: inv.serviceType || 'N/A',
+        problemDescription: inv.problemDescription || '',
+        totalAmount: inv.totalAmount || 0,
+        discountType: inv.discountType || 'percentage',
+        discountValue: inv.discountValue || 0,
+        discountAmount: inv.discountAmount || 0,
+        grandTotal: inv.billAmount || 0,
+        amountReceived: inv.amountReceived || 0,
+        paymentMode: inv.modeOfPayment || 'Cash',
+        serviceDate: inv.invoiceDate || null,
+        products: (inv.products || []).map(p => ({
+          name: p.name || 'N/A',
+          qty: Number(p.qty) || 0,
+          price: Number(p.price) || 0
+        })),
+      })
       window.open(whatsappMsg(inv), '_blank')
       toast.success('📱 PDF downloaded! Attach in WhatsApp.')
-    } catch { toast.error('Failed to generate PDF') }
+    } catch (err) {
+      toast.error('Failed to generate PDF')
+    }
     setBusy(false)
-    setViewInvoice(null)
   }
 
   // Download from modal
   const modalDownload = async () => {
     setBusy(true)
     try {
-      const { pdf, fileName } = await buildPDF(modalRef.current, viewInvoice)
-      pdf.save(fileName)
+      generateInvoice({
+        invoiceNumber: viewInvoice.billNo,
+        customerName: viewInvoice.customerName || 'N/A',
+        customerPhone: viewInvoice.customerPhone || 'N/A',
+        customerAddress: viewInvoice.customerAddress || 'N/A',
+        technicianName: viewInvoice.technicianName || 'N/A',
+        serviceType: viewInvoice.serviceType || 'N/A',
+        problemDescription: viewInvoice.problemDescription || '',
+        totalAmount: viewInvoice.totalAmount || 0,
+        discountType: viewInvoice.discountType || 'percentage',
+        discountValue: viewInvoice.discountValue || 0,
+        discountAmount: viewInvoice.discountAmount || 0,
+        grandTotal: viewInvoice.billAmount || 0,
+        amountReceived: viewInvoice.amountReceived || 0,
+        paymentMode: viewInvoice.modeOfPayment || 'Cash',
+        serviceDate: viewInvoice.invoiceDate || null,
+        products: (viewInvoice.products || []).map(p => ({
+          name: p.name || 'N/A',
+          qty: Number(p.qty) || 0,
+          price: Number(p.price) || 0
+        })),
+      })
       toast.success('📥 Downloaded!')
-    } catch { toast.error('Failed to generate PDF') }
+    } catch (err) {
+      toast.error('Failed to generate PDF')
+    }
     setBusy(false)
   }
 
@@ -109,11 +160,33 @@ export default function ViewInvoices() {
   const modalShare = async () => {
     setBusy(true)
     try {
-      const { pdf, fileName } = await buildPDF(modalRef.current, viewInvoice)
-      pdf.save(fileName)
+      generateInvoice({
+        invoiceNumber: viewInvoice.billNo,
+        customerName: viewInvoice.customerName || 'N/A',
+        customerPhone: viewInvoice.customerPhone || 'N/A',
+        customerAddress: viewInvoice.customerAddress || 'N/A',
+        technicianName: viewInvoice.technicianName || 'N/A',
+        serviceType: viewInvoice.serviceType || 'N/A',
+        problemDescription: viewInvoice.problemDescription || '',
+        totalAmount: viewInvoice.totalAmount || 0,
+        discountType: viewInvoice.discountType || 'percentage',
+        discountValue: viewInvoice.discountValue || 0,
+        discountAmount: viewInvoice.discountAmount || 0,
+        grandTotal: viewInvoice.billAmount || 0,
+        amountReceived: viewInvoice.amountReceived || 0,
+        paymentMode: viewInvoice.modeOfPayment || 'Cash',
+        serviceDate: viewInvoice.invoiceDate || null,
+        products: (viewInvoice.products || []).map(p => ({
+          name: p.name || 'N/A',
+          qty: Number(p.qty) || 0,
+          price: Number(p.price) || 0
+        })),
+      })
       window.open(whatsappMsg(viewInvoice), '_blank')
       toast.success('📱 PDF downloaded! Attach in WhatsApp.')
-    } catch { toast.error('Failed to generate PDF') }
+    } catch (err) {
+      toast.error('Failed to generate PDF')
+    }
     setBusy(false)
   }
 
@@ -231,10 +304,6 @@ export default function ViewInvoices() {
         )}
       </Modal>
 
-      {/* Hidden render target for card-level download/share */}
-      <div className="fixed -left-[9999px] -top-[9999px] pointer-events-none opacity-0">
-        {viewInvoice && <InvoicePDF ref={hiddenRef} inv={viewInvoice} />}
-      </div>
 
     </div>
   )

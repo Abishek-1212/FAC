@@ -223,8 +223,18 @@ export const generateReport = (data) => {
     return `${dd}/${mm}/${yyyy}`
   }
 
-    // Prepare table data
-    const tableData = invoices.map(inv => {
+    // Prepare table data — sorted newest first
+    const sortedInvoices = [...invoices].sort((a, b) => {
+      const getTs = (inv) => {
+        const val = inv.type === 'sale' ? inv.createdAt : (inv.generatedDate || inv.createdAt)
+        if (!val) return 0
+        if (val?.toDate) return val.toDate().getTime()
+        if (val?.seconds) return val.seconds * 1000
+        return new Date(val).getTime()
+      }
+      return getTs(b) - getTs(a)
+    })
+    const tableData = sortedInvoices.map(inv => {
       const isSale = inv.type === 'sale'
       const total = isSale ? (inv.grandTotal ?? inv.billAmount ?? 0) : (inv.billAmount || 0)
       const received = isSale ? total : (inv.amountReceived || 0)

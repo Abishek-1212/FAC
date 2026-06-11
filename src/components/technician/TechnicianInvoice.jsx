@@ -108,11 +108,26 @@ export default function TechnicianInvoice() {
     })
   }
 
-  const addComponent = () => setForm(f => ({ ...f, components: [...f.components, { name: '', quantity: 1, amount: 0 }] }))
+  const addComponent = () => setForm(f => ({ ...f, components: [...f.components, { name: '', quantity: 1, price: 0, amount: 0 }] }))
   const removeComponent = (i) => setForm(f => ({ ...f, components: f.components.filter((_, idx) => idx !== i) }))
   const updateComponent = (i, key, val) => setForm(f => {
     const components = [...f.components]
-    components[i] = { ...components[i], [key]: val }
+    const updated = { ...components[i], [key]: val }
+    if (key === 'name') {
+      const stockItem = myStock.find(s => s.productName === val)
+      updated.price = Number(stockItem?.price) || 0
+      updated.quantity = Number(updated.quantity) || 1
+      updated.amount = Number(updated.price) * Number(updated.quantity)
+    } else if (key === 'quantity') {
+      updated.quantity = Number(val) || 0
+      updated.price = Number(updated.price) || 0
+      updated.amount = Number(updated.price) * Number(updated.quantity)
+    } else if (key === 'price') {
+      updated.price = Number(val) || 0
+      updated.quantity = Number(updated.quantity) || 1
+      updated.amount = Number(updated.price) * Number(updated.quantity)
+    }
+    components[i] = updated
     return { ...f, components }
   })
 
@@ -124,6 +139,13 @@ export default function TechnicianInvoice() {
     try {
       const billNo = generateBillNo()
       const pending = Number(form.billAmount) - Number(form.amountReceived)
+      const cleanedComponents = form.components.map(comp => ({
+        name: comp.name || '',
+        quantity: Number(comp.quantity) || 0,
+        price: Number(comp.price) || 0,
+        amount: Number(comp.amount) || 0
+      }))
+
       const invoiceData = {
         billNo,
         jobId: selectedJob.id,
@@ -134,7 +156,7 @@ export default function TechnicianInvoice() {
         serviceType: form.serviceType,
         technicianId: user.uid,
         technicianName: profile?.name || '',
-        components: form.components,
+        components: cleanedComponents,
         componentsTotal,
         billAmount: Number(form.billAmount),
         amountReceived: Number(form.amountReceived),
@@ -401,15 +423,16 @@ export default function TechnicianInvoice() {
                 <button type="button" onClick={addComponent} className="text-xs font-bold text-cyan-500 hover:text-cyan-600">+ Add</button>
               </div>
               {form.components.map((comp, i) => (
-                <div key={i} className="flex gap-2 mb-2">
-                  <select value={comp.name} onChange={e => updateComponent(i, 'name', e.target.value)} className={`flex-1 border rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
+                <div key={i} className="flex gap-2 mb-2 items-center flex-wrap">
+                  <select value={comp.name} onChange={e => updateComponent(i, 'name', e.target.value)} className={`flex-1 min-w-[120px] border rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
                     <option value="">Select component</option>
                     {myStock.map(s => (
                       <option key={s.id} value={s.productName}>{s.productName}</option>
                     ))}
                   </select>
                   <input type="number" value={comp.quantity} onChange={e => updateComponent(i, 'quantity', Number(e.target.value))} min={1} placeholder="Qty" className={`w-16 border rounded-xl px-2 py-2 text-xs text-center focus:outline-none focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`} />
-                  <input type="number" value={comp.amount} onChange={e => updateComponent(i, 'amount', Number(e.target.value))} placeholder="₹" className={`w-20 border rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`} />
+                  <input type="number" value={comp.price} onChange={e => updateComponent(i, 'price', Number(e.target.value))} min={0} placeholder="Unit ₹" className={`w-20 border rounded-xl px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`} />
+                  <span className={`text-xs font-bold min-w-[52px] text-right ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>₹{Number(comp.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   <button type="button" onClick={() => removeComponent(i)} className="text-red-400 text-lg px-1">×</button>
                 </div>
               ))}

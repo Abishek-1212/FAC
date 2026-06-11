@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { collection, onSnapshot, doc as fsDoc, updateDoc, serverTimestamp, addDoc, query, where } from 'firebase/firestore'
+import { collection, onSnapshot, doc as fsDoc, updateDoc, deleteDoc, serverTimestamp, addDoc, query, where } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useTheme } from '../../context/ThemeContext'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { generateInvoice } from '../../utils/generateInvoice'
 
-const EMPTY_ITEM = { category: '', productId: '', quantity: '' }
+const EMPTY_ITEM = { category: '', productId: '', quantity: '', price: '' }
 
 const ordinalSuffix = (d) => {
   const s = ['th','st','nd','rd'], v = d % 100
@@ -27,7 +27,7 @@ export default function GenerateInvoice() {
   const [invoices, setInvoices] = useState([])
 
   // Customer info
-  const [customer, setCustomer] = useState({ companyName: '', phone: '', paymentMode: 'Cash', billAmount: '' })
+  const [customer, setCustomer] = useState({ companyName: '', phone: '', paymentMode: 'Cash' })
   const [discount, setDiscount] = useState({ type: 'percentage', value: '' })
 
   // Products list
@@ -38,6 +38,8 @@ export default function GenerateInvoice() {
   const [showForm, setShowForm] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [editingInvoice, setEditingInvoice] = useState(null) // invoice being edited from history
+  const [deletingId, setDeletingId] = useState(null)
 
   // Filter state
   const [activeFilter, setActiveFilter] = useState('today')
@@ -47,8 +49,8 @@ export default function GenerateInvoice() {
   const [expandedId, setExpandedId] = useState(null)
   const [downloadingId, setDownloadingId] = useState(null)
 
-  // Computed discount
-  const billAmt = Number(customer.billAmount) || 0
+  // Computed totals from items
+  const billAmt = items.reduce((sum, it) => sum + (Number(it.price) || 0) * it.quantity, 0)
   const discountVal = Number(discount.value) || 0
   const discountAmount = discount.type === 'percentage'
     ? Math.round((billAmt * discountVal) / 100 * 100) / 100
@@ -110,7 +112,7 @@ export default function GenerateInvoice() {
 
   const draftProduct = getProduct(draft.productId)
 
-  const draftValid = draft.category && draft.productId && Number(draft.quantity) > 0
+  const draftValid = draft.category && draft.productId && Number(draft.quantity) > 0 && draft.price !== ''
 
   const addOrUpdateItem = () => {
     if (!draftValid) return
@@ -123,6 +125,7 @@ export default function GenerateInvoice() {
       productId: draft.productId,
       productName: draftProduct?.productName || draftProduct?.name || '',
       quantity: qty,
+      price: Number(draft.price) || 0,
     }
 
     if (editIndex !== null) {
@@ -136,7 +139,7 @@ export default function GenerateInvoice() {
 
   const startEdit = (idx) => {
     const it = items[idx]
-    setDraft({ category: it.category, productId: it.productId, quantity: String(it.quantity) })
+    setDraft({ category: it.category, productId: it.productId, quantity: String(it.quantity), price: String(it.price || '') })
     setEditIndex(idx)
   }
 
@@ -147,65 +150,129 @@ export default function GenerateInvoice() {
     if (editIndex === idx) cancelEdit()
   }
 
-  const customerValid = customer.companyName && customer.phone && customer.billAmount && items.length > 0
+  const customerValid = customer.companyName && customer.phone && items.length > 0
 
-  const handleDownload = async () => {
+  const resetForm = () => {
+    setItems([])
+    setCustomer({ companyName: '', phone: '', paymentMode: 'Cash' })
+    setDiscount({ type: 'percentage', value: '' })
+    setDraft(EMPTY_ITEM)
+    setEditingInvoice(null)
+  }
+
+  const handleGenerateInvoice = async () => {
     setGenerating(true)
     try {
-      const invoiceNo = `FAC-SALE-${Date.now()}`
-
-      generateInvoice({
-        invoiceNumber: invoiceNo,
-        customerName: customer.companyName,
-        customerPhone: customer.phone,
-        paymentMode: customer.paymentMode,
-        totalAmount: billAmt,
-        discountType: discount.type,
-        discountValue: discountVal,
-        discountAmount,
-        grandTotal,
-        amountReceived: grandTotal,
-        serviceDate: new Date(),
-        isSalesInvoice: true,
-        products: items.map(it => ({ name: it.productName, qty: it.quantity, category: it.category })),
-      })
-
-      for (const it of items) {
-        const prod = getProduct(it.productId)
-        if (prod) {
-          await updateDoc(fsDoc(db, 'inventory', it.productId), {
-            quantity: (prod.quantity || 0) - it.quantity,
-            lastUpdated: serverTimestamp(),
-          })
+      if (editingInvoice) {
+        // Save changes to existing invoice (no stock adjustment)
+        await updateDoc(fsDoc(db, 'invoices', editingInvoice.id), {
+          companyName: customer.companyName,
+          phone: customer.phone,
+          paymentMode: customer.paymentMode,
+          billAmount: billAmt,
+          discountType: discountVal > 0 ? discount.type : null,
+          discountValue: discountVal > 0 ? discountVal : null,
+          discountAmount: discountVal > 0 ? discountAmount : null,
+          grandTotal,
+          products: items.map(it => ({ category: it.category, productName: it.productName, quantity: it.quantity, price: it.price })),
+        })
+        generateInvoice({
+          invoiceNumber: editingInvoice.invoiceNumber,
+          customerName: customer.companyName,
+          customerPhone: customer.phone,
+          paymentMode: customer.paymentMode,
+          totalAmount: billAmt,
+          discountType: discount.type,
+          discountValue: discountVal,
+          discountAmount,
+          grandTotal,
+          amountReceived: grandTotal,
+          serviceDate: new Date(),
+          isSalesInvoice: true,
+          products: items.map(it => ({ name: it.productName, qty: it.quantity, category: it.category, price: it.price })),
+        })
+        toast.success('✅ Invoice updated')
+      } else {
+        const invoiceNo = `FAC-SALE-${Date.now()}`
+        for (const it of items) {
+          const prod = getProduct(it.productId)
+          if (prod) {
+            await updateDoc(fsDoc(db, 'inventory', it.productId), {
+              quantity: (prod.quantity || 0) - it.quantity,
+              lastUpdated: serverTimestamp(),
+            })
+          }
         }
+        await addDoc(collection(db, 'invoices'), {
+          invoiceNumber: invoiceNo,
+          type: 'sale',
+          companyName: customer.companyName,
+          phone: customer.phone,
+          paymentMode: customer.paymentMode,
+          billAmount: billAmt,
+          discountType: discountVal > 0 ? discount.type : null,
+          discountValue: discountVal > 0 ? discountVal : null,
+          discountAmount: discountVal > 0 ? discountAmount : null,
+          grandTotal,
+          products: items.map(it => ({ category: it.category, productName: it.productName, quantity: it.quantity, price: it.price })),
+          createdAt: serverTimestamp(),
+        })
+        generateInvoice({
+          invoiceNumber: invoiceNo,
+          customerName: customer.companyName,
+          customerPhone: customer.phone,
+          paymentMode: customer.paymentMode,
+          totalAmount: billAmt,
+          discountType: discountVal > 0 ? discount.type : 'percentage',
+          discountValue: discountVal > 0 ? discountVal : 0,
+          discountAmount: discountVal > 0 ? discountAmount : 0,
+          grandTotal,
+          amountReceived: grandTotal,
+          serviceDate: new Date(),
+          isSalesInvoice: true,
+          products: items.map(it => ({ name: it.productName, qty: it.quantity, category: it.category, price: it.price })),
+        })
+        toast.success('✅ Invoice generated & stock updated')
       }
-
-      await addDoc(collection(db, 'invoices'), {
-        invoiceNumber: invoiceNo,
-        type: 'sale',
-        companyName: customer.companyName,
-        phone: customer.phone,
-        paymentMode: customer.paymentMode,
-        billAmount: billAmt,
-        discountType: discountVal > 0 ? discount.type : null,
-        discountValue: discountVal > 0 ? discountVal : null,
-        discountAmount: discountVal > 0 ? discountAmount : null,
-        grandTotal,
-        products: items.map(it => ({ category: it.category, productName: it.productName, quantity: it.quantity })),
-        createdAt: serverTimestamp(),
-      })
-
-      toast.success('✅ Invoice generated & stock updated')
       setShowPreview(false)
-      setItems([])
-      setCustomer({ companyName: '', phone: '', paymentMode: 'Cash', billAmount: '' })
-      setDiscount({ type: 'percentage', value: '' })
-      setDraft(EMPTY_ITEM)
+      setShowForm(false)
+      resetForm()
     } catch (err) {
       toast.error(err.message)
     } finally {
       setGenerating(false)
     }
+  }
+
+  const handleDeleteInvoice = async (invId) => {
+    setDeletingId(invId)
+    try {
+      await deleteDoc(fsDoc(db, 'invoices', invId))
+      toast.success('🗑️ Invoice deleted')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleEditInvoice = (inv) => {
+    setEditingInvoice(inv)
+    setCustomer({ companyName: inv.companyName, phone: inv.phone, paymentMode: inv.paymentMode })
+    setDiscount({
+      type: inv.discountType || 'percentage',
+      value: inv.discountValue != null ? String(inv.discountValue) : '',
+    })
+    setItems((inv.products || []).map(p => ({
+      category: p.category,
+      productId: invProducts.find(ip => (ip.productName || ip.name) === p.productName)?.id || '',
+      productName: p.productName,
+      quantity: p.quantity,
+      price: p.price,
+    })))
+    setDraft(EMPTY_ITEM)
+    setShowForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const t = isDark ? 'text-white' : 'text-gray-900'
@@ -241,14 +308,16 @@ export default function GenerateInvoice() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <span className={`text-base font-black tracking-widest uppercase ${t}`}>Generate Invoice</span>
+          <span className={`text-base font-black tracking-widest uppercase ${t}`}>
+            {editingInvoice ? 'Edit Invoice' : 'Generate Invoice'}
+          </span>
         </div>
       </div>
 
       {/* Generate New Invoice Button */}
       <motion.button
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-        onClick={() => setShowForm(v => !v)}
+        onClick={() => { if (showForm && editingInvoice) { resetForm(); setShowForm(false) } else setShowForm(v => !v) }}
         whileTap={{ scale: 0.97 }}
         className={`w-full py-3.5 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 border-2 ${
           showForm
@@ -264,7 +333,7 @@ export default function GenerateInvoice() {
           transition={{ duration: 0.3, ease: 'easeInOut' }}
           className="text-lg"
         >+</motion.span>
-        {showForm ? 'Close Form' : 'Generate New Invoice'}
+        {showForm ? (editingInvoice ? 'Cancel Edit' : 'Close Form') : 'Generate New Invoice'}
       </motion.button>
 
       {/* Invoice Form Card */}
@@ -301,52 +370,6 @@ export default function GenerateInvoice() {
               {['Cash', 'UPI', 'Card', 'Bank Transfer', 'Cheque'].map(m => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
-          <div>
-            <label className={labelCls}>Bill Amount (₹)</label>
-            <input type="number" min="0" value={customer.billAmount}
-              onChange={e => setCustomer(c => ({ ...c, billAmount: e.target.value }))}
-              onWheel={e => e.target.blur()}
-              placeholder="Enter total bill amount" className={inputCls} />
-          </div>
-          {/* Discount — optional */}
-              <div className="md:col-span-2">
-                <label className={labelCls}>Discount <span className={`font-normal ${s}`}>(optional)</span></label>
-                <div className="flex gap-2">
-                  <div className={`flex rounded-xl overflow-hidden text-sm font-bold ${nmInset}`}>
-                    <button type="button"
-                      onClick={() => setDiscount(d => ({ ...d, type: 'percentage' }))}
-                      className={`px-4 py-3 transition ${
-                        discount.type === 'percentage'
-                          ? 'text-orange-400 font-black'
-                          : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-700'
-                      }`}>%</button>
-                    <button type="button"
-                      onClick={() => setDiscount(d => ({ ...d, type: 'amount' }))}
-                      className={`px-4 py-3 transition ${
-                        discount.type === 'amount'
-                          ? 'text-orange-400 font-black'
-                          : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-700'
-                      }`}>₹</button>
-                  </div>
-                  <input type="number" min="0" value={discount.value}
-                    onChange={e => setDiscount(d => ({ ...d, value: e.target.value }))}
-                    onWheel={e => e.target.blur()}
-                    placeholder={discount.type === 'percentage' ? 'e.g. 10 for 10%' : 'e.g. 40 for ₹40 off'}
-                    className={`flex-1 ${inputCls}`} />
-                  {discount.value && (
-                    <div className={`flex items-center px-3 rounded-xl text-sm font-bold whitespace-nowrap ${
-                      isDark ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-green-50 text-green-600 border border-green-200'
-                    }`}>
-                      −₹{discountAmount.toLocaleString('en-IN')}
-                    </div>
-                  )}
-                </div>
-                {discount.value && (
-                  <p className={`text-xs mt-1.5 ${isDark ? 'text-green-400' : 'text-green-600'}`}>
-                    Grand Total: ₹{grandTotal.toLocaleString('en-IN')}
-                  </p>
-                )}
-              </div>
             </div>
             </div>
 
@@ -373,7 +396,7 @@ export default function GenerateInvoice() {
                   <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-700'}`}>{idx + 1}</span>
                   <div>
                     <p className={`text-sm font-bold ${t}`}>{it.productName}</p>
-                    <p className={`text-xs ${s}`}>{it.category} · Qty: {it.quantity}</p>
+                    <p className={`text-xs ${s}`}>{it.category} · Qty: {it.quantity} · ₹{(Number(it.price) * it.quantity).toLocaleString('en-IN')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -397,7 +420,7 @@ export default function GenerateInvoice() {
           <p className={`text-xs font-bold ${isDark ? 'text-orange-300' : 'text-orange-600'}`}>
             {editIndex !== null ? `Editing Product #${editIndex + 1}` : '+ Add Product'}
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Category</label>
               <select value={draft.category}
@@ -410,7 +433,11 @@ export default function GenerateInvoice() {
             <div>
               <label className={labelCls}>Product</label>
               <select value={draft.productId}
-                onChange={e => setDraft(d => ({ ...d, productId: e.target.value }))}
+                onChange={e => {
+                const pid = e.target.value
+                const prod = invProducts.find(p => p.id === pid)
+                setDraft(d => ({ ...d, productId: pid, price: prod?.price != null ? String(prod.price) : '' }))
+              }}
                 disabled={!draft.category}
                 className={inputCls}>
                 <option value="">Select product</option>
@@ -428,6 +455,21 @@ export default function GenerateInvoice() {
                 onChange={e => setDraft(d => ({ ...d, quantity: e.target.value }))}
                 onWheel={e => e.target.blur()}
                 placeholder="Qty" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>
+                Price (₹)
+                {draftProduct?.price != null && <span className={`ml-1 font-normal ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>(Stock: ₹{draftProduct.price})</span>}
+              </label>
+              <input type="number" min="0" value={draft.price}
+                onChange={e => setDraft(d => ({ ...d, price: e.target.value }))}
+                onWheel={e => e.target.blur()}
+                placeholder="Unit price" className={inputCls} />
+              {Number(draft.price) > 0 && Number(draft.quantity) > 0 && (
+                <p className={`text-xs mt-1 font-bold ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                  = ₹{(Number(draft.price) * Number(draft.quantity)).toLocaleString('en-IN')}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex gap-2">
@@ -452,14 +494,69 @@ export default function GenerateInvoice() {
           </div>
         </div>
 
-              {/* Generate Button */}
+              {/* Discount + Totals Summary */}
+              {items.length > 0 && (
+                <div className={`rounded-xl p-4 space-y-3 ${nmInset}`}>
+                  <p className={`text-xs font-bold uppercase tracking-widest ${s}`}>Discount <span className={`font-normal normal-case ${s}`}>(optional)</span></p>
+                  <div className="flex gap-2">
+                    <div className={`flex rounded-xl overflow-hidden text-sm font-bold ${nm}`}>
+                      <button type="button"
+                        onClick={() => setDiscount(d => ({ ...d, type: 'percentage' }))}
+                        className={`px-4 py-3 transition ${
+                          discount.type === 'percentage'
+                            ? 'text-orange-400 font-black'
+                            : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-700'
+                        }`}>%</button>
+                      <button type="button"
+                        onClick={() => setDiscount(d => ({ ...d, type: 'amount' }))}
+                        className={`px-4 py-3 transition ${
+                          discount.type === 'amount'
+                            ? 'text-orange-400 font-black'
+                            : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-700'
+                        }`}>₹</button>
+                    </div>
+                    <input type="number" min="0" value={discount.value}
+                      onChange={e => setDiscount(d => ({ ...d, value: e.target.value }))}
+                      onWheel={e => e.target.blur()}
+                      placeholder={discount.type === 'percentage' ? 'e.g. 10 for 10%' : 'e.g. 40 for ₹40 off'}
+                      className={`flex-1 ${inputCls}`} />
+                  </div>
+                  {/* Totals breakdown */}
+                  <div className={`rounded-xl p-3 space-y-2 ${nm}`}>
+                    <div className="flex justify-between items-center">
+                      <span className={`text-xs font-semibold ${s}`}>Total Amount</span>
+                      <span className={`text-sm font-bold ${t}`}>₹{billAmt.toLocaleString('en-IN')}</span>
+                    </div>
+                    {discountVal > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className={`text-xs font-semibold ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                          Discount {discount.type === 'percentage' ? `(${discountVal}%)` : '(₹)'}
+                        </span>
+                        <span className={`text-sm font-bold ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                          −₹{discountAmount.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    )}
+                    <div className={`flex justify-between items-center pt-2 border-t ${
+                      isDark ? 'border-white/10' : 'border-black/10'
+                    }`}>
+                      <span className={`text-sm font-black ${t}`}>Grand Total</span>
+                      <span className={`text-base font-black ${isDark ? 'text-orange-400' : 'text-orange-500'}`}>
+                        ₹{grandTotal.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Generate / Save Button */}
               <button onClick={() => setShowPreview(true)} disabled={!customerValid}
                 className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                   isDark
                     ? 'bg-[#151B2B] text-orange-400 shadow-[5px_5px_12px_#0a0e1a,-5px_-5px_12px_#202a3c] active:shadow-[inset_5px_5px_12px_#0a0e1a,inset_-5px_-5px_12px_#202a3c]'
                     : 'bg-[#e8f4f8] text-orange-500 shadow-[5px_5px_12px_#c5d8e0,-5px_-5px_12px_#ffffff] active:shadow-[inset_5px_5px_12px_#c5d8e0,inset_-5px_-5px_12px_#ffffff]'
                 }`}>
-                Preview &amp; Generate Invoice
+                {editingInvoice ? 'Preview & Save Changes' : 'Preview & Generate Invoice'}
               </button>
             </div>
 
@@ -630,38 +727,68 @@ export default function GenerateInvoice() {
                                         </div>
                                       </div>
                                     )}
-                                    {/* Download button */}
-                                    <button
-                                      disabled={downloadingId === inv.id}
-                                      onClick={() => {
-                                        setDownloadingId(inv.id)
-                                        try {
-                                          generateInvoice({
-                                            invoiceNumber: inv.invoiceNumber,
-                                            customerName: inv.companyName,
-                                            customerPhone: inv.phone,
-                                            paymentMode: inv.paymentMode,
-                                            totalAmount: inv.billAmount ?? 0,
-                                            discountType: inv.discountType || 'percentage',
-                                            discountValue: inv.discountValue || 0,
-                                            discountAmount: inv.discountAmount || 0,
-                                            grandTotal: inv.grandTotal ?? inv.billAmount ?? 0,
-                                            amountReceived: inv.grandTotal ?? inv.billAmount ?? 0,
-                                            serviceDate: d,
-                                            isSalesInvoice: true,
-                                            products: (inv.products || []).map(p => ({ name: p.productName, qty: p.quantity, category: p.category })),
-                                          })
-                                        } finally {
-                                          setDownloadingId(null)
-                                        }
-                                      }}
-                                      className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${
-                                        isDark
-                                          ? 'bg-[#151B2B] text-orange-400 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
-                                          : 'bg-[#e8f4f8] text-orange-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
-                                      }`}>
-                                      {downloadingId === inv.id ? 'Generating…' : 'Download Invoice PDF'}
-                                    </button>
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-2">
+                                      <button
+                                        disabled={downloadingId === inv.id}
+                                        onClick={() => {
+                                          setDownloadingId(inv.id)
+                                          try {
+                                            generateInvoice({
+                                              invoiceNumber: inv.invoiceNumber,
+                                              customerName: inv.companyName,
+                                              customerPhone: inv.phone,
+                                              paymentMode: inv.paymentMode,
+                                              totalAmount: inv.billAmount ?? 0,
+                                              discountType: inv.discountType || 'percentage',
+                                              discountValue: inv.discountValue || 0,
+                                              discountAmount: inv.discountAmount || 0,
+                                              grandTotal: inv.grandTotal ?? inv.billAmount ?? 0,
+                                              amountReceived: inv.grandTotal ?? inv.billAmount ?? 0,
+                                              serviceDate: d,
+                                              isSalesInvoice: true,
+                                              products: (inv.products || []).map(p => ({ name: p.productName, qty: p.quantity, category: p.category, price: p.price || 0 })),
+                                            })
+                                          } finally {
+                                            setDownloadingId(null)
+                                          }
+                                        }}
+                                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 ${
+                                          isDark
+                                            ? 'bg-[#151B2B] text-orange-400 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+                                            : 'bg-[#e8f4f8] text-orange-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
+                                        }`}>
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        {downloadingId === inv.id ? 'Generating…' : 'Download PDF'}
+                                      </button>
+                                      <button
+                                        onClick={() => { setExpandedId(null); handleEditInvoice(inv) }}
+                                        className={`px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
+                                          isDark
+                                            ? 'bg-[#151B2B] text-cyan-400 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+                                            : 'bg-[#e8f4f8] text-cyan-600 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
+                                        }`}>
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Edit
+                                      </button>
+                                      <button
+                                        disabled={deletingId === inv.id}
+                                        onClick={() => handleDeleteInvoice(inv.id)}
+                                        className={`px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 ${
+                                          isDark
+                                            ? 'bg-[#151B2B] text-red-400 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
+                                            : 'bg-[#e8f4f8] text-red-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
+                                        }`}>
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        {deletingId === inv.id ? '…' : 'Delete'}
+                                      </button>
+                                    </div>
                                   </div>
                                 </motion.div>
                               )}
@@ -684,10 +811,8 @@ export default function GenerateInvoice() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="absolute inset-0 bg-black/60" onClick={() => setShowPreview(false)} />
             <motion.div
-              className={`relative w-full max-w-md rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto ${
-                isDark
-                  ? 'bg-[#151B2B] shadow-[8px_8px_20px_#0a0e1a,-8px_-8px_20px_#202a3c]'
-                  : 'bg-[#e8f4f8] shadow-[8px_8px_20px_#c5d8e0,-8px_-8px_20px_#ffffff]'
+              className={`relative w-full max-w-md rounded-2xl max-h-[90vh] overflow-y-auto ${
+                isDark ? 'bg-[#151B2B]' : 'bg-[#e8f4f8]'
               }`}
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
               <div className={`px-6 py-4 border-b flex items-center justify-between sticky top-0 ${
@@ -708,7 +833,7 @@ export default function GenerateInvoice() {
                     ['Company / Customer', customer.companyName],
                     ['Phone', customer.phone],
                     ['Payment', customer.paymentMode],
-                    ['Bill Amount', `₹${billAmt.toLocaleString('en-IN')}`],
+                    ['Subtotal', `₹${billAmt.toLocaleString('en-IN')}`],
                     ['Date', new Date().toLocaleDateString('en-IN')],
                   ].map(([label, value]) => (
                     <div key={label} className="flex justify-between items-center">
@@ -738,13 +863,13 @@ export default function GenerateInvoice() {
                   <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${s}`}>Products ({items.length})</p>
                   {items.map((it, idx) => (
                     <div key={idx} className="flex justify-between items-center">
-                      <span className={`text-xs ${isDark ? 'text-white/70' : 'text-gray-700'}`}>{idx + 1}. {it.productName} <span className={`${s}`}>({it.category})</span></span>
-                      <span className={`text-xs font-bold ${t}`}>x{it.quantity}</span>
+                      <span className={`text-xs ${isDark ? 'text-white/70' : 'text-gray-700'}`}>{idx + 1}. {it.productName} <span className={`${s}`}>x{it.quantity}</span></span>
+                      <span className={`text-xs font-bold ${t}`}>₹{(Number(it.price) * it.quantity).toLocaleString('en-IN')}</span>
                     </div>
                   ))}
                 </div>
                 <p className={`text-xs text-center ${s}`}>
-                  Download will generate the PDF and deduct stock from inventory.
+                  {editingInvoice ? 'Saving changes will update the invoice record.' : 'Generating will save the invoice and deduct stock from inventory.'}
                 </p>
                 <div className="flex gap-3">
                   <button onClick={() => setShowPreview(false)}
@@ -755,13 +880,13 @@ export default function GenerateInvoice() {
                     }`}>
                     ← Back
                   </button>
-                  <button onClick={handleDownload} disabled={generating}
+                  <button onClick={handleGenerateInvoice} disabled={generating}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-60 ${
                       isDark
                         ? 'bg-[#151B2B] text-orange-400 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
                         : 'bg-[#e8f4f8] text-orange-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
                     }`}>
-                    {generating ? 'Generating...' : 'Download PDF'}
+                    {generating ? 'Saving...' : editingInvoice ? 'Save Changes' : 'Generate Invoice'}
                   </button>
                 </div>
               </div>

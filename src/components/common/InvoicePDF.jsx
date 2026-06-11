@@ -65,7 +65,6 @@ const InvoicePDF = forwardRef(function InvoicePDF({ inv }, ref) {
               <th className="border border-gray-300 px-3 py-2 text-left font-bold">S.No</th>
               <th className="border border-gray-300 px-3 py-2 text-left font-bold">Component Name</th>
               <th className="border border-gray-300 px-3 py-2 text-center font-bold">Quantity</th>
-              <th className="border border-gray-300 px-3 py-2 text-right font-bold">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -75,11 +74,10 @@ const InvoicePDF = forwardRef(function InvoicePDF({ inv }, ref) {
                   <td className="border border-gray-300 px-3 py-2">{i + 1}</td>
                   <td className="border border-gray-300 px-3 py-2">{comp.name}</td>
                   <td className="border border-gray-300 px-3 py-2 text-center">{comp.quantity}</td>
-                  <td className="border border-gray-300 px-3 py-2 text-right">₹{Number(comp.amount).toLocaleString('en-IN')}</td>
                 </tr>
               ))
             ) : (
-              <tr><td colSpan="4" className="border border-gray-300 px-3 py-2 text-center text-gray-500">No components used</td></tr>
+              <tr><td colSpan="3" className="border border-gray-300 px-3 py-2 text-center text-gray-500">No components used</td></tr>
             )}
           </tbody>
         </table>
@@ -91,7 +89,7 @@ const InvoicePDF = forwardRef(function InvoicePDF({ inv }, ref) {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="font-bold">Components Cost:</span>
-            <span>₹ {(inv.componentsTotal || 0).toLocaleString('en-IN')}</span>
+            <span>₹ {Number(inv.componentsTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between">
             <span className="font-bold">Mode of Payment:</span>
@@ -103,7 +101,7 @@ const InvoicePDF = forwardRef(function InvoicePDF({ inv }, ref) {
           </div>
           <div className="flex justify-between">
             <span className="font-bold text-green-700">Amount Received:</span>
-            <span className="font-bold text-green-700">₹ {(inv.amountReceived || 0).toLocaleString('en-IN')}</span>
+            <span className="font-bold text-green-700">₹ {Number(inv.amountReceived ?? 0).toLocaleString('en-IN')}</span>
           </div>
           {(inv.paymentPending || 0) > 0 && (
             <div className="flex justify-between bg-red-50 p-2 rounded">

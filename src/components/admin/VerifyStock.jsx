@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, query, where, updateDoc, doc, serverTimestamp, addDoc, deleteDoc, getDocs, getDoc } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, updateDoc, doc, serverTimestamp, addDoc, getDocs, getDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useTheme } from '../../context/ThemeContext'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -140,18 +140,11 @@ export default function VerifyStock() {
         })
       }
       
-      if (shouldDelete) {
-        // Delete the stock record completely
-        await deleteDoc(doc(db, 'technician_stock', selectedStock.id))
-        toast.success(`✅ Verified return of ${qty} units of ${selectedStock.productName} - Stock record removed`)
-      } else {
-        // Just update returned quantity
-        await updateDoc(doc(db, 'technician_stock', selectedStock.id), {
-          returnedQuantity: newReturned,
-          lastUpdated: serverTimestamp(),
-        })
-        toast.success(`✅ Verified return of ${qty} units of ${selectedStock.productName}`)
-      }
+      await updateDoc(doc(db, 'technician_stock', selectedStock.id), {
+        returnedQuantity: newReturned,
+        lastUpdated: serverTimestamp(),
+      })
+      toast.success(`✅ Verified return of ${qty} units of ${selectedStock.productName}`)
 
       setShowReturnModal(false)
       setReturnQuantity('')
@@ -192,18 +185,11 @@ export default function VerifyStock() {
         timestamp: serverTimestamp(),
       })
       
-      if (shouldDelete) {
-        // Delete the stock record completely
-        await deleteDoc(doc(db, 'technician_stock', stockItem.id))
-        toast.success(`✅ Cleared ${pending} pending units of ${stockItem.productName} - Stock record removed`)
-      } else {
-        // Just update returned quantity
-        await updateDoc(doc(db, 'technician_stock', stockItem.id), {
-          returnedQuantity: newReturned,
-          lastUpdated: serverTimestamp(),
-        })
-        toast.success(`✅ Cleared ${pending} pending units of ${stockItem.productName}`)
-      }
+      await updateDoc(doc(db, 'technician_stock', stockItem.id), {
+        returnedQuantity: newReturned,
+        lastUpdated: serverTimestamp(),
+      })
+      toast.success(`✅ Cleared ${pending} pending units of ${stockItem.productName}`)
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -239,19 +225,12 @@ export default function VerifyStock() {
         timestamp: serverTimestamp(),
       })
       
-      if (shouldDelete) {
-        // Delete the stock record completely
-        await deleteDoc(doc(db, 'technician_stock', stockItem.id))
-        toast.success(`✅ Cleared ${damaged} damaged units of ${stockItem.productName} - Stock record removed`)
-      } else {
-        // Just clear damaged
-        await updateDoc(doc(db, 'technician_stock', stockItem.id), {
-          damagedQuantity: 0,
-          damageCharges: 0,
-          lastUpdated: serverTimestamp(),
-        })
-        toast.success(`✅ Cleared ${damaged} damaged units of ${stockItem.productName}`)
-      }
+      await updateDoc(doc(db, 'technician_stock', stockItem.id), {
+        damagedQuantity: 0,
+        damageCharges: 0,
+        lastUpdated: serverTimestamp(),
+      })
+      toast.success(`✅ Cleared ${damaged} damaged units of ${stockItem.productName}`)
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -260,11 +239,11 @@ export default function VerifyStock() {
   }
 
   const handleResetStock = async (stockItem) => {
-    if (!confirm(`Remove stock record for ${stockItem.productName}? This will delete it completely.`)) return
+    if (!confirm(`Reset stock record for ${stockItem.productName}? Remaining will be set to 0.`)) return
 
     setVerifying(true)
     try {
-      // Log transaction first
+      const pending = stockItem.takenQuantity - stockItem.usedQuantity - stockItem.returnedQuantity - (stockItem.damagedQuantity || 0)
       await addDoc(collection(db, 'stock_transactions'), {
         type: 'stock_reset',
         technicianId: stockItem.technicianId,
@@ -273,11 +252,11 @@ export default function VerifyStock() {
         productName: stockItem.productName,
         timestamp: serverTimestamp(),
       })
-      
-      // Delete the stock record
-      await deleteDoc(doc(db, 'technician_stock', stockItem.id))
-
-      toast.success(`✅ Stock record removed for ${stockItem.productName}`)
+      await updateDoc(doc(db, 'technician_stock', stockItem.id), {
+        returnedQuantity: stockItem.returnedQuantity + pending,
+        lastUpdated: serverTimestamp(),
+      })
+      toast.success(`✅ Stock reset for ${stockItem.productName}`)
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -303,11 +282,23 @@ export default function VerifyStock() {
         setDrillData(rows)
       } else if (type === 'Used') {
         const snap = await getDocs(query(collection(db, 'stock_transactions'), where('type', '==', 'job_usage'), where('productId', '==', stock.productId)))
-        let rows = snap.docs
-          .filter(d => !d.data().technicianId || d.data().technicianId === stock.technicianId)
-          .map(d => ({ qty: d.data().usedQuantity || d.data().quantity || 0, ts: d.data().timestamp, label: d.data().jobId || '' }))
+        const filtered = snap.docs.filter(d => !d.data().technicianId || d.data().technicianId === stock.technicianId)
+        const rows = await Promise.all(filtered.map(async d => {
+          const data = d.data()
+          let label = ''
+          if (data.jobId) {
+            try {
+              const jobSnap = await getDoc(doc(db, 'service_jobs', data.jobId))
+              if (jobSnap.exists()) {
+                const job = jobSnap.data()
+                label = `${job.customerName || ''}${job.serviceType ? ' · ' + job.serviceType : ''}`
+              }
+            } catch (_) {}
+          }
+          return { qty: data.usedQuantity || data.quantity || 0, ts: data.timestamp, label }
+        }))
         if (rows.length === 0 && (stock.usedQuantity || 0) > 0) {
-          rows = [{ qty: stock.usedQuantity, ts: stock.lastUpdated || stock.takenAt, legacy: true }]
+          rows.push({ qty: stock.usedQuantity, ts: stock.lastUpdated || stock.takenAt, legacy: true })
         }
         rows.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0))
         setDrillData(rows)

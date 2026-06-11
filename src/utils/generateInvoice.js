@@ -20,6 +20,26 @@ const formatDate = (date) => {
 }
 
 export const generateInvoice = (invoiceData) => {
+  console.log('\n' + '='.repeat(80))
+  console.log('GENERATEINVOICE CALLED WITH DATA:')
+  console.log('='.repeat(80))
+  console.log('invoiceNumber:', invoiceData.invoiceNumber)
+  console.log('customerName:', invoiceData.customerName)
+  console.log('totalAmount:', invoiceData.totalAmount)
+  console.log('discountAmount:', invoiceData.discountAmount)
+  console.log('grandTotal:', invoiceData.grandTotal)
+  console.log('amountReceived:', invoiceData.amountReceived)
+  console.log('products count:', invoiceData.products?.length || 0)
+  if (invoiceData.products && invoiceData.products.length > 0) {
+    console.log('PRODUCTS ARRAY:')
+    invoiceData.products.forEach((p, i) => {
+      console.log(`  [${i}] ${p.name} | qty: ${p.qty} | price: ${p.price}`)
+    })
+  } else {
+    console.error('WARNING: NO PRODUCTS IN GENERATEINVOICE DATA!')
+  }
+  console.log('='.repeat(80) + '\n')
+  
   // Initialize standard A4 Portrait document
   const doc = new jsPDF('p', 'mm', 'a4')
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -111,7 +131,7 @@ export const generateInvoice = (invoiceData) => {
   doc.setFontSize(8.5)
 
   currentY += 18
-  doc.setFont('helvetica', 'oblique')
+  doc.setFont('helvetica', 'italic')
   doc.setFontSize(10)
   doc.setTextColor(...lightMuted)
   doc.text('Water Purifier Service & Maintenance', margin, currentY)
@@ -254,12 +274,14 @@ export const generateInvoice = (invoiceData) => {
       doc.text(String(value), svcLabelX + doc.getStringUnitWidth(label) * 8.5 / doc.internal.scaleFactor + 1, y)
     })
     doc.setFont('helvetica', 'bold')
-    doc.text('Problem: ', svcLabelX, currentY + 22.5)
-    doc.setFont('helvetica', 'normal')
-    const cleanProblem = (problemDescription || '').replace(/\n/g, ' ')
-    const probValueX = svcLabelX + doc.getStringUnitWidth('Problem: ') * 8.5 / doc.internal.scaleFactor + 1
-    const splitProblem = doc.splitTextToSize(cleanProblem, cardWidth - 6 - (probValueX - svcLabelX))
-    doc.text(splitProblem, probValueX, currentY + 22.5)
+    const cleanProblem = (problemDescription || '').replace(/\n/g, ' ').trim()
+    if (cleanProblem) {
+      doc.text('Problem: ', svcLabelX, currentY + 22.5)
+      doc.setFont('helvetica', 'normal')
+      const probValueX = svcLabelX + doc.getStringUnitWidth('Problem: ') * 8.5 / doc.internal.scaleFactor + 1
+      const splitProblem = doc.splitTextToSize(cleanProblem, cardWidth - 6 - (probValueX - svcLabelX))
+      doc.text(splitProblem, probValueX, currentY + 22.5)
+    }
   }
 
   currentY += cardHeight + 8
@@ -272,50 +294,64 @@ export const generateInvoice = (invoiceData) => {
 
   if (isSalesInvoice) {
     products.forEach((product) => {
+      const qty = Number(product.qty) || 0
+      const unitPrice = Number(product.price) || 0
+      const totalPrice = qty * unitPrice
       formattedTableData.push([
         serialCounter.toString(),
         product.category || '',
         product.name || 'Item',
-        product.qty ? product.qty.toString() : '0'
+        qty.toString(),
+        `Rs. ${unitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        `Rs. ${totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       ])
       serialCounter++
     })
     autoTable(doc, {
       startY: currentY,
-      head: [['S.No', 'Category', 'Product', 'Quantity']],
+      head: [['S.No', 'Category', 'Product', 'Qty', 'Unit Price', 'Total']],
       body: formattedTableData,
       theme: 'grid',
       headStyles: { fillColor: primaryColor, textColor: [255,255,255], fontStyle: 'bold', fontSize: 9, halign: 'center', valign: 'middle', cellPadding: 4, lineColor: primaryColor, lineWidth: 0.1 },
       bodyStyles: { fontSize: 8.5, textColor: darkText, cellPadding: 4, lineColor: tableBorder, lineWidth: 0.1, valign: 'middle' },
       columnStyles: {
-        0: { cellWidth: 15, halign: 'center' },
-        1: { cellWidth: 55, halign: 'left' },
-        2: { cellWidth: 94, halign: 'left' },
-        3: { cellWidth: 30, halign: 'center' }
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 28, halign: 'left' },
+        2: { cellWidth: 56, halign: 'left' },
+        3: { cellWidth: 18, halign: 'center' },
+        4: { cellWidth: 40, halign: 'right' },
+        5: { cellWidth: 37, halign: 'right' }
       },
       margin: { left: margin, right: margin },
       alternateRowStyles: { fillColor: rowHighlight }
     })
   } else {
     products.forEach((product) => {
+      const qty = Number(product.qty) || 0
+      const unitPrice = Number(product.price) || 0
+      const totalPrice = qty * unitPrice
       formattedTableData.push([
         serialCounter.toString(),
         product.name || 'Service Item',
-        product.qty ? product.qty.toString() : '0'
+        qty.toString(),
+        `Rs. ${unitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        `Rs. ${totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       ])
       serialCounter++
     })
     autoTable(doc, {
       startY: currentY,
-      head: [['S.No', 'Product', 'Quantity']],
+      head: [['S.No', 'Product', 'Qty', 'Unit Price', 'Total']],
       body: formattedTableData,
       theme: 'grid',
       headStyles: { fillColor: primaryColor, textColor: [255,255,255], fontStyle: 'bold', fontSize: 9, halign: 'center', valign: 'middle', cellPadding: 4, lineColor: primaryColor, lineWidth: 0.1 },
       bodyStyles: { fontSize: 8.5, textColor: darkText, cellPadding: 4, lineColor: tableBorder, lineWidth: 0.1, valign: 'middle' },
       columnStyles: {
-        0: { cellWidth: 20, halign: 'center' },
-        1: { cellWidth: 130, halign: 'left' },
-        2: { cellWidth: 44, halign: 'center' }
+        0: { cellWidth: 14, halign: 'center' },
+        1: { cellWidth: 78, halign: 'left' },
+        2: { cellWidth: 18, halign: 'center' },
+        3: { cellWidth: 45, halign: 'center' },
+        4: { cellWidth: 40, halign: 'center' }
       },
       margin: { left: margin, right: margin },
       alternateRowStyles: { fillColor: rowHighlight }
@@ -371,7 +407,7 @@ export const generateInvoice = (invoiceData) => {
         formatCurrency(grandTotal),
       ]
     : [
-        formatCurrency(totalAmount),
+        `Rs. ${Number(totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         formatCurrency(discountAmount),
         formatCurrency(grandTotal),
         formatCurrency(amountReceived),
