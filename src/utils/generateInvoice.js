@@ -328,11 +328,18 @@ export const generateInvoice = (invoiceData) => {
   } else {
     products.forEach((product) => {
       const qty = Number(product.qty) || 0
-      const unitPrice = Number(product.price) || 0
+      let unitPrice = Number(product.price) || 0
+      
+      // If price is 0 or missing, try to derive from amount field if available
+      if (unitPrice === 0 && product.amount && qty > 0) {
+        unitPrice = Math.round((Number(product.amount) / qty) * 100) / 100
+      }
+      
       const totalPrice = qty * unitPrice
+      const productName = product.name || product.productName || 'Service Item'
       formattedTableData.push([
         serialCounter.toString(),
-        product.name || 'Service Item',
+        productName,
         qty.toString(),
         `Rs. ${unitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         `Rs. ${totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`

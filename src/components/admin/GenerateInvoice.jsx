@@ -176,21 +176,6 @@ export default function GenerateInvoice() {
           grandTotal,
           products: items.map(it => ({ category: it.category, productName: it.productName, quantity: it.quantity, price: it.price })),
         })
-        generateInvoice({
-          invoiceNumber: editingInvoice.invoiceNumber,
-          customerName: customer.companyName,
-          customerPhone: customer.phone,
-          paymentMode: customer.paymentMode,
-          totalAmount: billAmt,
-          discountType: discount.type,
-          discountValue: discountVal,
-          discountAmount,
-          grandTotal,
-          amountReceived: grandTotal,
-          serviceDate: new Date(),
-          isSalesInvoice: true,
-          products: items.map(it => ({ name: it.productName, qty: it.quantity, category: it.category, price: it.price })),
-        })
         toast.success('✅ Invoice updated')
       } else {
         const invoiceNo = `FAC-SALE-${Date.now()}`
@@ -216,21 +201,6 @@ export default function GenerateInvoice() {
           grandTotal,
           products: items.map(it => ({ category: it.category, productName: it.productName, quantity: it.quantity, price: it.price })),
           createdAt: serverTimestamp(),
-        })
-        generateInvoice({
-          invoiceNumber: invoiceNo,
-          customerName: customer.companyName,
-          customerPhone: customer.phone,
-          paymentMode: customer.paymentMode,
-          totalAmount: billAmt,
-          discountType: discountVal > 0 ? discount.type : 'percentage',
-          discountValue: discountVal > 0 ? discountVal : 0,
-          discountAmount: discountVal > 0 ? discountAmount : 0,
-          grandTotal,
-          amountReceived: grandTotal,
-          serviceDate: new Date(),
-          isSalesInvoice: true,
-          products: items.map(it => ({ name: it.productName, qty: it.quantity, category: it.category, price: it.price })),
         })
         toast.success('✅ Invoice generated & stock updated')
       }
@@ -728,7 +698,7 @@ export default function GenerateInvoice() {
                                       </div>
                                     )}
                                     {/* Action Buttons */}
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 justify-center">
                                       <button
                                         disabled={downloadingId === inv.id}
                                         onClick={() => {
@@ -753,40 +723,38 @@ export default function GenerateInvoice() {
                                             setDownloadingId(null)
                                           }
                                         }}
-                                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 ${
+                                        disabled={downloadingId === inv.id}
+                                        className={`w-10 h-10 rounded-lg transition-all flex items-center justify-center disabled:opacity-60 ${
                                           isDark
-                                            ? 'bg-[#151B2B] text-orange-400 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
-                                            : 'bg-[#e8f4f8] text-orange-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
+                                            ? 'bg-gradient-to-br from-orange-500/25 to-orange-600/15 text-orange-400 shadow-[3px_3px_8px_#0a0e1a,_-3px_-3px_8px_rgba(255,255,255,0.02)] hover:shadow-[inset_2px_2px_5px_#0a0e1a,_inset_-2px_-2px_5px_rgba(255,255,255,0.02)]'
+                                            : 'bg-gradient-to-br from-orange-100 to-orange-50 text-orange-600 shadow-[3px_3px_8px_rgba(0,0,0,0.1),_-3px_-3px_8px_#ffffff] hover:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05),_inset_-2px_-2px_5px_#ffffff]'
                                         }`}>
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                         </svg>
-                                        {downloadingId === inv.id ? 'Generating…' : 'Download PDF'}
                                       </button>
                                       <button
                                         onClick={() => { setExpandedId(null); handleEditInvoice(inv) }}
-                                        className={`px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
+                                        className={`w-10 h-10 rounded-lg transition-all flex items-center justify-center ${
                                           isDark
-                                            ? 'bg-[#151B2B] text-cyan-400 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
-                                            : 'bg-[#e8f4f8] text-cyan-600 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
+                                            ? 'bg-gradient-to-br from-blue-500/25 to-blue-600/15 text-blue-400 shadow-[3px_3px_8px_#0a0e1a,_-3px_-3px_8px_rgba(255,255,255,0.02)] hover:shadow-[inset_2px_2px_5px_#0a0e1a,_inset_-2px_-2px_5px_rgba(255,255,255,0.02)]'
+                                            : 'bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 shadow-[3px_3px_8px_rgba(0,0,0,0.1),_-3px_-3px_8px_#ffffff] hover:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05),_inset_-2px_-2px_5px_#ffffff]'
                                         }`}>
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
-                                        Edit
                                       </button>
                                       <button
                                         disabled={deletingId === inv.id}
                                         onClick={() => handleDeleteInvoice(inv.id)}
-                                        className={`px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 ${
+                                        className={`w-10 h-10 rounded-lg transition-all flex items-center justify-center disabled:opacity-60 ${
                                           isDark
-                                            ? 'bg-[#151B2B] text-red-400 shadow-[4px_4px_10px_#0a0e1a,-4px_-4px_10px_#202a3c] active:shadow-[inset_4px_4px_10px_#0a0e1a,inset_-4px_-4px_10px_#202a3c]'
-                                            : 'bg-[#e8f4f8] text-red-500 shadow-[4px_4px_10px_#c5d8e0,-4px_-4px_10px_#ffffff] active:shadow-[inset_4px_4px_10px_#c5d8e0,inset_-4px_-4px_10px_#ffffff]'
+                                            ? 'bg-gradient-to-br from-red-500/25 to-red-600/15 text-red-400 shadow-[3px_3px_8px_#0a0e1a,_-3px_-3px_8px_rgba(255,255,255,0.02)] hover:shadow-[inset_2px_2px_5px_#0a0e1a,_inset_-2px_-2px_5px_rgba(255,255,255,0.02)]'
+                                            : 'bg-gradient-to-br from-red-100 to-red-50 text-red-600 shadow-[3px_3px_8px_rgba(0,0,0,0.1),_-3px_-3px_8px_#ffffff] hover:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05),_inset_-2px_-2px_5px_#ffffff]'
                                         }`}>
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
-                                        {deletingId === inv.id ? '…' : 'Delete'}
                                       </button>
                                     </div>
                                   </div>

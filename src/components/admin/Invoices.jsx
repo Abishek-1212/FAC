@@ -621,11 +621,24 @@ export default function Invoices() {
                     amountReceived: viewInvoice.amountReceived || 0,
                     paymentMode: viewInvoice.modeOfPayment || 'N/A',
                     serviceDate: viewInvoice.invoiceDate || null,
-                    products: (viewInvoice.products || []).map(p => ({
-                      name: p.name || 'N/A',
-                      qty: Number(p.qty) || 0,
-                      price: Number(p.price) || 0
-                    })),
+                    products: (() => {
+                      const comps = (viewInvoice.components || [])
+                      if (comps.length > 0) {
+                        return comps.map(c => ({
+                          name: c.name || 'N/A',
+                          qty: Number(c.quantity) || 0,
+                          price: Number(c.price) || 0,
+                          amount: Number(c.amount) || 0
+                        }))
+                      }
+                      // Fallback to products field
+                      return (viewInvoice.products || []).map(p => ({
+                        name: p.name || p.productName || 'N/A',
+                        qty: Number(p.qty || p.quantity) || 0,
+                        price: Number(p.price) || 0,
+                        amount: Number(p.amount) || 0
+                      }))
+                    })(),
                   })
                   toast.success('Invoice downloaded!')
                 }}
